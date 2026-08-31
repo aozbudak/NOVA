@@ -1,0 +1,56 @@
+@php
+    $items = $items ?? app(\App\Support\Cart::class)->items();
+    $subtotal = $subtotal ?? app(\App\Support\Cart::class)->subtotal();
+@endphp
+
+@if ($items->isEmpty())
+    <div class="flex flex-1 flex-col items-center justify-center gap-6 px-8 text-center">
+        <p class="text-[11px] tracking-nav uppercase">Your bag is empty</p>
+        <x-button href="{{ route('shop.show', 'new-in') }}" data-close="cart">Continue shopping</x-button>
+    </div>
+@else
+    <ul class="flex-1 overflow-y-auto px-5 py-6">
+        @foreach ($items as $item)
+            <li class="flex gap-4 border-b border-border py-4 first:pt-0">
+                <a href="{{ route('product.show', $item['product']['slug']) }}" class="block w-20 shrink-0">
+                    <img
+                        src="{{ $item['product']['images'][0] }}"
+                        alt="{{ $item['product']['name'] }}"
+                        width="160"
+                        height="200"
+                        class="aspect-[4/5] w-full object-cover"
+                        loading="lazy"
+                    >
+                </a>
+                <div class="flex min-w-0 flex-1 flex-col gap-2">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm">{{ $item['product']['name'] }}</p>
+                            <p class="mt-1 text-xs text-muted-foreground">Size {{ $item['size'] }}</p>
+                        </div>
+                        <p class="text-sm">{{ Number::currency($item['line_total'], in: 'EUR') }}</p>
+                    </div>
+                    <div class="mt-auto flex items-center justify-between">
+                        <div class="inline-flex items-center border border-border">
+                            <button type="button" class="p-2" data-cart-qty="{{ $item['key'] }}" data-qty="{{ $item['quantity'] - 1 }}" aria-label="Decrease quantity">
+                                <x-icon name="minus" size="size-3.5" />
+                            </button>
+                            <span class="min-w-6 text-center text-xs">{{ $item['quantity'] }}</span>
+                            <button type="button" class="p-2" data-cart-qty="{{ $item['key'] }}" data-qty="{{ $item['quantity'] + 1 }}" aria-label="Increase quantity">
+                                <x-icon name="plus" size="size-3.5" />
+                            </button>
+                        </div>
+                        <button type="button" class="text-[10px] tracking-label uppercase text-muted-foreground" data-cart-remove="{{ $item['key'] }}">Remove</button>
+                    </div>
+                </div>
+            </li>
+        @endforeach
+    </ul>
+    <div class="border-t border-border px-5 py-5">
+        <div class="flex items-center justify-between text-sm">
+            <span class="tracking-label uppercase text-muted-foreground">Subtotal</span>
+            <span data-cart-subtotal>{{ Number::currency($subtotal, in: 'EUR') }}</span>
+        </div>
+        <x-button href="{{ route('checkout.show') }}" class="mt-5 w-full">Checkout</x-button>
+    </div>
+@endif

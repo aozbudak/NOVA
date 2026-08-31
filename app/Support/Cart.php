@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Support;
+
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+
+class Cart
+{
+    public function __construct(private Catalog $catalog) {}
+
+    /**
+     * @return Collection<int, array{key: string, product: array<string, mixed>, size: string, quantity: int, line_total: float}>
+     */
+    public function items(): Collection
+    {
+        return collect(session('cart', []))
+            ->map(function (array $line): ?array {
+                $product = $this->catalog->find((int) $line['product_id']);
+
+                if ($product === null) {
+                    return null;
+                }
+
+                return [
+                    'key' => $line['key'],
+                    'product' => $product,
+                    'size' => $line['size'],
+                    'quantity' => (int) $line['quantity'],
+                    'line_total' => $product['price'] * (int) $line['quantity'],
+                ];
+            })
+            ->filter()
+            ->values();
+    }
+
+    public function count(): int
+    {
+        return (int) collect(session('cart', []))->sum('quantity');
+    }
+
+    public function subtotal(): float
+    {
+        return (float) $this->items()->sum('line_total');
+    }
+
+    public function add(int $productId, string $size, int $quantity): void
+    {
+        $items = collect(session('cart', []));
+        $key = $productId.'-'.Str::upper($size);
+        $existing = $items->search(fn (array $line): bool => $line['key'] === $key);
+
+        if ($existing !== false) {
+            $line = $items[$existing];
+            $line['quantity'] = min(10, (int) $line['quantity'] + $quantity);
+            $items[$existing] = $line;
+        } else {
+            $items->push([
+                'key' => $key,
+                'product_id' => $productId,
+                'size' => Str::upper($size),
+                'quantity' => min(10, $quantity),
+            ]);
+        }
+
+        session(['cart' => $items->values()->all()]);
+    }
+
+    public function update(string $key, int $quantity): void
+    {
+        if ($quantity < 1) {
+            $this->remove($key);
+
+            return;
+        }
+
+        $items = collect(session('cart', []))->map(function (array $line) use ($key, $quantity): array {
+            if ($line['key'] === $key) {
+                $line['quantity'] = min(10, $quantity);
+            }
+
+            return $line;
+        });
+
+        session(['cart' => $items->values()->all()]);
+    }
+
+    public function remove(string $key): void
+    {
+        $items = collect(session('cart', []))
+            ->reject(fn (array $line): bool => $line['key'] === $key)
+            ->values()
+            ->all();
+
+        session(['cart' => $items]);
+    }
+
+    public function clear(): void
+    {
+        session()->forget('cart');
+    }
+}
