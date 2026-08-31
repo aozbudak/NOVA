@@ -36,7 +36,7 @@ class CartController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'count' => $cart->count(),
-                'message' => 'Added to bag',
+                'message' => __('storefront.cart.added'),
             ]);
         }
 

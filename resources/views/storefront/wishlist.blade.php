@@ -1,16 +1,16 @@
 @extends('layouts.storefront')
 
-@section('title', 'My Wishlist')
+@section('title', __('storefront.wishlist.title'))
 
 @section('content')
     <div class="mx-auto max-w-[1600px] px-4 pt-10 md:px-8 md:pt-14">
-        <h1 class="font-serif text-4xl md:text-5xl">My wishlist</h1>
+        <h1 class="font-serif text-4xl md:text-5xl">{{ __('storefront.wishlist.title') }}</h1>
         <div class="mt-12">
             @if ($products->isEmpty())
-                <x-empty-state title="Your wishlist is empty">
-                    Discover the latest NOVA collection.
+                <x-empty-state :title="__('storefront.wishlist.empty')">
+                    {{ __('storefront.wishlist.empty_body') }}
                     <x-slot:action>
-                        <x-button href="{{ route('shop.show', 'new-in') }}">Explore collection</x-button>
+                        <x-button href="{{ route('shop.show', 'new-in') }}">{{ __('storefront.wishlist.explore') }}</x-button>
                     </x-slot:action>
                 </x-empty-state>
             @else

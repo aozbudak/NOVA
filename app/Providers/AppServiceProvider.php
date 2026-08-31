@@ -28,7 +28,10 @@ class AppServiceProvider extends ServiceProvider
                 'cartCount' => app(Cart::class)->count(),
                 'wishlistIds' => app(Wishlist::class)->ids(),
                 'searchIndex' => app(Catalog::class)->searchIndex(),
+                'navItems' => app(Catalog::class)->navigation(),
                 'customer' => session('storefront.customer'),
+                'locales' => config('app.available_locales'),
+                'currentLocale' => app()->getLocale(),
             ]);
         });
     }

@@ -13,10 +13,10 @@
                     loading="lazy"
                 >
                 <div class="absolute inset-0 bg-foreground/15"></div>
-                <div class="absolute inset-x-0 bottom-0 p-6 text-primary-foreground md:p-8">
+                <div class="absolute inset-x-0 bottom-0 p-6 text-overlay md:p-8">
                     <p class="font-serif text-4xl md:text-5xl">{{ $campaign['title'] }}</p>
                     <p class="mt-3 inline-flex items-center gap-2 text-[11px] tracking-nav uppercase">
-                        Shop collection
+                        {{ __('storefront.nav.shop_collection') }}
                         <x-icon name="arrow-right" size="size-4" />
                     </p>
                 </div>
@@ -34,11 +34,11 @@
                 loading="lazy"
             >
             <div class="absolute inset-0 bg-foreground/20"></div>
-            <div class="absolute inset-x-0 bottom-0 p-6 text-primary-foreground md:p-10">
+            <div class="absolute inset-x-0 bottom-0 p-6 text-overlay md:p-10">
                 <p class="text-[11px] tracking-nav uppercase">{{ $campaigns[2]['eyebrow'] }}</p>
                 <p class="mt-2 font-serif text-4xl md:text-6xl">{{ $campaigns[2]['title'] }}</p>
                 <p class="mt-3 inline-flex items-center gap-2 text-[11px] tracking-nav uppercase">
-                    Shop collection
+                    {{ __('storefront.nav.shop_collection') }}
                     <x-icon name="arrow-right" size="size-4" />
                 </p>
             </div>

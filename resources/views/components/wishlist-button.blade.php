@@ -8,7 +8,7 @@
     data-wishlist-toggle
     data-product-id="{{ $productId }}"
     aria-pressed="{{ $active ? 'true' : 'false' }}"
-    aria-label="{{ $active ? 'Remove from wishlist' : 'Add to wishlist' }}"
+    aria-label="{{ $active ? __('storefront.wishlist.remove') : __('storefront.wishlist.add') }}"
     {{ $attributes->merge(['class' => 'p-1 text-foreground transition-transform duration-150']) }}
 >
     <x-icon name="heart" :filled="$active" />

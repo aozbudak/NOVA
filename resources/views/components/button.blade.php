@@ -8,7 +8,7 @@
     $classes = match ($variant) {
         'outline' => 'border border-foreground bg-transparent text-foreground hover:bg-foreground hover:text-background',
         'ghost' => 'bg-transparent text-foreground hover:text-muted-foreground',
-        'light' => 'border border-primary-foreground bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-primary',
+        'light' => 'border border-overlay bg-transparent text-overlay hover:bg-overlay hover:text-primary',
         default => 'border border-primary bg-primary text-primary-foreground hover:opacity-90',
     };
 

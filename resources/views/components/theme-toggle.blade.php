@@ -1,8 +1,8 @@
 <button
     type="button"
     data-theme-toggle
-    aria-label="Toggle dark mode"
-    {{ $attributes->merge(['class' => 'p-1 text-foreground']) }}
+    aria-label="{{ __('storefront.theme.toggle') }}"
+    {{ $attributes->merge(['class' => 'p-1 text-current']) }}
 >
     <span class="dark:hidden">
         <x-icon name="moon" />

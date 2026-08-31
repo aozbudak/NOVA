@@ -1,55 +1,79 @@
-<footer class="mt-24 border-t border-border">
-    <div class="mx-auto grid max-w-[1600px] gap-10 px-4 py-16 md:grid-cols-4 md:px-8">
-        <div>
-            <p class="text-[11px] font-medium tracking-nav uppercase">Shop</p>
-            <ul class="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
-                <li><a href="{{ route('shop.show', 'women') }}" class="hover:text-foreground">Women</a></li>
-                <li><a href="{{ route('shop.show', 'men') }}" class="hover:text-foreground">Men</a></li>
-                <li><a href="{{ route('shop.show', 'new-in') }}" class="hover:text-foreground">New In</a></li>
-                <li><a href="{{ route('shop.show', 'collections') }}" class="hover:text-foreground">Collections</a></li>
-                <li><a href="{{ route('shop.show', 'sale') }}" class="hover:text-foreground">Sale</a></li>
-            </ul>
-        </div>
-        <div>
-            <p class="text-[11px] font-medium tracking-nav uppercase">Help</p>
-            <ul class="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
-                <li><a href="{{ route('pages.show', 'contact') }}" class="hover:text-foreground">Contact</a></li>
-                <li><a href="{{ route('pages.show', 'shipping') }}" class="hover:text-foreground">Shipping</a></li>
-                <li><a href="{{ route('pages.show', 'returns') }}" class="hover:text-foreground">Returns</a></li>
-                <li><a href="{{ route('pages.show', 'faq') }}" class="hover:text-foreground">FAQ</a></li>
-                <li><a href="{{ route('pages.show', 'size-guide') }}" class="hover:text-foreground">Size Guide</a></li>
-            </ul>
-        </div>
-        <div>
-            <p class="text-[11px] font-medium tracking-nav uppercase">About NOVA</p>
-            <ul class="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
-                <li><a href="{{ route('pages.show', 'about') }}" class="hover:text-foreground">About</a></li>
-                <li><a href="{{ route('pages.show', 'careers') }}" class="hover:text-foreground">Careers</a></li>
-                <li><a href="{{ route('pages.show', 'sustainability') }}" class="hover:text-foreground">Sustainability</a></li>
-            </ul>
-        </div>
-        <div>
-            <p class="text-[11px] font-medium tracking-nav uppercase">Legal</p>
-            <ul class="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
-                <li><a href="{{ route('pages.show', 'privacy') }}" class="hover:text-foreground">Privacy</a></li>
-                <li><a href="{{ route('pages.show', 'terms') }}" class="hover:text-foreground">Terms</a></li>
-                <li><a href="{{ route('pages.show', 'cookies') }}" class="hover:text-foreground">Cookies</a></li>
-            </ul>
-            <div class="mt-8 flex gap-4">
-                <a href="https://instagram.com" class="text-foreground" aria-label="Instagram" rel="noopener noreferrer">
+<footer class="relative mt-24 overflow-hidden border-t border-glass-border">
+    <div class="pointer-events-none absolute inset-0 glass"></div>
+    <div class="relative mx-auto grid max-w-[1600px] gap-12 px-4 py-20 md:grid-cols-2 md:px-8 lg:grid-cols-6">
+        <div class="flex flex-col gap-5 md:col-span-2">
+            <x-logo size="text-sm" />
+            <p class="max-w-xs text-sm leading-relaxed text-muted-foreground">
+                {{ __('storefront.footer.tagline') }}
+            </p>
+            <div class="flex gap-4">
+                <a href="https://instagram.com" class="text-foreground/80 transition-opacity hover:opacity-60" aria-label="{{ __('storefront.footer.instagram') }}" rel="noopener noreferrer">
                     <x-icon name="instagram" />
                 </a>
-                <a href="https://pinterest.com" class="text-foreground" aria-label="Pinterest" rel="noopener noreferrer">
+                <a href="https://pinterest.com" class="text-foreground/80 transition-opacity hover:opacity-60" aria-label="{{ __('storefront.footer.pinterest') }}" rel="noopener noreferrer">
                     <x-icon name="pinterest" />
                 </a>
-                <a href="https://x.com" class="text-foreground" aria-label="X" rel="noopener noreferrer">
+                <a href="https://x.com" class="text-foreground/80 transition-opacity hover:opacity-60" aria-label="{{ __('storefront.footer.x') }}" rel="noopener noreferrer">
                     <x-icon name="x-social" />
                 </a>
             </div>
         </div>
+        <div>
+            <p class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.footer.shop') }}</p>
+            <ul class="mt-5 flex flex-col gap-2.5 text-sm text-muted-foreground">
+                <li><a href="{{ route('shop.show', 'women') }}" class="transition-colors hover:text-foreground">{{ __('storefront.nav.women') }}</a></li>
+                <li><a href="{{ route('shop.show', 'men') }}" class="transition-colors hover:text-foreground">{{ __('storefront.nav.men') }}</a></li>
+                <li><a href="{{ route('shop.show', 'kids') }}" class="transition-colors hover:text-foreground">{{ __('storefront.nav.kids') }}</a></li>
+                <li><a href="{{ route('shop.show', 'sport') }}" class="transition-colors hover:text-foreground">{{ __('storefront.nav.sport') }}</a></li>
+                <li><a href="{{ route('shop.show', 'new-in') }}" class="transition-colors hover:text-foreground">{{ __('storefront.nav.new-in') }}</a></li>
+                <li><a href="{{ route('shop.show', 'collections') }}" class="transition-colors hover:text-foreground">{{ __('storefront.nav.collections') }}</a></li>
+                <li><a href="{{ route('shop.show', 'sale') }}" class="transition-colors hover:text-foreground">{{ __('storefront.nav.sale') }}</a></li>
+            </ul>
+        </div>
+        <div>
+            <p class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.footer.help') }}</p>
+            <ul class="mt-5 flex flex-col gap-2.5 text-sm text-muted-foreground">
+                <li><a href="{{ route('pages.show', 'contact') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.contact') }}</a></li>
+                <li><a href="{{ route('pages.show', 'shipping') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.shipping') }}</a></li>
+                <li><a href="{{ route('pages.show', 'returns') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.returns') }}</a></li>
+                <li><a href="{{ route('pages.show', 'faq') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.faq') }}</a></li>
+                <li><a href="{{ route('pages.show', 'size-guide') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.size_guide') }}</a></li>
+            </ul>
+        </div>
+        <div>
+            <p class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.footer.about') }}</p>
+            <ul class="mt-5 flex flex-col gap-2.5 text-sm text-muted-foreground">
+                <li><a href="{{ route('pages.show', 'about') }}" class="transition-colors hover:text-foreground">{{ __('storefront.pages.about.title') }}</a></li>
+                <li><a href="{{ route('pages.show', 'careers') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.careers') }}</a></li>
+                <li><a href="{{ route('pages.show', 'sustainability') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.sustainability') }}</a></li>
+            </ul>
+        </div>
+        <div>
+            <p class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.footer.journal') }}</p>
+            <p class="mt-5 text-sm leading-relaxed text-muted-foreground">{{ __('storefront.footer.journal_text') }}</p>
+            <form action="{{ route('pages.show', 'contact') }}" method="get" class="mt-5 flex items-end gap-3 border-b border-glass-border pb-2">
+                <label class="sr-only" for="footer-email">{{ __('storefront.footer.email') }}</label>
+                <input
+                    id="footer-email"
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="{{ __('storefront.footer.email') }}"
+                    class="w-full bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground"
+                >
+                <button type="submit" class="shrink-0 pb-1 text-[11px] tracking-nav uppercase">{{ __('storefront.footer.subscribe') }}</button>
+            </form>
+            <ul class="mt-8 flex flex-col gap-2.5 text-sm text-muted-foreground">
+                <li><a href="{{ route('pages.show', 'privacy') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.privacy') }}</a></li>
+                <li><a href="{{ route('pages.show', 'terms') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.terms') }}</a></li>
+                <li><a href="{{ route('pages.show', 'cookies') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.cookies') }}</a></li>
+            </ul>
+        </div>
     </div>
-    <div class="mx-auto flex max-w-[1600px] flex-col items-start justify-between gap-3 px-4 py-8 text-xs text-muted-foreground md:flex-row md:items-center md:px-8">
-        <x-logo size="text-[11px]" class="text-muted-foreground" />
-        <p>© 2026 NOVA</p>
+    <div class="relative border-t border-glass-border">
+        <div class="mx-auto flex max-w-[1600px] flex-col items-start justify-between gap-3 px-4 py-6 text-xs text-muted-foreground md:flex-row md:items-center md:px-8">
+            <p>{{ __('storefront.footer.copyright') }}</p>
+            <p class="tracking-label uppercase">{{ __('storefront.footer.crafted') }}</p>
+        </div>
     </div>
 </footer>

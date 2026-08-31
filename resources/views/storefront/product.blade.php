@@ -25,7 +25,7 @@
                 <x-color-selector :colors="$product['colors']" />
                 <x-size-selector :sizes="$product['sizes']" />
 
-                <x-button type="submit" class="w-full">Add to bag</x-button>
+                <x-button type="submit" class="w-full">{{ __('storefront.product.add_to_bag') }}</x-button>
             </form>
 
             <form method="post" action="{{ route('wishlist.store') }}" class="mt-4">
@@ -33,34 +33,34 @@
                 <input type="hidden" name="product_id" value="{{ $product['id'] }}">
                 <button type="button" class="inline-flex items-center gap-2 text-[11px] tracking-nav uppercase" data-wishlist-toggle data-product-id="{{ $product['id'] }}" aria-pressed="{{ in_array($product['id'], $wishlistIds, true) ? 'true' : 'false' }}">
                     <x-icon name="heart" :filled="in_array($product['id'], $wishlistIds, true)" />
-                    Add to wishlist
+                    {{ __('storefront.product.add_to_wishlist') }}
                 </button>
             </form>
 
             <div class="mt-10">
-                <x-accordion title="Product details">
+                <x-accordion :title="__('storefront.product.details')">
                     {{ $product['description'] }}
                 </x-accordion>
-                <x-accordion title="Material">
-                    {{ $product['material'] }} Dry clean only. Made in Europe.
+                <x-accordion :title="__('storefront.product.material')">
+                    {{ $product['material'] }} {{ __('storefront.product.material_body') }}
                 </x-accordion>
-                <x-accordion title="Shipping">
-                    Complimentary shipping on orders over €100. Standard delivery 3–5 working days.
+                <x-accordion :title="__('storefront.product.shipping')">
+                    {{ __('storefront.product.shipping_body') }}
                 </x-accordion>
-                <x-accordion title="Returns">
-                    Free returns within 30 days. Items must be unworn, with tags attached.
+                <x-accordion :title="__('storefront.product.returns')">
+                    {{ __('storefront.product.returns_body') }}
                 </x-accordion>
             </div>
         </div>
     </div>
 
     <div class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background p-3 lg:hidden">
-        <x-button type="submit" form="add-to-cart" class="w-full">Add to bag</x-button>
+        <x-button type="submit" form="add-to-cart" class="w-full">{{ __('storefront.product.add_to_bag') }}</x-button>
     </div>
 
     @if ($related->isNotEmpty())
         <section class="mx-auto mt-24 max-w-[1600px] px-4 pb-16 md:px-8">
-            <h2 class="mb-8 font-serif text-3xl">You may also like</h2>
+            <h2 class="mb-8 font-serif text-3xl">{{ __('storefront.product.related') }}</h2>
             <x-product-grid :products="$related" :wishlist-ids="$wishlistIds" />
         </section>
     @endif

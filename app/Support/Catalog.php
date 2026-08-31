@@ -104,22 +104,22 @@ class Catalog
         return [
             [
                 'slug' => 'women',
-                'title' => 'Women',
-                'eyebrow' => 'Autumn Winter 2026',
+                'title' => $this->t('nav.women'),
+                'eyebrow' => $this->t('collection.aw26'),
                 'image' => $this->image('photo-1469334031218-e382a71b716b', 1600),
                 'href' => route('shop.show', ['department' => 'women']),
             ],
             [
                 'slug' => 'men',
-                'title' => 'Men',
-                'eyebrow' => 'Autumn Winter 2026',
+                'title' => $this->t('nav.men'),
+                'eyebrow' => $this->t('collection.aw26'),
                 'image' => $this->image('photo-1490578474895-699cd4e2cf59', 1600),
                 'href' => route('shop.show', ['department' => 'men']),
             ],
             [
                 'slug' => 'new-collection',
-                'title' => 'New Collection',
-                'eyebrow' => 'The Season Edit',
+                'title' => $this->t('campaign.new_collection'),
+                'eyebrow' => $this->t('featured.season_edit'),
                 'image' => $this->image('photo-1490481651871-ab68de25d43d', 2000),
                 'href' => route('shop.show', ['department' => 'new-in']),
             ],
@@ -132,18 +132,21 @@ class Catalog
     public function departmentMeta(string $department, ?string $category = null): array
     {
         $departments = [
-            'women' => ['title' => 'Women', 'label' => 'Women'],
-            'men' => ['title' => 'Men', 'label' => 'Men'],
-            'new-in' => ['title' => 'New In', 'label' => 'New In'],
-            'sale' => ['title' => 'Sale', 'label' => 'Sale'],
-            'collections' => ['title' => 'Collections', 'label' => 'Collections'],
+            'women' => ['title' => $this->t('nav.women'), 'label' => $this->t('nav.women')],
+            'men' => ['title' => $this->t('nav.men'), 'label' => $this->t('nav.men')],
+            'kids' => ['title' => $this->t('nav.kids'), 'label' => $this->t('nav.kids')],
+            'sport' => ['title' => $this->t('nav.sport'), 'label' => $this->t('nav.sport')],
+            'new-in' => ['title' => $this->t('nav.new-in'), 'label' => $this->t('nav.new-in')],
+            'sale' => ['title' => $this->t('nav.sale'), 'label' => $this->t('nav.sale')],
+            'collections' => ['title' => $this->t('nav.collections'), 'label' => $this->t('nav.collections')],
         ];
 
-        $meta = $departments[$department] ?? ['title' => 'Shop', 'label' => 'Shop'];
+        $meta = $departments[$department] ?? ['title' => $this->t('nav.shop'), 'label' => $this->t('nav.shop')];
 
         if ($category !== null && $category !== '') {
-            $meta['title'] = Str::headline($category);
-            $meta['breadcrumb'] = $meta['label'].' / '.Str::headline($category);
+            $categoryLabel = $this->t('nav.'.$category);
+            $meta['title'] = $categoryLabel;
+            $meta['breadcrumb'] = $meta['label'].' / '.$categoryLabel;
         } else {
             $meta['breadcrumb'] = $meta['label'];
         }
@@ -171,7 +174,7 @@ class Catalog
         $category = $filters['category'] ?? null;
 
         $products = match ($department) {
-            'women', 'men' => $products->where('category', $department),
+            'women', 'men', 'kids', 'sport' => $products->where('category', $department),
             'new-in' => $products->where('isNew', true),
             'sale' => $products->filter(fn (array $product): bool => $product['oldPrice'] !== null),
             default => $products,
@@ -225,14 +228,14 @@ class Catalog
                 'date' => '12 Aug 2026',
                 'total' => 389.00,
                 'currency' => 'EUR',
-                'status' => 'Delivered',
+                'status' => $this->t('account.status_delivered'),
             ],
             [
                 'id' => 'NOVA-0981',
                 'date' => '28 Jul 2026',
                 'total' => 229.00,
                 'currency' => 'EUR',
-                'status' => 'In transit',
+                'status' => $this->t('account.status_in_transit'),
             ],
         ];
     }
@@ -242,7 +245,153 @@ class Catalog
      */
     public function departments(): array
     {
-        return ['women', 'men', 'new-in', 'collections', 'sale'];
+        return ['women', 'men', 'kids', 'sport', 'new-in', 'collections', 'sale'];
+    }
+
+    /**
+     * @return list<array{
+     *     label: string,
+     *     department: string,
+     *     columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>,
+     *     featured: array{title: string, image: string, href: string}
+     * }>
+     */
+    public function navigation(): array
+    {
+        return [
+            $this->navItem($this->t('nav.women'), 'women', [
+                ['title' => $this->t('nav.clothing'), 'categories' => [
+                    'dresses' => $this->t('nav.dresses'),
+                    'blazers' => $this->t('nav.blazers'),
+                    'knitwear' => $this->t('nav.knitwear'),
+                    'outerwear' => $this->t('nav.outerwear'),
+                    'trousers' => $this->t('nav.trousers'),
+                    'skirts' => $this->t('nav.skirts'),
+                    'denim' => $this->t('nav.denim'),
+                ]],
+                ['title' => $this->t('nav.accessories'), 'categories' => [
+                    'accessories' => $this->t('nav.bags'),
+                    'shoes' => $this->t('nav.shoes'),
+                ]],
+            ], $this->t('collection.aw26'), 'photo-1469334031218-e382a71b716b'),
+            $this->navItem($this->t('nav.men'), 'men', [
+                ['title' => $this->t('nav.clothing'), 'categories' => [
+                    'outerwear' => $this->t('nav.outerwear'),
+                    'shirts' => $this->t('nav.shirts'),
+                    'knitwear' => $this->t('nav.knitwear'),
+                    'trousers' => $this->t('nav.trousers'),
+                    'denim' => $this->t('nav.denim'),
+                ]],
+                ['title' => $this->t('nav.accessories'), 'categories' => [
+                    'shoes' => $this->t('nav.shoes'),
+                    'accessories' => $this->t('nav.accessories'),
+                ]],
+            ], $this->t('featured.tailored_edit'), 'photo-1490578474895-699cd4e2cf59'),
+            $this->navItem($this->t('nav.kids'), 'kids', [
+                ['title' => $this->t('nav.clothing'), 'categories' => [
+                    'dresses' => $this->t('nav.dresses'),
+                    'outerwear' => $this->t('nav.outerwear'),
+                    'knitwear' => $this->t('nav.knitwear'),
+                ]],
+            ], $this->t('featured.mini_nova'), 'photo-1503453342920-ded826308edf'),
+            $this->navItem($this->t('nav.sport'), 'sport', [
+                ['title' => $this->t('nav.activity'), 'categories' => [
+                    'running' => $this->t('nav.running'),
+                    'training' => $this->t('nav.training'),
+                ]],
+                ['title' => $this->t('nav.shop'), 'categories' => [
+                    'knitwear' => $this->t('nav.knitwear'),
+                    'trousers' => $this->t('nav.trousers'),
+                    'outerwear' => $this->t('nav.outerwear'),
+                ]],
+            ], $this->t('featured.move_well'), 'photo-1517836357463-d25dfeac3438'),
+            $this->navItem($this->t('nav.new-in'), 'new-in', [
+                ['title' => $this->t('nav.just_arrived'), 'links' => [
+                    ['label' => $this->t('nav.women'), 'href' => route('shop.show', 'women')],
+                    ['label' => $this->t('nav.men'), 'href' => route('shop.show', 'men')],
+                    ['label' => $this->t('nav.kids'), 'href' => route('shop.show', 'kids')],
+                    ['label' => $this->t('nav.sport'), 'href' => route('shop.show', 'sport')],
+                ]],
+            ], $this->t('featured.season_edit'), 'photo-1490481651871-ab68de25d43d'),
+            $this->navItem($this->t('nav.collections'), 'collections', [
+                ['title' => $this->t('nav.this_season'), 'links' => [
+                    ['label' => $this->t('collection.aw26'), 'href' => route('shop.show', 'new-in')],
+                    ['label' => $this->t('collection.essentials'), 'href' => route('shop.show', ['department' => 'women', 'category' => 'knitwear'])],
+                    ['label' => $this->t('nav.sport'), 'href' => route('shop.show', 'sport')],
+                ]],
+            ], $this->t('featured.house_collections'), 'photo-1483985988355-763728e1935b'),
+            $this->navItem($this->t('nav.sale'), 'sale', [
+                ['title' => $this->t('nav.reduced'), 'links' => [
+                    ['label' => $this->t('nav.women'), 'href' => route('shop.show', ['department' => 'sale'])],
+                    ['label' => $this->t('nav.men'), 'href' => route('shop.show', 'men')],
+                    ['label' => $this->t('nav.kids'), 'href' => route('shop.show', 'kids')],
+                    ['label' => $this->t('nav.sport'), 'href' => route('shop.show', 'sport')],
+                ]],
+            ], $this->t('featured.selected_pieces'), 'photo-1487222477894-8943e31ef7b2'),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function categoriesFor(string $department): array
+    {
+        $item = collect($this->navigation())->firstWhere('department', $department);
+
+        if (! is_array($item)) {
+            return [];
+        }
+
+        $categories = [];
+
+        foreach ($item['columns'] as $column) {
+            foreach ($column['links'] as $link) {
+                if (isset($link['category'])) {
+                    $categories[$link['category']] = $link['label'];
+                }
+            }
+        }
+
+        return $categories;
+    }
+
+    /**
+     * @param  list<array{title: string, categories?: array<string, string>, links?: list<array{label: string, href: string}>}>  $columns
+     * @return array{
+     *     label: string,
+     *     department: string,
+     *     columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>,
+     *     featured: array{title: string, image: string, href: string}
+     * }
+     */
+    private function navItem(string $label, string $department, array $columns, string $featuredTitle, string $featuredPhoto): array
+    {
+        return [
+            'label' => $label,
+            'department' => $department,
+            'columns' => collect($columns)
+                ->map(function (array $column) use ($department): array {
+                    $links = $column['links'] ?? collect($column['categories'] ?? [])
+                        ->map(fn (string $name, string $slug): array => [
+                            'label' => $name,
+                            'category' => $slug,
+                            'href' => route('shop.show', ['department' => $department, 'category' => $slug]),
+                        ])
+                        ->values()
+                        ->all();
+
+                    return [
+                        'title' => $column['title'],
+                        'links' => $links,
+                    ];
+                })
+                ->all(),
+            'featured' => [
+                'title' => $featuredTitle,
+                'image' => $this->image($featuredPhoto, 900),
+                'href' => route('shop.show', ['department' => $department]),
+            ],
+        ];
     }
 
     /**
@@ -535,6 +684,70 @@ class Catalog
                 outOfStockSizes: [],
                 description: 'A relaxed straight jean in organic cotton denim. Mid rise, with a clean unfinished hem.',
             ),
+            $this->product(
+                id: 17,
+                name: 'Cotton Jersey Dress',
+                price: 59,
+                oldPrice: null,
+                photos: ['photo-1503453342920-ded826308edf', 'photo-1471286174890-9c112ffca5b4'],
+                colors: [['name' => 'Ivory', 'hex' => '#f3efe6'], ['name' => 'Navy', 'hex' => '#1c2430']],
+                category: 'kids',
+                type: 'dresses',
+                collection: 'Autumn Winter 2026',
+                stock: 10,
+                featured: false,
+                isNew: true,
+                outOfStockSizes: [],
+                description: 'A soft cotton jersey dress with a gentle A-line and a clean neckline. Cut for ease of movement.',
+            ),
+            $this->product(
+                id: 18,
+                name: 'Wool Overshirt',
+                price: 89,
+                oldPrice: null,
+                photos: ['photo-1471286174890-9c112ffca5b4', 'photo-1503453342920-ded826308edf'],
+                colors: [['name' => 'Camel', 'hex' => '#c4a574'], ['name' => 'Charcoal', 'hex' => '#3a3a3a']],
+                category: 'kids',
+                type: 'outerwear',
+                collection: 'Essentials',
+                stock: 8,
+                featured: false,
+                isNew: true,
+                outOfStockSizes: [],
+                description: 'A compact wool overshirt with a straight hem and patch pockets. Intended as a light extra layer.',
+            ),
+            $this->product(
+                id: 19,
+                name: 'Performance Knit',
+                price: 129,
+                oldPrice: null,
+                photos: ['photo-1517836357463-d25dfeac3438', 'photo-1571019614242-c5c5dee9f50b'],
+                colors: [['name' => 'Black', 'hex' => '#1a1a1a'], ['name' => 'Grey', 'hex' => '#6e6e6e']],
+                category: 'sport',
+                type: 'knitwear',
+                collection: 'Autumn Winter 2026',
+                stock: 14,
+                featured: false,
+                isNew: true,
+                outOfStockSizes: [],
+                description: 'A fine technical knit with a close rib cuff. Designed to sit cleanly under a training layer.',
+            ),
+            $this->product(
+                id: 20,
+                name: 'Training Trousers',
+                price: 99,
+                oldPrice: 129,
+                photos: ['photo-1571019614242-c5c5dee9f50b', 'photo-1517836357463-d25dfeac3438'],
+                colors: [['name' => 'Black', 'hex' => '#1a1a1a'], ['name' => 'Navy', 'hex' => '#1c2430']],
+                category: 'sport',
+                type: 'trousers',
+                collection: 'Essentials',
+                stock: 11,
+                featured: false,
+                isNew: false,
+                outOfStockSizes: [],
+                description: 'Tapered training trousers in a compact stretch weave. Side pockets and a clean elastic waist.',
+            ),
         ];
     }
 
@@ -579,8 +792,16 @@ class Catalog
             'description' => $description,
             'featured' => $featured,
             'isNew' => $isNew,
-            'material' => 'See product details for composition and care.',
+            'material' => $this->t('product.material_see_details'),
         ];
+    }
+
+    /**
+     * @param  array<string, string>  $replace
+     */
+    private function t(string $key, array $replace = []): string
+    {
+        return __('storefront.'.$key, $replace);
     }
 
     /**

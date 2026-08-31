@@ -1,2 +1,2 @@
-<p>NOVA designs for longevity. We work with certified mills, reduce seasonal volume, and favour repair over replacement.</p>
-<p>Packaging is recycled and plastic-free.</p>
+<p>{{ __('storefront.pages.sustainability.p1') }}</p>
+<p>{{ __('storefront.pages.sustainability.p2') }}</p>

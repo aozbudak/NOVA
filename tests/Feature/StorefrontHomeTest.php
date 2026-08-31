@@ -16,5 +16,9 @@ class StorefrontHomeTest extends TestCase
         $response->assertSee('New arrivals');
         $response->assertSee('Structured Wool Coat');
         $response->assertSee('Shop women');
+        $response->assertSee('Kids');
+        $response->assertSee('Sport');
+        $response->assertSee('Shirts');
+        $response->assertSee('data-mega-trigger="men"', false);
     }
 }

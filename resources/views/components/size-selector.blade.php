@@ -4,7 +4,7 @@
 ])
 
 <fieldset {{ $attributes }}>
-    <legend class="text-[11px] font-medium tracking-nav uppercase">Size</legend>
+    <legend class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.product.size') }}</legend>
     <div class="mt-3 flex flex-wrap gap-2">
         @foreach ($sizes as $size)
             <label class="relative">
@@ -22,5 +22,5 @@
             </label>
         @endforeach
     </div>
-    <a href="{{ route('pages.show', 'size-guide') }}" class="mt-3 inline-block text-[10px] tracking-label uppercase text-muted-foreground underline-offset-4 hover:underline">Size guide</a>
+    <a href="{{ route('pages.show', 'size-guide') }}" class="mt-3 inline-block text-[10px] tracking-label uppercase text-muted-foreground underline-offset-4 hover:underline">{{ __('storefront.product.size_guide') }}</a>
 </fieldset>

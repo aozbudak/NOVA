@@ -39,7 +39,7 @@
             data-product-id="{{ $product['id'] }}"
             data-size="{{ $quickSize }}"
         >
-            Quick add
+            {{ __('storefront.product.quick_add') }}
         </button>
     </div>
     <div class="mt-3 flex flex-col gap-1">

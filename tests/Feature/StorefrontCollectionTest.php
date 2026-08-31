@@ -30,7 +30,23 @@ class StorefrontCollectionTest extends TestCase
 
     public function test_unknown_department_returns_404(): void
     {
-        $this->get('/shop/kids')->assertNotFound();
+        $this->get('/shop/atelier')->assertNotFound();
+    }
+
+    public function test_kids_listing_renders_childrenswear(): void
+    {
+        $this->get(route('shop.show', 'kids'))
+            ->assertOk()
+            ->assertSee('Kids')
+            ->assertSee('Cotton Jersey Dress');
+    }
+
+    public function test_sport_listing_renders_performance_pieces(): void
+    {
+        $this->get(route('shop.show', 'sport'))
+            ->assertOk()
+            ->assertSee('Sport')
+            ->assertSee('Performance Knit');
     }
 
     public function test_invalid_sort_falls_back_to_recommended_order(): void

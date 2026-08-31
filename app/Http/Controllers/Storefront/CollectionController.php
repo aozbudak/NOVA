@@ -33,6 +33,7 @@ class CollectionController extends Controller
             'category' => $category,
             'filters' => $filters,
             'meta' => $meta,
+            'categories' => $catalog->categoriesFor($department),
         ]);
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\CheckoutController;
 use App\Http\Controllers\Storefront\CollectionController;
 use App\Http\Controllers\Storefront\HomeController;
+use App\Http\Controllers\Storefront\LocaleController;
 use App\Http\Controllers\Storefront\PageController;
 use App\Http\Controllers\Storefront\ProductController;
 use App\Http\Controllers\Storefront\SearchController;
@@ -13,6 +14,10 @@ use App\Http\Controllers\Storefront\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+
+Route::get('/locale/{locale}', [LocaleController::class, 'update'])
+    ->whereIn('locale', array_keys(config('app.available_locales')))
+    ->name('locale.update');
 
 Route::get('/shop/{department}/{category?}', [CollectionController::class, 'show'])
     ->name('shop.show');

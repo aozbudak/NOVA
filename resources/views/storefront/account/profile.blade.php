@@ -1,19 +1,19 @@
 @extends('layouts.storefront')
 
-@section('title', 'Profile')
+@section('title', __('storefront.account.profile'))
 
 @section('content')
     <div class="mx-auto grid max-w-[1100px] gap-12 px-4 py-16 md:grid-cols-[14rem_minmax(0,1fr)] md:px-8">
         @include('storefront.account.nav')
         <div class="max-w-md">
-            <h2 class="text-[11px] tracking-nav uppercase">Profile</h2>
+            <h2 class="text-[11px] tracking-nav uppercase">{{ __('storefront.account.profile') }}</h2>
             <dl class="mt-8 flex flex-col gap-6 text-sm">
                 <div>
-                    <dt class="text-[11px] tracking-label uppercase text-muted-foreground">Name</dt>
+                    <dt class="text-[11px] tracking-label uppercase text-muted-foreground">{{ __('storefront.account.name') }}</dt>
                     <dd class="mt-1">{{ $customer['first_name'] }} {{ $customer['last_name'] }}</dd>
                 </div>
                 <div>
-                    <dt class="text-[11px] tracking-label uppercase text-muted-foreground">Email</dt>
+                    <dt class="text-[11px] tracking-label uppercase text-muted-foreground">{{ __('storefront.account.email') }}</dt>
                     <dd class="mt-1">{{ $customer['email'] }}</dd>
                 </div>
             </dl>

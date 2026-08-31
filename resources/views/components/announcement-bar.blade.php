@@ -1,5 +1,5 @@
-<div class="bg-foreground text-background">
-    <p class="px-4 py-1.5 text-center text-[10px] font-medium tracking-nav uppercase">
-        Complimentary shipping on orders over €100
+<div class="border-b border-current/15">
+    <p class="px-4 py-1.5 text-center text-[10px] font-medium tracking-nav uppercase opacity-90">
+        {{ __('storefront.announcement.shipping') }}
     </p>
 </div>

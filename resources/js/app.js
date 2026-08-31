@@ -1,5 +1,13 @@
 const nova = () => window.NOVA ?? {};
 
+const t = (key, fallback) => nova().i18n?.[key] ?? fallback;
+
+const escapeHtml = (value) => String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+
 const headers = (json = true) => ({
     Accept: json ? 'application/json' : 'text/html',
     'Content-Type': 'application/json',
@@ -109,14 +117,14 @@ async function addToCart(productId, size, quantity = 1) {
     });
 
     if (! response.ok) {
-        toast('Something went wrong. Please try again.');
+        toast(t('error', 'Something went wrong. Please try again.'));
         return;
     }
 
     const data = await response.json();
     setCartCount(data.count);
     await refreshCartPanel();
-    toast(data.message ?? 'Added to bag');
+    toast(data.message ?? t('addedToBag', 'Added to bag'));
 }
 
 async function toggleWishlist(button) {
@@ -128,7 +136,7 @@ async function toggleWishlist(button) {
     });
 
     if (! response.ok) {
-        toast('Something went wrong. Please try again.');
+        toast(t('error', 'Something went wrong. Please try again.'));
         return;
     }
 
@@ -137,7 +145,7 @@ async function toggleWishlist(button) {
 
     document.querySelectorAll(`[data-wishlist-toggle][data-product-id="${productId}"]`).forEach((node) => {
         node.setAttribute('aria-pressed', added ? 'true' : 'false');
-        node.setAttribute('aria-label', added ? 'Remove from wishlist' : 'Add to wishlist');
+        node.setAttribute('aria-label', added ? t('removeFromWishlist', 'Remove from wishlist') : t('addToWishlist', 'Add to wishlist'));
         const icon = node.querySelector('svg');
         if (icon) {
             icon.setAttribute('fill', added ? 'currentColor' : 'none');
@@ -164,18 +172,18 @@ function renderSearchResults(query) {
     }
 
     const matches = catalog.filter((item) => item.name.toLowerCase().includes(needle) || item.category.toLowerCase().includes(needle)).slice(0, 8);
-    const formatter = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+    const formatter = new Intl.NumberFormat(nova().locale ?? 'en', { style: 'currency', currency: 'EUR' });
 
     trending.classList.add('hidden');
     results.classList.remove('hidden');
     results.innerHTML = matches.length === 0
-        ? '<p class="text-sm text-muted-foreground">No results</p>'
+        ? `<p class="text-sm text-muted-foreground">${escapeHtml(t('noResults', 'No results'))}</p>`
         : `<ul class="flex flex-col gap-4">${matches.map((item) => `
             <li>
                 <a href="${nova().routes.product}/${item.slug}" class="flex items-center gap-4">
-                    <img src="${item.image}" alt="${item.name}" width="56" height="70" class="h-[70px] w-14 object-cover" loading="lazy">
+                    <img src="${item.image}" alt="${escapeHtml(item.name)}" width="56" height="70" class="h-[70px] w-14 object-cover" loading="lazy">
                     <span>
-                        <span class="block text-sm">${item.name}</span>
+                        <span class="block text-sm">${escapeHtml(item.name)}</span>
                         <span class="block text-xs text-muted-foreground">${formatter.format(item.price)}</span>
                     </span>
                 </a>
@@ -203,22 +211,92 @@ function initTheme() {
     });
 }
 
-function initHeader() {
-    const header = document.querySelector('[data-header]');
+let applyChrome = () => {};
 
-    if (! header) {
+function initHeader() {
+    const chrome = document.querySelector('[data-chrome]');
+
+    if (! chrome) {
         return;
     }
 
-    const onScroll = () => {
-        const stuck = window.scrollY > 8;
-        header.classList.toggle('bg-background/0', ! stuck);
-        header.classList.toggle('bg-background/90', stuck);
-        header.classList.toggle('backdrop-blur-sm', stuck);
+    const overHero = chrome.dataset.overHero === 'true';
+
+    applyChrome = () => {
+        const megaOpen = chrome.classList.contains('mega-open');
+        const glass = megaOpen || ! overHero || window.scrollY > 24;
+
+        chrome.classList.toggle('text-overlay', ! glass);
+        chrome.classList.toggle('text-foreground', glass);
+        chrome.classList.toggle('glass', glass);
+        chrome.classList.toggle('border-transparent', ! glass);
     };
 
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
+    applyChrome();
+    window.addEventListener('scroll', applyChrome, { passive: true });
+}
+
+function initMegaMenu() {
+    const chrome = document.querySelector('[data-chrome]');
+    const root = document.querySelector('[data-mega-root]');
+
+    if (! chrome || ! root) {
+        return;
+    }
+
+    const triggers = [...chrome.querySelectorAll('[data-mega-trigger]')];
+    const panels = [...root.querySelectorAll('[data-mega]')];
+    let closeTimer = 0;
+    let current = null;
+
+    const setExpanded = (name) => {
+        triggers.forEach((trigger) => {
+            trigger.setAttribute('aria-expanded', trigger.dataset.megaTrigger === name ? 'true' : 'false');
+        });
+    };
+
+    const open = (name) => {
+        window.clearTimeout(closeTimer);
+        current = name;
+        chrome.classList.add('mega-open');
+        root.classList.remove('hidden');
+        panels.forEach((panel) => {
+            panel.classList.toggle('hidden', panel.dataset.mega !== name);
+        });
+        setExpanded(name);
+        applyChrome();
+    };
+
+    const close = () => {
+        current = null;
+        chrome.classList.remove('mega-open');
+        root.classList.add('hidden');
+        panels.forEach((panel) => panel.classList.add('hidden'));
+        setExpanded(null);
+        applyChrome();
+    };
+
+    const scheduleClose = () => {
+        window.clearTimeout(closeTimer);
+        closeTimer = window.setTimeout(close, 140);
+    };
+
+    triggers.forEach((trigger) => {
+        trigger.addEventListener('mouseenter', () => open(trigger.dataset.megaTrigger));
+        trigger.addEventListener('focus', () => open(trigger.dataset.megaTrigger));
+        trigger.addEventListener('mouseleave', scheduleClose);
+    });
+
+    root.addEventListener('mouseenter', () => window.clearTimeout(closeTimer));
+    root.addEventListener('mouseleave', scheduleClose);
+
+    chrome.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && current) {
+            close();
+        }
+    });
+
+    window.NOVA_CLOSE_MEGA = close;
 }
 
 function initGallery() {
@@ -248,7 +326,7 @@ function openImageViewer(images, index) {
 
     if (img) {
         img.src = galleryImages[galleryIndex];
-        img.alt = 'Product image';
+        img.alt = t('productImage', 'Product image');
     }
 
     openLayer('image');
@@ -315,7 +393,7 @@ document.addEventListener('click', async (event) => {
             body: JSON.stringify({ quantity }),
         }).then(async (response) => {
             if (! response.ok) {
-                toast('Something went wrong. Please try again.');
+                toast(t('error', 'Something went wrong. Please try again.'));
                 return;
             }
             const data = await response.json();
@@ -332,7 +410,7 @@ document.addEventListener('click', async (event) => {
             headers: headers(),
         }).then(async (response) => {
             if (! response.ok) {
-                toast('Something went wrong. Please try again.');
+                toast(t('error', 'Something went wrong. Please try again.'));
                 return;
             }
             const data = await response.json();
@@ -380,6 +458,7 @@ document.addEventListener('input', (event) => {
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         closeAllLayers();
+        window.NOVA_CLOSE_MEGA?.();
     }
 
     if (event.key === 'ArrowLeft') {
@@ -393,4 +472,5 @@ document.addEventListener('keydown', (event) => {
 
 initTheme();
 initHeader();
+initMegaMenu();
 initGallery();

@@ -4,7 +4,7 @@
 ])
 
 <fieldset {{ $attributes }}>
-    <legend class="text-[11px] font-medium tracking-nav uppercase">Color</legend>
+    <legend class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.product.color') }}</legend>
     <div class="mt-3 flex flex-wrap items-center gap-3">
         @foreach ($colors as $color)
             <label class="relative flex cursor-pointer items-center gap-2">
