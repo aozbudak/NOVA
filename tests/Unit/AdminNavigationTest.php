@@ -25,14 +25,14 @@ class AdminNavigationTest extends TestCase
         );
     }
 
-    public function test_store_manager_does_not_receive_roles_audit_or_settings(): void
+    public function test_store_manager_receives_roles_instead_of_a_separate_users_item(): void
     {
         $keys = $this->itemKeys(StaffRole::StoreManager);
 
         $this->assertContains('dashboard', $keys);
-        $this->assertContains('users', $keys);
+        $this->assertContains('roles', $keys);
         $this->assertContains('cash', $keys);
-        $this->assertNotContains('roles', $keys);
+        $this->assertNotContains('users', $keys);
         $this->assertNotContains('audit', $keys);
         $this->assertNotContains('settings', $keys);
     }

@@ -140,6 +140,33 @@ initSearch();
 initPos();
 initVariantRows();
 initFilterForms();
+initUserAbilities();
+
+function initUserAbilities() {
+    const field = document.querySelector('[data-user-role]');
+    const boxes = [...document.querySelectorAll('[data-user-ability]')];
+
+    if (! field || boxes.length === 0) {
+        return;
+    }
+
+    const defaults = JSON.parse(field.dataset.roleAbilities ?? '{}');
+
+    field.addEventListener('change', () => {
+        const typed = field.value.trim().toLowerCase();
+        const key = Object.keys(defaults).find((name) => name.toLowerCase() === typed);
+
+        if (key === undefined) {
+            return;
+        }
+
+        const allowed = defaults[key];
+
+        boxes.forEach((box) => {
+            box.checked = allowed.includes(box.value);
+        });
+    });
+}
 
 function escapeHtml(value) {
     return String(value)

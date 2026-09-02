@@ -47,8 +47,14 @@ final class AdminNavigation
         'admin.payments.index' => 'payments',
         'admin.reports.index' => 'reports',
         'admin.reports.show' => 'reports',
+        'admin.reports.export' => 'reports',
         'admin.users.index' => 'users',
+        'admin.users.create' => 'users',
+        'admin.users.store' => 'users',
+        'admin.users.edit' => 'users',
+        'admin.users.update' => 'users',
         'admin.roles.index' => 'roles',
+        'admin.roles.show' => 'roles',
         'admin.audit.index' => 'audit',
         'admin.settings.index' => 'settings',
         'admin.profile.show' => 'profile',
@@ -117,7 +123,6 @@ final class AdminNavigation
             [
                 'label' => __('admin.nav.management'),
                 'items' => [
-                    $this->item('users', 'users', 'admin.users.index', 'users'),
                     $this->item('roles', 'roles', 'admin.roles.index', 'roles'),
                     $this->item('audit', 'audit', 'admin.audit.index', 'audit'),
                 ],
@@ -282,6 +287,18 @@ final class AdminNavigation
             'admin.reports.show' => [
                 ['label' => __('admin.nav.reports'), 'url' => route('admin.reports.index')],
                 ['label' => __('admin.reports.detail'), 'url' => null],
+            ],
+            'admin.users.create' => [
+                ['label' => __('admin.nav.roles'), 'url' => route('admin.roles.index')],
+                ['label' => __('admin.users.add'), 'url' => null],
+            ],
+            'admin.users.edit' => [
+                ['label' => __('admin.nav.roles'), 'url' => route('admin.roles.index')],
+                ['label' => __('admin.users.edit'), 'url' => null],
+            ],
+            'admin.roles.show' => [
+                ['label' => __('admin.nav.roles'), 'url' => route('admin.roles.index')],
+                ['label' => __('admin.roles.detail'), 'url' => null],
             ],
         ];
 

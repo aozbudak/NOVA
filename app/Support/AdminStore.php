@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\StaffRole;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -94,21 +96,29 @@ final class AdminStore
     }
 
     /**
-     * @param  array{search?: string|null, category?: string|null, stock?: string|null}  $filters
+     * @param  array{search?: string|null, category?: string|null, brand?: string|null, stock?: string|null}  $filters
      * @return Collection<int, array<string, mixed>>
      */
     public function inventory(array $filters = []): Collection
     {
-        $rows = $this->variants()->map(fn (array $variant): array => [
-            'product' => $variant['product'],
-            'product_slug' => $variant['product_slug'],
-            'variant' => $variant['color'].' / '.$variant['size'],
-            'sku' => $variant['sku'],
-            'stock' => $variant['stock'],
-            'min_stock' => $variant['min_stock'],
-            'status' => $variant['stock_status'],
-            'category' => $this->product($variant['product_slug'])['category'] ?? '',
-        ]);
+        $rows = $this->variants()->map(function (array $variant): array {
+            $product = $this->product($variant['product_slug']) ?? [];
+            $purchase = (int) ($product['purchase_price'] ?? 0);
+
+            return [
+                'product' => $variant['product'],
+                'product_slug' => $variant['product_slug'],
+                'variant' => $variant['color'].' / '.$variant['size'],
+                'sku' => $variant['sku'],
+                'stock' => $variant['stock'],
+                'min_stock' => $variant['min_stock'],
+                'status' => $variant['stock_status'],
+                'category' => $product['category'] ?? '',
+                'brand' => $product['brand'] ?? '',
+                'purchase_price' => $purchase,
+                'stock_value' => $variant['stock'] * $purchase,
+            ];
+        });
 
         $search = Str::lower(trim((string) ($filters['search'] ?? '')));
 
@@ -118,6 +128,10 @@ final class AdminStore
 
         if (filled($filters['category'] ?? null)) {
             $rows = $rows->where('category', $filters['category']);
+        }
+
+        if (filled($filters['brand'] ?? null)) {
+            $rows = $rows->where('brand', $filters['brand']);
         }
 
         if (filled($filters['stock'] ?? null)) {
@@ -151,11 +165,11 @@ final class AdminStore
     public function customers(): Collection
     {
         return collect([
-            ['id' => 'elif-kaya', 'name' => 'Elif Kaya', 'phone' => '0532 441 12 08', 'email' => 'elif.kaya@email.com', 'orders' => 14, 'spent' => 24800, 'last_purchase' => '2026-09-02', 'city' => 'Istanbul'],
-            ['id' => 'mert-aydin', 'name' => 'Mert Aydın', 'phone' => '0533 210 88 41', 'email' => 'mert.aydin@email.com', 'orders' => 6, 'spent' => 9720, 'last_purchase' => '2026-09-01', 'city' => 'Ankara'],
-            ['id' => 'selin-arslan', 'name' => 'Selin Arslan', 'phone' => '0542 118 03 76', 'email' => 'selin.arslan@email.com', 'orders' => 21, 'spent' => 41250, 'last_purchase' => '2026-08-30', 'city' => 'Izmir'],
-            ['id' => 'can-demir', 'name' => 'Can Demir', 'phone' => '0505 667 91 20', 'email' => 'can.demir@email.com', 'orders' => 3, 'spent' => 3180, 'last_purchase' => '2026-08-22', 'city' => 'Bursa'],
-            ['id' => 'deniz-yildiz', 'name' => 'Deniz Yıldız', 'phone' => '0536 904 55 12', 'email' => 'deniz.yildiz@email.com', 'orders' => 9, 'spent' => 15640, 'last_purchase' => '2026-08-18', 'city' => 'Istanbul'],
+            ['id' => 'elif-kaya', 'name' => 'Elif Kaya', 'phone' => '0532 441 12 08', 'email' => 'elif.kaya@email.com', 'orders' => 14, 'spent' => 24800, 'last_purchase' => '2026-09-02', 'city' => 'Istanbul', 'created_at' => '2025-03-12'],
+            ['id' => 'mert-aydin', 'name' => 'Mert Aydın', 'phone' => '0533 210 88 41', 'email' => 'mert.aydin@email.com', 'orders' => 6, 'spent' => 9720, 'last_purchase' => '2026-09-01', 'city' => 'Ankara', 'created_at' => '2026-08-04'],
+            ['id' => 'selin-arslan', 'name' => 'Selin Arslan', 'phone' => '0542 118 03 76', 'email' => 'selin.arslan@email.com', 'orders' => 21, 'spent' => 41250, 'last_purchase' => '2026-08-30', 'city' => 'Izmir', 'created_at' => '2024-11-18'],
+            ['id' => 'can-demir', 'name' => 'Can Demir', 'phone' => '0505 667 91 20', 'email' => 'can.demir@email.com', 'orders' => 3, 'spent' => 3180, 'last_purchase' => '2026-08-22', 'city' => 'Bursa', 'created_at' => '2026-09-01'],
+            ['id' => 'deniz-yildiz', 'name' => 'Deniz Yıldız', 'phone' => '0536 904 55 12', 'email' => 'deniz.yildiz@email.com', 'orders' => 9, 'spent' => 15640, 'last_purchase' => '2026-08-18', 'city' => 'Istanbul', 'created_at' => '2026-01-20'],
         ]);
     }
 
@@ -502,9 +516,10 @@ final class AdminStore
     }
 
     /**
+     * @param  array{range?: string|null, from?: string|null, to?: string|null, date?: string|null, category?: string|null, brand?: string|null, stock?: string|null}  $filters
      * @return array<string, mixed>|null
      */
-    public function report(string $category): ?array
+    public function report(string $category, array $filters = []): ?array
     {
         $meta = collect($this->reportCategories())->firstWhere('key', $category);
 
@@ -512,50 +527,156 @@ final class AdminStore
             return null;
         }
 
-        $rows = match ($category) {
-            'sales' => [
-                ['label' => 'Today', 'value' => self::money(48250)],
-                ['label' => 'Orders', 'value' => '126'],
-                ['label' => 'Average ticket', 'value' => self::money(383)],
-            ],
-            'products' => [
-                ['label' => 'Basic Shirt', 'value' => '38 units'],
-                ['label' => 'Cotton T-Shirt', 'value' => '29 units'],
-                ['label' => 'Wool Coat', 'value' => '9 units'],
-            ],
-            'inventory' => [
-                ['label' => 'Low stock SKUs', 'value' => '18'],
-                ['label' => 'Out of stock', 'value' => '2'],
-                ['label' => 'Units on hand', 'value' => '160'],
-            ],
-            'cash' => [
-                ['label' => 'Opening', 'value' => self::money(12000)],
-                ['label' => "Today's sales", 'value' => self::money(48250)],
-                ['label' => 'Expected', 'value' => self::money(55290)],
-            ],
-            'returns' => [
-                ['label' => 'Returns today', 'value' => '7'],
-                ['label' => 'Return rate', 'value' => '5.6%'],
-                ['label' => 'Refunded', 'value' => self::money(4340)],
-            ],
-            'customers' => [
-                ['label' => 'Active buyers', 'value' => '5'],
-                ['label' => 'Top spender', 'value' => 'Selin Arslan'],
-                ['label' => 'Repeat rate', 'value' => '68%'],
-            ],
-            'suppliers' => [
-                ['label' => 'Active suppliers', 'value' => '2'],
-                ['label' => 'Open POs', 'value' => '1'],
-                ['label' => 'Outstanding', 'value' => self::money(8400)],
-            ],
-            default => [],
+        return match ($category) {
+            'sales' => $this->salesReport($meta, $filters),
+            'products' => $this->productsReport($meta),
+            'inventory' => $this->inventoryReport($meta, $filters),
+            'cash' => $this->cashReport($meta, $filters),
+            'returns' => $this->returnReport($meta),
+            'customers' => $this->customerReport($meta),
+            'suppliers' => $this->supplierReport($meta),
+            default => null,
         };
+    }
 
-        return [
-            'key' => $category,
-            'title' => $meta['label'],
-            'rows' => $rows,
-        ];
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function users(): Collection
+    {
+        $users = collect($this->userCatalog())->keyBy('id');
+
+        foreach (session('admin.staff', []) as $id => $row) {
+            $users->put((string) $id, [
+                ...($users->get((string) $id) ?? []),
+                ...$row,
+            ]);
+        }
+
+        return $users->values();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function user(string $id): ?array
+    {
+        return $this->users()->firstWhere('id', $id);
+    }
+
+    /**
+     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null, role: string, status: string, abilities?: list<string>}  $data
+     * @return array<string, mixed>
+     */
+    public function createUser(array $data): array
+    {
+        $base = Str::slug($data['first_name'].' '.$data['last_name']);
+        $id = $base === '' ? 'user' : $base;
+        $suffix = 2;
+
+        while ($this->user($id) !== null) {
+            $id = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        $record = $this->staffRecord($id, $data);
+        $this->writeStaff($id, $record);
+
+        return $record;
+    }
+
+    /**
+     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null, role: string, status: string, abilities?: list<string>}  $data
+     * @return array<string, mixed>
+     */
+    public function updateUser(string $id, array $data): array
+    {
+        $existing = $this->user($id);
+
+        if ($existing === null) {
+            abort(404);
+        }
+
+        $record = $this->staffRecord($id, $data, $existing);
+        $this->writeStaff($id, $record);
+
+        return $record;
+    }
+
+    /**
+     * @return Collection<int, array{id: string, name: string, builtin: bool, abilities: list<string>}>
+     */
+    public function roles(): Collection
+    {
+        $roles = collect($this->builtinRoles())->keyBy('id');
+
+        foreach (session('admin.roles', []) as $id => $row) {
+            $key = (string) $id;
+
+            if (StaffRole::tryFrom($key) !== null) {
+                continue;
+            }
+
+            $roles->put($key, [
+                ...($roles->get($key) ?? []),
+                ...$row,
+                'id' => $key,
+                'builtin' => false,
+            ]);
+        }
+
+        return $roles->values();
+    }
+
+    /**
+     * @return array{id: string, name: string, builtin: bool, abilities: list<string>}|null
+     */
+    public function role(string $id): ?array
+    {
+        return $this->roles()->firstWhere('id', $id);
+    }
+
+    /**
+     * @param  array{name: string, abilities?: list<string>}  $data
+     * @return array{id: string, name: string, builtin: bool, abilities: list<string>}
+     */
+    public function createRole(array $data): array
+    {
+        $base = Str::slug($data['name']);
+        $id = $base === '' ? 'role' : $base;
+        $suffix = 2;
+
+        while ($this->role($id) !== null) {
+            $id = ($base === '' ? 'role' : $base).'-'.$suffix;
+            $suffix++;
+        }
+
+        $record = $this->customRoleRecord($id, $data);
+        $this->writeRole($id, $record);
+
+        return $record;
+    }
+
+    /**
+     * @param  list<string>  $abilities
+     * @return array{id: string, name: string, builtin: bool, abilities: list<string>}
+     */
+    public function resolveRole(string $name, array $abilities = []): array
+    {
+        $needle = Str::lower(trim($name));
+
+        $existing = $this->roles()->first(function (array $role) use ($needle): bool {
+            return Str::lower($role['name']) === $needle || Str::lower($role['id']) === $needle;
+        });
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        return $this->createRole([
+            'name' => trim($name),
+            'abilities' => $abilities,
+        ]);
     }
 
     /**
@@ -641,6 +762,626 @@ final class AdminStore
         }
 
         return 'in_stock';
+    }
+
+    /**
+     * @param  array{label: string, key: string}  $meta
+     * @param  array{range?: string|null, from?: string|null, to?: string|null}  $filters
+     * @return array<string, mixed>
+     */
+    private function salesReport(array $meta, array $filters): array
+    {
+        [$from, $to, $range] = $this->reportPeriod($filters);
+        $sales = $this->sales(['from' => $from, 'to' => $to, 'status' => 'completed']);
+        $totalSales = (int) $sales->sum('total');
+        $orders = $sales->count();
+        $itemsSold = (int) $sales->sum(fn (array $sale): int => (int) collect($sale['items'])->sum('qty'));
+        $average = $orders > 0 ? (int) round($totalSales / $orders) : 0;
+        $products = $this->aggregateSoldProducts($sales);
+        $maxQty = max(1, (int) collect($products)->max('quantity'));
+        $payments = collect(['cash', 'card', 'other'])->map(function (string $method) use ($sales, $totalSales): array {
+            $amount = (int) $sales->where('payment', $method)->sum('total');
+            $share = $totalSales > 0 ? (int) round(($amount / $totalSales) * 100) : 0;
+
+            return [
+                'key' => $method,
+                'label' => __('admin.pos.'.$method),
+                'amount' => $amount,
+                'share' => $share,
+            ];
+        })->all();
+
+        return [
+            'key' => 'sales',
+            'title' => $meta['label'],
+            'range' => $range,
+            'from' => $from,
+            'to' => $to,
+            'metrics' => [
+                ['key' => 'total_sales', 'label' => __('admin.reports.metrics.total_sales'), 'value' => self::money($totalSales)],
+                ['key' => 'total_orders', 'label' => __('admin.reports.metrics.total_orders'), 'value' => (string) $orders],
+                ['key' => 'total_items', 'label' => __('admin.reports.metrics.total_items'), 'value' => (string) $itemsSold],
+                ['key' => 'average_order', 'label' => __('admin.reports.metrics.average_order'), 'value' => self::money($average)],
+            ],
+            'trend' => $this->salesTrend($sales, $from, $to, $range),
+            'payments' => $payments,
+            'top_products' => collect($products)
+                ->sortByDesc('quantity')
+                ->take(5)
+                ->values()
+                ->map(fn (array $row): array => [
+                    ...$row,
+                    'share' => (int) round(($row['quantity'] / $maxQty) * 100),
+                ])
+                ->all(),
+            'headers' => [
+                __('admin.reports.table.product'),
+                __('admin.reports.table.quantity'),
+                __('admin.reports.table.revenue'),
+                __('admin.reports.table.discount'),
+                __('admin.reports.table.net_sales'),
+            ],
+            'table' => collect($products)
+                ->sortByDesc('quantity')
+                ->values()
+                ->map(fn (array $row): array => [
+                    $row['product'],
+                    (string) $row['quantity'],
+                    self::money($row['revenue']),
+                    self::money($row['discount']),
+                    self::money($row['net']),
+                ])
+                ->all(),
+        ];
+    }
+
+    /**
+     * @param  array{label: string}  $meta
+     * @return array<string, mixed>
+     */
+    private function productsReport(array $meta): array
+    {
+        $products = $this->aggregateSoldProducts($this->sales(['status' => 'completed']));
+
+        return [
+            'key' => 'products',
+            'title' => $meta['label'],
+            'metrics' => collect($products)
+                ->sortByDesc('quantity')
+                ->take(3)
+                ->values()
+                ->map(fn (array $row): array => [
+                    'key' => Str::slug($row['product']),
+                    'label' => $row['product'],
+                    'value' => $row['quantity'].' '.__('admin.dashboard.charts.units'),
+                ])
+                ->all(),
+            'headers' => [
+                __('admin.reports.table.product'),
+                __('admin.reports.table.quantity'),
+                __('admin.reports.table.net_sales'),
+            ],
+            'table' => collect($products)
+                ->sortByDesc('quantity')
+                ->values()
+                ->map(fn (array $row): array => [
+                    $row['product'],
+                    (string) $row['quantity'],
+                    self::money($row['net']),
+                ])
+                ->all(),
+        ];
+    }
+
+    /**
+     * @param  array{label: string}  $meta
+     * @param  array{category?: string|null, brand?: string|null, stock?: string|null}  $filters
+     * @return array<string, mixed>
+     */
+    private function inventoryReport(array $meta, array $filters): array
+    {
+        $rows = $this->inventory([
+            'category' => $filters['category'] ?? null,
+            'brand' => $filters['brand'] ?? null,
+            'stock' => $filters['stock'] ?? null,
+        ]);
+        $products = $this->filteredProducts([
+            'category' => $filters['category'] ?? null,
+            'brand' => $filters['brand'] ?? null,
+            'stock' => $filters['stock'] ?? null,
+        ]);
+
+        return [
+            'key' => 'inventory',
+            'title' => $meta['label'],
+            'filters' => [
+                'category' => $filters['category'] ?? '',
+                'brand' => $filters['brand'] ?? '',
+                'stock' => $filters['stock'] ?? '',
+            ],
+            'categories' => $this->categories(),
+            'brands' => $this->brands(),
+            'metrics' => [
+                ['key' => 'total_products', 'label' => __('admin.reports.metrics.total_products'), 'value' => (string) $products->count()],
+                ['key' => 'total_stock', 'label' => __('admin.reports.metrics.total_stock'), 'value' => (string) $rows->sum('stock')],
+                ['key' => 'low_stock', 'label' => __('admin.reports.metrics.low_stock'), 'value' => (string) $products->where('stock_status', 'low_stock')->count()],
+                ['key' => 'out_of_stock', 'label' => __('admin.reports.metrics.out_of_stock'), 'value' => (string) $products->where('stock_status', 'out_of_stock')->count()],
+            ],
+            'headers' => [
+                __('admin.reports.table.product'),
+                __('admin.reports.table.sku'),
+                __('admin.reports.table.variant'),
+                __('admin.reports.table.stock'),
+                __('admin.reports.table.min_stock'),
+                __('admin.reports.table.status'),
+                __('admin.reports.table.stock_value'),
+            ],
+            'table' => $rows->map(fn (array $row): array => [
+                $row['product'],
+                $row['sku'],
+                $row['variant'],
+                (string) $row['stock'],
+                (string) $row['min_stock'],
+                __('admin.stock.'.$row['status']),
+                self::money($row['stock_value']),
+            ])->all(),
+            'status_rows' => $rows,
+        ];
+    }
+
+    /**
+     * @param  array{label: string}  $meta
+     * @param  array{date?: string|null, from?: string|null, to?: string|null}  $filters
+     * @return array<string, mixed>
+     */
+    private function cashReport(array $meta, array $filters): array
+    {
+        $date = filled($filters['date'] ?? null) ? (string) $filters['date'] : now()->toDateString();
+        $from = filled($filters['from'] ?? null) ? (string) $filters['from'] : $date;
+        $to = filled($filters['to'] ?? null) ? (string) $filters['to'] : $date;
+        $movements = collect($this->cashMovements())
+            ->filter(function (array $row) use ($from, $to): bool {
+                $day = Str::substr($row['date'], 0, 10);
+
+                return $day >= $from && $day <= $to;
+            })
+            ->values();
+        $opening = (int) $movements->where('type', 'opening')->sum('amount');
+        $sales = (int) $movements->where('type', 'sale')->sum('amount');
+        $income = (int) $movements->where('type', 'income')->sum('amount');
+        $expenses = (int) abs($movements->where('type', 'expense')->sum('amount'));
+        $refunds = (int) abs($movements->where('type', 'refund')->sum('amount'));
+        $closing = $opening + $sales + $income - $expenses - $refunds;
+
+        return [
+            'key' => 'cash',
+            'title' => $meta['label'],
+            'date' => $date,
+            'from' => $from,
+            'to' => $to,
+            'metrics' => [
+                ['key' => 'opening', 'label' => __('admin.reports.metrics.opening'), 'value' => self::money($opening)],
+                ['key' => 'sales', 'label' => __('admin.reports.metrics.cash_sales'), 'value' => self::money($sales)],
+                ['key' => 'income', 'label' => __('admin.reports.metrics.income'), 'value' => self::money($income)],
+                ['key' => 'expenses', 'label' => __('admin.reports.metrics.expenses'), 'value' => self::money($expenses)],
+                ['key' => 'refunds', 'label' => __('admin.reports.metrics.refunds'), 'value' => self::money($refunds)],
+                ['key' => 'closing', 'label' => __('admin.reports.metrics.closing'), 'value' => self::money($closing)],
+            ],
+            'trend' => $movements->map(fn (array $row): array => [
+                'label' => Str::substr($row['date'], 11, 5) !== '' ? Str::substr($row['date'], 11, 5) : Str::substr($row['date'], 5, 5),
+                'value' => abs((int) $row['amount']),
+            ])->all(),
+            'headers' => [
+                __('admin.cash.date'),
+                __('admin.cash.type'),
+                __('admin.cash.description'),
+                __('admin.cash.reference'),
+                __('admin.cash.amount'),
+                __('admin.cash.balance'),
+            ],
+            'table' => $movements->map(fn (array $row): array => [
+                $row['date'],
+                __('admin.status.'.$row['type']),
+                $row['description'],
+                $row['reference'],
+                self::money($row['amount']),
+                self::money($row['balance']),
+            ])->all(),
+        ];
+    }
+
+    /**
+     * @param  array{label: string}  $meta
+     * @return array<string, mixed>
+     */
+    private function returnReport(array $meta): array
+    {
+        $returns = $this->returns();
+        $sales = $this->sales();
+        $totalReturns = $returns->count();
+        $returnValue = (int) $returns->sum('amount');
+        $returnRate = $sales->count() > 0
+            ? round(($totalReturns / $sales->count()) * 100, 1)
+            : 0.0;
+        $soldByProduct = $this->aggregateSoldProducts($sales);
+        $returned = [];
+
+        foreach ($returns as $row) {
+            $name = Str::of($row['products'])->before(' / ')->trim()->toString();
+            $returned[$name] ??= ['product' => $name, 'quantity' => 0, 'value' => 0, 'reasons' => []];
+            $returned[$name]['quantity']++;
+            $returned[$name]['value'] += $row['amount'];
+            $returned[$name]['reasons'][] = $row['reason'];
+        }
+
+        $table = collect($returned)
+            ->map(function (array $row) use ($soldByProduct): array {
+                $sold = (int) (collect($soldByProduct)->firstWhere('product', $row['product'])['quantity'] ?? 0);
+                $reasons = collect($row['reasons'])->countBy()->sortDesc();
+                $main = $reasons->keys()->first() ?? 'other';
+
+                return [
+                    'product' => $row['product'],
+                    'quantity' => $row['quantity'],
+                    'value' => $row['value'],
+                    'rate' => $sold > 0 ? round(($row['quantity'] / $sold) * 100, 1) : 0.0,
+                    'reason' => $main,
+                ];
+            })
+            ->sortByDesc('quantity')
+            ->values();
+        $top = $table->first();
+
+        return [
+            'key' => 'returns',
+            'title' => $meta['label'],
+            'metrics' => [
+                ['key' => 'total_returns', 'label' => __('admin.reports.metrics.total_returns'), 'value' => (string) $totalReturns],
+                ['key' => 'return_rate', 'label' => __('admin.reports.metrics.return_rate'), 'value' => number_format($returnRate, 1).'%'],
+                ['key' => 'return_value', 'label' => __('admin.reports.metrics.return_value'), 'value' => self::money($returnValue)],
+                ['key' => 'most_returned', 'label' => __('admin.reports.metrics.most_returned'), 'value' => $top['product'] ?? '—'],
+            ],
+            'headers' => [
+                __('admin.reports.table.product'),
+                __('admin.reports.table.return_quantity'),
+                __('admin.reports.table.return_value'),
+                __('admin.reports.table.return_rate'),
+                __('admin.reports.table.main_reason'),
+            ],
+            'table' => $table->map(fn (array $row): array => [
+                $row['product'],
+                (string) $row['quantity'],
+                self::money($row['value']),
+                number_format($row['rate'], 1).'%',
+                __('admin.status.'.$row['reason']),
+            ])->all(),
+        ];
+    }
+
+    /**
+     * @param  array{label: string}  $meta
+     * @return array<string, mixed>
+     */
+    private function customerReport(array $meta): array
+    {
+        $customers = $this->customers();
+        $monthStart = now()->startOfMonth()->toDateString();
+        $activeSince = now()->subDays(30)->toDateString();
+        $totalSales = (int) $customers->sum('spent');
+        $count = $customers->count();
+        $average = $count > 0 ? (int) round($totalSales / $count) : 0;
+        $top = $customers->sortByDesc('spent')->values();
+
+        return [
+            'key' => 'customers',
+            'title' => $meta['label'],
+            'metrics' => [
+                ['key' => 'total_customers', 'label' => __('admin.reports.metrics.total_customers'), 'value' => (string) $count],
+                ['key' => 'new_customers', 'label' => __('admin.reports.metrics.new_customers'), 'value' => (string) $customers->filter(fn (array $row): bool => $row['created_at'] >= $monthStart)->count()],
+                ['key' => 'active_customers', 'label' => __('admin.reports.metrics.active_customers'), 'value' => (string) $customers->filter(fn (array $row): bool => $row['last_purchase'] >= $activeSince)->count()],
+                ['key' => 'customer_sales', 'label' => __('admin.reports.metrics.customer_sales'), 'value' => self::money($totalSales)],
+                ['key' => 'average_value', 'label' => __('admin.reports.metrics.average_value'), 'value' => self::money($average)],
+            ],
+            'headers' => [
+                __('admin.customers.name'),
+                __('admin.customers.orders'),
+                __('admin.customers.spent'),
+                __('admin.customers.last_purchase'),
+            ],
+            'table' => $top->map(fn (array $row): array => [
+                $row['name'],
+                (string) $row['orders'],
+                self::money($row['spent']),
+                $row['last_purchase'],
+            ])->all(),
+        ];
+    }
+
+    /**
+     * @param  array{label: string}  $meta
+     * @return array<string, mixed>
+     */
+    private function supplierReport(array $meta): array
+    {
+        $suppliers = $this->suppliers();
+        $totalPurchases = (int) $suppliers->sum('total');
+        $max = max(1, $totalPurchases);
+        $top = $suppliers->sortByDesc('total')->values();
+
+        return [
+            'key' => 'suppliers',
+            'title' => $meta['label'],
+            'metrics' => [
+                ['key' => 'total_suppliers', 'label' => __('admin.reports.metrics.total_suppliers'), 'value' => (string) $suppliers->count()],
+                ['key' => 'total_purchases', 'label' => __('admin.reports.metrics.total_purchases'), 'value' => self::money($totalPurchases)],
+                ['key' => 'top_suppliers', 'label' => __('admin.reports.metrics.top_suppliers'), 'value' => $top->first()['name'] ?? '—'],
+            ],
+            'top_suppliers' => $top->map(fn (array $row): array => [
+                'name' => $row['name'],
+                'amount' => $row['total'],
+                'share' => (int) round(($row['total'] / $max) * 100),
+            ])->all(),
+            'headers' => [
+                __('admin.suppliers.supplier'),
+                __('admin.suppliers.purchases'),
+                __('admin.suppliers.total'),
+                __('admin.suppliers.last_purchase'),
+            ],
+            'table' => $top->map(fn (array $row): array => [
+                $row['name'],
+                (string) $row['purchases'],
+                self::money($row['total']),
+                $row['last_purchase'],
+            ])->all(),
+        ];
+    }
+
+    /**
+     * @param  array{range?: string|null, from?: string|null, to?: string|null}  $filters
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function reportPeriod(array $filters): array
+    {
+        $range = (string) ($filters['range'] ?? 'today');
+
+        if (! in_array($range, ['today', 'week', 'month', 'custom'], true)) {
+            $range = 'today';
+        }
+
+        $today = now()->toDateString();
+
+        return match ($range) {
+            'week' => [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString(), $range],
+            'month' => [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString(), $range],
+            'custom' => [
+                filled($filters['from'] ?? null) ? (string) $filters['from'] : $today,
+                filled($filters['to'] ?? null) ? (string) $filters['to'] : $today,
+                $range,
+            ],
+            default => [$today, $today, 'today'],
+        };
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $sales
+     * @return list<array{label: string, value: int}>
+     */
+    private function salesTrend(Collection $sales, string $from, string $to, string $range): array
+    {
+        $start = Carbon::parse($from)->startOfDay();
+        $end = Carbon::parse($to)->startOfDay();
+        $grouped = $sales->groupBy(fn (array $sale): string => Str::substr($sale['date'], 0, 10));
+
+        if ($range === 'month' && $start->diffInDays($end) > 14) {
+            $points = [];
+            $cursor = $start->copy()->startOfWeek();
+
+            while ($cursor->lte($end)) {
+                $weekEnd = $cursor->copy()->endOfWeek();
+                $amount = $grouped
+                    ->filter(fn ($_, string $day): bool => $day >= $cursor->toDateString() && $day <= $weekEnd->toDateString())
+                    ->sum(fn (Collection $rows): int => (int) $rows->sum('total'));
+                $points[] = ['label' => $cursor->format('M j'), 'value' => $amount];
+                $cursor->addWeek();
+            }
+
+            return $points;
+        }
+
+        $points = [];
+        $cursor = $start->copy();
+
+        while ($cursor->lte($end)) {
+            $day = $cursor->toDateString();
+            $points[] = [
+                'label' => $cursor->format('M j'),
+                'value' => (int) ($grouped->get($day)?->sum('total') ?? 0),
+            ];
+            $cursor->addDay();
+        }
+
+        return $points;
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $sales
+     * @return list<array{product: string, quantity: int, revenue: int, discount: int, net: int}>
+     */
+    private function aggregateSoldProducts(Collection $sales): array
+    {
+        $products = [];
+
+        foreach ($sales as $sale) {
+            foreach ($sale['items'] as $item) {
+                $name = $item['product'];
+                $products[$name] ??= ['product' => $name, 'quantity' => 0, 'revenue' => 0, 'discount' => 0, 'net' => 0];
+                $products[$name]['quantity'] += (int) $item['qty'];
+                $products[$name]['revenue'] += (int) $item['unit'] * (int) $item['qty'];
+                $products[$name]['discount'] += (int) ($item['discount'] ?? 0);
+                $products[$name]['net'] += (int) $item['total'];
+            }
+        }
+
+        return array_values($products);
+    }
+
+    /**
+     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null, role: string, status: string, abilities?: list<string>}  $data
+     * @param  array<string, mixed>|null  $existing
+     * @return array<string, mixed>
+     */
+    private function staffRecord(string $id, array $data, ?array $existing = null): array
+    {
+        $role = $this->role($data['role']);
+
+        if ($role === null) {
+            abort(404);
+        }
+
+        $abilities = array_values(array_intersect(
+            $data['abilities'] ?? [],
+            StaffRole::operations(),
+        ));
+
+        return [
+            'id' => $id,
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'name' => trim($data['first_name'].' '.$data['last_name']),
+            'email' => $data['email'],
+            'phone' => (string) ($data['phone'] ?? ''),
+            'role' => $role['id'],
+            'abilities' => $abilities,
+            'status' => $data['status'],
+            'last_login' => $existing['last_login'] ?? '—',
+            'created_at' => $existing['created_at'] ?? now()->toDateString(),
+        ];
+    }
+
+    /**
+     * @return list<array{id: string, name: string, builtin: bool, abilities: list<string>}>
+     */
+    private function builtinRoles(): array
+    {
+        return collect(StaffRole::cases())
+            ->map(fn (StaffRole $role): array => [
+                'id' => $role->value,
+                'name' => $role->label(),
+                'builtin' => true,
+                'abilities' => $role->assignedOperations(),
+            ])
+            ->all();
+    }
+
+    /**
+     * @param  array{name: string, abilities?: list<string>}  $data
+     * @return array{id: string, name: string, builtin: bool, abilities: list<string>}
+     */
+    private function customRoleRecord(string $id, array $data): array
+    {
+        return [
+            'id' => $id,
+            'name' => $data['name'],
+            'builtin' => false,
+            'abilities' => array_values(array_intersect(
+                $data['abilities'] ?? [],
+                StaffRole::operations(),
+            )),
+        ];
+    }
+
+    /**
+     * @param  array{id: string, name: string, builtin: bool, abilities: list<string>}  $record
+     */
+    private function writeRole(string $id, array $record): void
+    {
+        $roles = session('admin.roles', []);
+        $roles[$id] = $record;
+        session(['admin.roles' => $roles]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private function writeStaff(string $id, array $record): void
+    {
+        $staff = session('admin.staff', []);
+        $staff[$id] = $record;
+        session(['admin.staff' => $staff]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function userCatalog(): array
+    {
+        return [
+            [
+                'id' => 'ayse-yilmaz',
+                'first_name' => 'Ayşe',
+                'last_name' => 'Yılmaz',
+                'name' => 'Ayşe Yılmaz',
+                'email' => 'ayse.yilmaz@nova.store',
+                'phone' => '0532 441 00 11',
+                'role' => StaffRole::Cashier->value,
+                'abilities' => StaffRole::Cashier->assignedOperations(),
+                'status' => 'active',
+                'last_login' => '2026-09-02 09:14',
+                'created_at' => '2025-04-10',
+            ],
+            [
+                'id' => 'mert-kaya',
+                'first_name' => 'Mert',
+                'last_name' => 'Kaya',
+                'name' => 'Mert Kaya',
+                'email' => 'mert.kaya@nova.store',
+                'phone' => '0533 220 44 18',
+                'role' => StaffRole::Cashier->value,
+                'abilities' => StaffRole::Cashier->assignedOperations(),
+                'status' => 'active',
+                'last_login' => '2026-09-01 18:20',
+                'created_at' => '2025-06-02',
+            ],
+            [
+                'id' => 'deniz-aksoy',
+                'first_name' => 'Deniz',
+                'last_name' => 'Aksoy',
+                'name' => 'Deniz Aksoy',
+                'email' => 'deniz.aksoy@nova.store',
+                'phone' => '0536 118 90 22',
+                'role' => StaffRole::StoreManager->value,
+                'abilities' => StaffRole::StoreManager->assignedOperations(),
+                'status' => 'active',
+                'last_login' => '2026-09-01 11:40',
+                'created_at' => '2024-11-08',
+            ],
+            [
+                'id' => 'ece-yilmaz',
+                'first_name' => 'Ece',
+                'last_name' => 'Yılmaz',
+                'name' => 'Ece Yılmaz',
+                'email' => 'ece.yilmaz@nova.store',
+                'phone' => '0542 667 31 09',
+                'role' => StaffRole::WarehouseStaff->value,
+                'abilities' => StaffRole::WarehouseStaff->assignedOperations(),
+                'status' => 'active',
+                'last_login' => '2026-08-30 10:02',
+                'created_at' => '2026-02-14',
+            ],
+            [
+                'id' => 'admin',
+                'first_name' => 'NOVA',
+                'last_name' => 'Admin',
+                'name' => 'NOVA Admin',
+                'email' => 'admin@nova.store',
+                'phone' => '0212 000 00 01',
+                'role' => StaffRole::SuperAdmin->value,
+                'abilities' => StaffRole::SuperAdmin->assignedOperations(),
+                'status' => 'inactive',
+                'last_login' => '2026-08-12 16:05',
+                'created_at' => '2024-01-01',
+            ],
+        ];
     }
 
     /**
