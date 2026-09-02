@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Support\AdminList;
 use App\Support\AdminStore;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -44,8 +45,22 @@ class IncomeExpenseController extends Controller
         ]);
     }
 
-    public function store(): RedirectResponse
+    public function store(Request $request, DatabaseRecords $records): RedirectResponse
     {
+        $validated = $request->validate([
+            'type' => ['required', 'in:income,expense'],
+            'category' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string', 'max:255'],
+            'amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $records->recordIncomeExpense(
+            $validated['type'],
+            $validated['category'],
+            $validated['description'],
+            (float) $validated['amount'],
+        );
+
         return redirect()
             ->route('admin.income-expense.index')
             ->with('status', __('admin.toast.transaction_saved'));

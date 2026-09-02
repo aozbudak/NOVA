@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,22 +16,20 @@ class AuthController extends Controller
         return view('storefront.auth.login');
     }
 
-    public function login(Request $request): RedirectResponse
+    public function login(Request $request, DatabaseRecords $records): RedirectResponse
     {
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        $name = strstr($validated['email'], '@', true) ?: 'Guest';
+        $customer = $records->authenticateCustomer($validated['email'], $validated['password']);
 
-        session([
-            'storefront.customer' => [
-                'first_name' => ucfirst($name),
-                'last_name' => '',
-                'email' => $validated['email'],
-            ],
-        ]);
+        if ($customer === false) {
+            return back()->withErrors(['email' => __('auth.failed')]);
+        }
+
+        $this->storeCustomerSession($customer, $validated['email']);
 
         return redirect()->route('account.show');
     }
@@ -39,7 +39,7 @@ class AuthController extends Controller
         return view('storefront.auth.register');
     }
 
-    public function register(Request $request): RedirectResponse
+    public function register(Request $request, DatabaseRecords $records): RedirectResponse
     {
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:80'],
@@ -48,14 +48,41 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
+        $customer = $records->registerCustomer($validated);
+
         session([
             'storefront.customer' => [
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'],
-                'email' => $validated['email'],
+                'first_name' => $customer?->first_name ?? $validated['first_name'],
+                'last_name' => $customer?->last_name ?? $validated['last_name'],
+                'email' => $customer?->email ?? $validated['email'],
             ],
         ]);
 
         return redirect()->route('account.show');
+    }
+
+    private function storeCustomerSession(?Customer $customer, string $email): void
+    {
+        if ($customer instanceof Customer) {
+            session([
+                'storefront.customer' => [
+                    'first_name' => $customer->first_name,
+                    'last_name' => $customer->last_name,
+                    'email' => (string) $customer->email,
+                ],
+            ]);
+
+            return;
+        }
+
+        $name = strstr($email, '@', true) ?: 'Guest';
+
+        session([
+            'storefront.customer' => [
+                'first_name' => ucfirst($name),
+                'last_name' => '',
+                'email' => $email,
+            ],
+        ]);
     }
 }

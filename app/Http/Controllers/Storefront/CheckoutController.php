@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
 use App\Support\Cart;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -23,13 +24,13 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(Request $request, Cart $cart): RedirectResponse
+    public function store(Request $request, Cart $cart, DatabaseRecords $records): RedirectResponse
     {
         if ($cart->count() === 0) {
             return redirect()->route('home');
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'email' => ['required', 'email'],
             'first_name' => ['required', 'string', 'max:80'],
             'last_name' => ['required', 'string', 'max:80'],
@@ -43,10 +44,12 @@ class CheckoutController extends Controller
 
         $orderId = 'NOVA-'.now()->format('ymd').'-'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT);
 
+        $records->placeCheckout($cart, $validated, $orderId);
+
         session([
             'storefront.last_order' => [
                 'id' => $orderId,
-                'email' => $request->string('email')->toString(),
+                'email' => $validated['email'],
                 'total' => $cart->subtotal(),
             ],
         ]);

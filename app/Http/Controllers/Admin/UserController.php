@@ -58,6 +58,7 @@ class UserController extends Controller
             'role' => $role['id'],
             'status' => $data['status'],
             'abilities' => $data['abilities'] ?? [],
+            'password' => $data['password'],
         ]);
 
         return redirect()
@@ -100,6 +101,7 @@ class UserController extends Controller
             'role' => $role['id'],
             'status' => $data['status'],
             'abilities' => $data['abilities'] ?? [],
+            'password' => $data['password'] ?? null,
         ]);
 
         return redirect()

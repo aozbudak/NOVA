@@ -40,8 +40,20 @@ class SupplierController extends Controller
         return view('admin.suppliers.form');
     }
 
-    public function store(): RedirectResponse
+    public function store(Request $request, AdminStore $store): RedirectResponse
     {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'contact' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'status' => ['nullable', 'in:active,inactive'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'tax' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $store->createSupplier($data);
+
         return redirect()
             ->route('admin.suppliers.index')
             ->with('status', __('admin.toast.supplier_created'));

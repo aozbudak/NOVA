@@ -249,6 +249,26 @@ return [
         'product' => 'Product',
         'variant' => 'Variant',
     ],
+    'categories' => [
+        'title' => 'Categories',
+        'name' => 'Category',
+        'products' => 'Products',
+        'stock' => 'Stock',
+        'status' => 'Status',
+    ],
+    'brands' => [
+        'title' => 'Brands',
+        'name' => 'Brand',
+        'products' => 'Products',
+        'stock' => 'Stock',
+        'status' => 'Status',
+    ],
+    'barcode' => [
+        'title' => 'Barcode',
+        'search' => 'Search SKU or barcode',
+        'product' => 'Product',
+        'variant' => 'Variant',
+    ],
     'inventory' => [
         'title' => 'Inventory',
         'movements' => 'Stock movements',
@@ -716,6 +736,10 @@ return [
         ],
         'audit' => [
             'title' => 'No audit records',
+            'body' => 'Try changing your filters.',
+        ],
+        'barcode' => [
+            'title' => 'No barcodes found',
             'body' => 'Try changing your filters.',
         ],
     ],

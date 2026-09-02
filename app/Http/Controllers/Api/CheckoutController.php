@@ -4,12 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Support\Cart;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CheckoutController extends Controller
 {
-    public function store(Request $request, Cart $cart): JsonResponse
+    public function store(Request $request, Cart $cart, DatabaseRecords $records): JsonResponse
     {
         if ($cart->count() === 0) {
             return response()->json(['message' => __('storefront.cart.empty')], 422);
@@ -28,6 +29,8 @@ class CheckoutController extends Controller
         ]);
 
         $orderId = 'NOVA-'.now()->format('ymd').'-'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT);
+
+        $records->placeCheckout($cart, $validated, $orderId);
 
         session([
             'storefront.last_order' => [

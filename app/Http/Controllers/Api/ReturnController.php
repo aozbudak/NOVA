@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Support\AdminStore;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,14 +24,17 @@ class ReturnController extends Controller
         ]);
     }
 
-    public function store(Request $request, AdminStore $store): JsonResponse
+    public function store(Request $request, AdminStore $store, DatabaseRecords $records): JsonResponse
     {
         $validated = $request->validate([
             'sale' => ['required', 'string', 'max:255'],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        abort_if($store->sale($validated['sale']) === null, 404);
+        $fromStore = $store->sale($validated['sale']);
+        $persisted = $records->completeReturn($validated['sale'], $validated['reason'] ?? null);
+
+        abort_if($fromStore === null && $persisted === null, 404);
 
         return response()->json([
             'status' => 'completed',

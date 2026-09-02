@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Support\AdminStore;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,7 +25,7 @@ class SaleController extends Controller
         ]);
     }
 
-    public function store(Request $request, AdminStore $store): JsonResponse
+    public function store(Request $request, AdminStore $store, DatabaseRecords $records): JsonResponse
     {
         $skus = $store->variants()->pluck('sku')->all();
 
@@ -56,6 +57,8 @@ class SaleController extends Controller
         });
 
         $number = 'NV-'.now()->format('ymdHis');
+
+        $records->placeSale($validated, $lines, $number);
 
         return response()->json([
             'data' => [

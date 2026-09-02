@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Support\AdminList;
 use App\Support\AdminStore;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -44,15 +45,17 @@ class InventoryController extends Controller
         ]);
     }
 
-    public function adjust(Request $request, AdminStore $store): RedirectResponse
+    public function adjust(Request $request, AdminStore $store, DatabaseRecords $records): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'sku' => ['required', 'string', 'max:255'],
             'quantity' => ['required', 'integer'],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        abort_if($store->variants()->firstWhere('sku', $request->string('sku')->toString()) === null, 404);
+        abort_if($store->variants()->firstWhere('sku', $validated['sku']) === null, 404);
+
+        $records->adjustStock($validated['sku'], (int) $validated['quantity'], $validated['reason'] ?? null);
 
         return redirect()
             ->route('admin.inventory.index')

@@ -249,6 +249,26 @@ return [
         'product' => 'Ürün',
         'variant' => 'Varyant',
     ],
+    'categories' => [
+        'title' => 'Kategoriler',
+        'name' => 'Kategori',
+        'products' => 'Ürünler',
+        'stock' => 'Stok',
+        'status' => 'Durum',
+    ],
+    'brands' => [
+        'title' => 'Markalar',
+        'name' => 'Marka',
+        'products' => 'Ürünler',
+        'stock' => 'Stok',
+        'status' => 'Durum',
+    ],
+    'barcode' => [
+        'title' => 'Barkod',
+        'search' => 'SKU veya barkod ara',
+        'product' => 'Ürün',
+        'variant' => 'Varyant',
+    ],
     'inventory' => [
         'title' => 'Stok',
         'movements' => 'Stok hareketleri',
@@ -717,6 +737,10 @@ return [
         'audit' => [
             'title' => 'No audit records',
             'body' => 'Try changing your filters.',
+        ],
+        'barcode' => [
+            'title' => 'Barkod bulunamadı',
+            'body' => 'Filtreleri değiştirmeyi deneyin.',
         ],
     ],
 ];

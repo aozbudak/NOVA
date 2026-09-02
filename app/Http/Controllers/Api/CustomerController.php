@@ -14,13 +14,15 @@ class CustomerController extends Controller
         return response()->json(['data' => $store->customers()->values()]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, AdminStore $store): JsonResponse
     {
-        $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $store->createCustomer($data);
 
         return response()->json([
             'status' => 'created',

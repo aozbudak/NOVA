@@ -34,13 +34,15 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, AdminStore $store): RedirectResponse
     {
-        $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $store->createCustomer($data);
 
         return redirect()
             ->route('admin.customers.index')

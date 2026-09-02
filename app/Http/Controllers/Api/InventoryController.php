@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Support\AdminStore;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,7 +26,7 @@ class InventoryController extends Controller
         return response()->json(['data' => $store->movements()]);
     }
 
-    public function adjust(Request $request, AdminStore $store): JsonResponse
+    public function adjust(Request $request, AdminStore $store, DatabaseRecords $records): JsonResponse
     {
         $validated = $request->validate([
             'sku' => ['required', 'string', 'max:255'],
@@ -34,6 +35,8 @@ class InventoryController extends Controller
         ]);
 
         abort_if($store->variants()->firstWhere('sku', $validated['sku']) === null, 404);
+
+        $records->adjustStock($validated['sku'], (int) $validated['quantity'], $validated['reason'] ?? null);
 
         return response()->json([
             'status' => 'updated',

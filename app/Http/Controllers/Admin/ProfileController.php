@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Support\AdminStaff;
 use App\Support\AdminStore;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,13 +19,15 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request, AdminStaff $staff, DatabaseRecords $records): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $records->updateProfile($staff->email, $data);
 
         session([
             'admin.name' => $data['name'],
@@ -37,12 +40,16 @@ class ProfileController extends Controller
             ->with('status', __('admin.toast.profile_updated'));
     }
 
-    public function password(Request $request): RedirectResponse
+    public function password(Request $request, AdminStaff $staff, DatabaseRecords $records): RedirectResponse
     {
         $request->validate([
             'current_password' => ['required', 'string'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
+
+        if (! $records->updatePassword($staff->email, $request->string('current_password')->toString(), $request->string('password')->toString())) {
+            return back()->withErrors(['current_password' => __('auth.password')]);
+        }
 
         return redirect()
             ->route('admin.profile.show')

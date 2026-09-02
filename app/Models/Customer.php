@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['user_id', 'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'is_active'])]
+#[Fillable(['user_id', 'slug', 'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'is_active'])]
 class Customer extends Model
 {
     /** @use HasFactory<CustomerFactory> */

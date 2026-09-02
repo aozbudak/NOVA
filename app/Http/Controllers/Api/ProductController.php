@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Support\AdminStore;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,8 +23,13 @@ class ProductController extends Controller
         return response()->json(['data' => $products->values()]);
     }
 
-    public function store(): JsonResponse
+    public function store(Request $request, DatabaseRecords $records): JsonResponse
     {
+        $records->saveProduct($request->only([
+            'name', 'description', 'category', 'brand', 'status',
+            'purchase_price', 'price', 'vat', 'variants', 'initial_stock', 'min_stock',
+        ]));
+
         return response()->json([
             'status' => 'created',
             'message' => __('admin.toast.product_created'),
@@ -39,9 +45,14 @@ class ProductController extends Controller
         return response()->json(['data' => $record]);
     }
 
-    public function update(string $product, AdminStore $store): JsonResponse
+    public function update(Request $request, string $product, AdminStore $store, DatabaseRecords $records): JsonResponse
     {
         abort_if($store->product($product) === null, 404);
+
+        $records->saveProduct($request->only([
+            'name', 'description', 'category', 'brand', 'status',
+            'purchase_price', 'price', 'vat', 'variants', 'initial_stock', 'min_stock',
+        ]), $product);
 
         return response()->json([
             'status' => 'updated',
@@ -49,9 +60,11 @@ class ProductController extends Controller
         ]);
     }
 
-    public function deactivate(string $product, AdminStore $store): JsonResponse
+    public function deactivate(string $product, AdminStore $store, DatabaseRecords $records): JsonResponse
     {
         abort_if($store->product($product) === null, 404);
+
+        $records->deactivateProduct($product);
 
         return response()->json([
             'status' => 'deactivated',

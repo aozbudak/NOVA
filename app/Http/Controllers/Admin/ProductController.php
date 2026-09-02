@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Support\AdminList;
 use App\Support\AdminStore;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -54,8 +55,13 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(): RedirectResponse
+    public function store(Request $request, DatabaseRecords $records): RedirectResponse
     {
+        $records->saveProduct($request->only([
+            'name', 'description', 'category', 'brand', 'status',
+            'purchase_price', 'price', 'vat', 'variants', 'initial_stock', 'min_stock',
+        ]));
+
         return redirect()
             ->route('admin.products.index')
             ->with('status', __('admin.toast.product_created'));
@@ -74,18 +80,25 @@ class ProductController extends Controller
         ]);
     }
 
-    public function update(string $product, AdminStore $store): RedirectResponse
+    public function update(Request $request, string $product, AdminStore $store, DatabaseRecords $records): RedirectResponse
     {
         abort_if($store->product($product) === null, 404);
+
+        $records->saveProduct($request->only([
+            'name', 'description', 'category', 'brand', 'status',
+            'purchase_price', 'price', 'vat', 'variants', 'initial_stock', 'min_stock',
+        ]), $product);
 
         return redirect()
             ->route('admin.products.index')
             ->with('status', __('admin.toast.product_updated'));
     }
 
-    public function deactivate(string $product, AdminStore $store): RedirectResponse
+    public function deactivate(string $product, AdminStore $store, DatabaseRecords $records): RedirectResponse
     {
         abort_if($store->product($product) === null, 404);
+
+        $records->deactivateProduct($product);
 
         return redirect()
             ->route('admin.products.index')

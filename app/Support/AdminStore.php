@@ -3,7 +3,10 @@
 namespace App\Support;
 
 use App\Enums\StaffRole;
+use App\Models\Customer;
 use App\Models\Product;
+use App\Models\Supplier;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -158,6 +161,85 @@ final class AdminStore
     }
 
     /**
+     * @return Collection<int, array{id: string, name: string, products: int, stock: int, status: string}>
+     */
+    public function categoryRecords(): Collection
+    {
+        $products = $this->products();
+        $names = collect($this->categories())
+            ->merge($products->pluck('category')->filter())
+            ->unique()
+            ->values();
+
+        return $names->map(function (string $name) use ($products): array {
+            $rows = $products->where('category', $name);
+
+            return [
+                'id' => Str::slug($name),
+                'name' => $name,
+                'products' => $rows->count(),
+                'stock' => (int) $rows->sum('stock'),
+                'status' => $rows->contains('status', 'inactive') && $rows->doesntContain('status', 'active')
+                    ? 'inactive'
+                    : 'active',
+            ];
+        });
+    }
+
+    /**
+     * @return Collection<int, array{id: string, name: string, products: int, stock: int, status: string}>
+     */
+    public function brandRecords(): Collection
+    {
+        $products = $this->products();
+        $names = collect($this->brands())
+            ->merge($products->pluck('brand')->filter())
+            ->unique()
+            ->values();
+
+        return $names->map(function (string $name) use ($products): array {
+            $rows = $products->where('brand', $name);
+
+            return [
+                'id' => Str::slug($name),
+                'name' => $name,
+                'products' => $rows->count(),
+                'stock' => (int) $rows->sum('stock'),
+                'status' => $rows->contains('status', 'inactive') && $rows->doesntContain('status', 'active')
+                    ? 'inactive'
+                    : 'active',
+            ];
+        });
+    }
+
+    /**
+     * @param  array{search?: string|null}  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function barcodes(array $filters = []): Collection
+    {
+        $rows = $this->variants()->map(fn (array $variant): array => [
+            'product' => $variant['product'],
+            'product_slug' => $variant['product_slug'],
+            'variant' => $variant['color'].' / '.$variant['size'],
+            'sku' => $variant['sku'],
+            'barcode' => $variant['barcode'],
+            'stock' => $variant['stock'],
+            'status' => $variant['stock_status'],
+        ]);
+
+        $search = Str::lower(trim((string) ($filters['search'] ?? '')));
+
+        if ($search !== '') {
+            $rows = $rows->filter(function (array $row) use ($search): bool {
+                return Str::contains(Str::lower($row['product'].' '.$row['sku'].' '.$row['barcode']), $search);
+            });
+        }
+
+        return $rows->values();
+    }
+
+    /**
      * @return Collection<int, array<string, mixed>>
      */
     public function variants(): Collection
@@ -245,13 +327,98 @@ final class AdminStore
      */
     public function customers(): Collection
     {
-        return collect([
-            ['id' => 'elif-kaya', 'name' => 'Elif Kaya', 'phone' => '0532 441 12 08', 'email' => 'elif.kaya@email.com', 'orders' => 14, 'spent' => 24800, 'last_purchase' => '2026-09-02', 'city' => 'Istanbul', 'created_at' => '2025-03-12'],
-            ['id' => 'mert-aydin', 'name' => 'Mert Aydın', 'phone' => '0533 210 88 41', 'email' => 'mert.aydin@email.com', 'orders' => 6, 'spent' => 9720, 'last_purchase' => '2026-09-01', 'city' => 'Ankara', 'created_at' => '2026-08-04'],
-            ['id' => 'selin-arslan', 'name' => 'Selin Arslan', 'phone' => '0542 118 03 76', 'email' => 'selin.arslan@email.com', 'orders' => 21, 'spent' => 41250, 'last_purchase' => '2026-08-30', 'city' => 'Izmir', 'created_at' => '2024-11-18'],
-            ['id' => 'can-demir', 'name' => 'Can Demir', 'phone' => '0505 667 91 20', 'email' => 'can.demir@email.com', 'orders' => 3, 'spent' => 3180, 'last_purchase' => '2026-08-22', 'city' => 'Bursa', 'created_at' => '2026-09-01'],
-            ['id' => 'deniz-yildiz', 'name' => 'Deniz Yıldız', 'phone' => '0536 904 55 12', 'email' => 'deniz.yildiz@email.com', 'orders' => 9, 'spent' => 15640, 'last_purchase' => '2026-08-18', 'city' => 'Istanbul', 'created_at' => '2026-01-20'],
-        ]);
+        $rows = collect($this->customerCatalog())->keyBy('id');
+
+        foreach ($this->databaseCustomers() as $row) {
+            $rows->put($row['id'], [
+                ...($rows->get($row['id']) ?? []),
+                ...$row,
+            ]);
+        }
+
+        foreach (session('admin.customers', []) as $id => $row) {
+            $rows->put((string) $id, [
+                ...($rows->get((string) $id) ?? []),
+                ...$row,
+            ]);
+        }
+
+        return $rows->values();
+    }
+
+    /**
+     * @param  array{name: string, email: string, phone?: string|null}  $data
+     * @return array<string, mixed>
+     */
+    public function createCustomer(array $data): array
+    {
+        $base = Str::slug($data['name']);
+        $id = $base === '' ? 'customer' : $base;
+        $suffix = 2;
+
+        while ($this->customers()->firstWhere('id', $id) !== null) {
+            $id = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        $record = [
+            'id' => $id,
+            'name' => $data['name'],
+            'phone' => (string) ($data['phone'] ?? ''),
+            'email' => $data['email'],
+            'orders' => 0,
+            'spent' => 0,
+            'last_purchase' => '—',
+            'city' => '',
+            'created_at' => now()->toDateString(),
+        ];
+
+        $customers = session('admin.customers', []);
+        $customers[$id] = $record;
+        session(['admin.customers' => $customers]);
+
+        (new DatabaseRecords)->saveCustomer($record);
+
+        return $record;
+    }
+
+    /**
+     * @param  array{name: string, contact?: string|null, email?: string|null, phone?: string|null, address?: string|null, tax?: string|null, status?: string|null}  $data
+     * @return array<string, mixed>
+     */
+    public function createSupplier(array $data): array
+    {
+        $base = Str::slug($data['name']);
+        $id = $base === '' ? 'supplier' : $base;
+        $suffix = 2;
+
+        while ($this->suppliers()->firstWhere('id', $id) !== null) {
+            $id = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        $record = [
+            'id' => $id,
+            'name' => $data['name'],
+            'contact' => (string) ($data['contact'] ?? ''),
+            'phone' => (string) ($data['phone'] ?? ''),
+            'email' => (string) ($data['email'] ?? ''),
+            'address' => (string) ($data['address'] ?? ''),
+            'tax' => (string) ($data['tax'] ?? ''),
+            'purchases' => 0,
+            'total' => 0,
+            'last_purchase' => '',
+            'status' => ($data['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active',
+            'balance' => 0,
+        ];
+
+        $suppliers = session('admin.suppliers', []);
+        $suppliers[$id] = $record;
+        session(['admin.suppliers' => $suppliers]);
+
+        (new DatabaseRecords)->saveSupplier($record);
+
+        return $record;
     }
 
     /**
@@ -265,14 +432,19 @@ final class AdminStore
             return null;
         }
 
-        $customer['sales'] = [
-            ['ref' => 'NV-10482', 'date' => '2026-09-02', 'total' => 1860, 'items' => 'Basic Shirt, Leather Belt'],
-            ['ref' => 'NV-10311', 'date' => '2026-08-14', 'total' => 2499, 'items' => 'Wool Coat'],
-            ['ref' => 'NV-10104', 'date' => '2026-07-02', 'total' => 899, 'items' => 'Basic Shirt'],
-        ];
-        $customer['returns'] = [
-            ['ref' => 'RT-2204', 'date' => '2026-09-01', 'total' => 449, 'items' => 'Cotton T-Shirt / White / M'],
-        ];
+        if (collect($this->customerCatalog())->contains('id', $id)) {
+            $customer['sales'] = [
+                ['ref' => 'NV-10482', 'date' => '2026-09-02', 'total' => 1860, 'items' => 'Basic Shirt, Leather Belt'],
+                ['ref' => 'NV-10311', 'date' => '2026-08-14', 'total' => 2499, 'items' => 'Wool Coat'],
+                ['ref' => 'NV-10104', 'date' => '2026-07-02', 'total' => 899, 'items' => 'Basic Shirt'],
+            ];
+            $customer['returns'] = [
+                ['ref' => 'RT-2204', 'date' => '2026-09-01', 'total' => 449, 'items' => 'Cotton T-Shirt / White / M'],
+            ];
+        } else {
+            $customer['sales'] = [];
+            $customer['returns'] = [];
+        }
 
         return $customer;
     }
@@ -299,7 +471,23 @@ final class AdminStore
      */
     public function suppliers(array $filters = []): Collection
     {
-        $rows = collect($this->supplierCatalog());
+        $rows = collect($this->supplierCatalog())->keyBy('id');
+
+        foreach ($this->databaseSuppliers() as $row) {
+            $rows->put($row['id'], [
+                ...($rows->get($row['id']) ?? []),
+                ...$row,
+            ]);
+        }
+
+        foreach (session('admin.suppliers', []) as $id => $row) {
+            $rows->put((string) $id, [
+                ...($rows->get((string) $id) ?? []),
+                ...$row,
+            ]);
+        }
+
+        $rows = $rows->values();
         $search = Str::lower(trim((string) ($filters['search'] ?? '')));
 
         if ($search !== '') {
@@ -332,7 +520,7 @@ final class AdminStore
      */
     public function supplier(string $id): ?array
     {
-        $supplier = collect($this->supplierCatalog())->firstWhere('id', $id);
+        $supplier = $this->suppliers()->firstWhere('id', $id);
 
         if ($supplier === null) {
             return null;
@@ -627,6 +815,13 @@ final class AdminStore
     {
         $users = collect($this->userCatalog())->keyBy('id');
 
+        foreach ($this->databaseUsers() as $row) {
+            $users->put($row['id'], [
+                ...($users->get($row['id']) ?? []),
+                ...$row,
+            ]);
+        }
+
         foreach (session('admin.staff', []) as $id => $row) {
             $users->put((string) $id, [
                 ...($users->get((string) $id) ?? []),
@@ -646,7 +841,7 @@ final class AdminStore
     }
 
     /**
-     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null, role: string, status: string, abilities?: list<string>}  $data
+     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null, role: string, status: string, abilities?: list<string>, password?: string|null}  $data
      * @return array<string, mixed>
      */
     public function createUser(array $data): array
@@ -662,12 +857,13 @@ final class AdminStore
 
         $record = $this->staffRecord($id, $data);
         $this->writeStaff($id, $record);
+        (new DatabaseRecords)->saveStaff($record, $data['password'] ?? null);
 
         return $record;
     }
 
     /**
-     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null, role: string, status: string, abilities?: list<string>}  $data
+     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null, role: string, status: string, abilities?: list<string>, password?: string|null}  $data
      * @return array<string, mixed>
      */
     public function updateUser(string $id, array $data): array
@@ -680,6 +876,7 @@ final class AdminStore
 
         $record = $this->staffRecord($id, $data, $existing);
         $this->writeStaff($id, $record);
+        (new DatabaseRecords)->saveStaff($record, $data['password'] ?? null);
 
         return $record;
     }
@@ -1619,6 +1816,116 @@ final class AdminStore
         $staff = session('admin.staff', []);
         $staff[$id] = $record;
         session(['admin.staff' => $staff]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function customerCatalog(): array
+    {
+        return [
+            ['id' => 'elif-kaya', 'name' => 'Elif Kaya', 'phone' => '0532 441 12 08', 'email' => 'elif.kaya@email.com', 'orders' => 14, 'spent' => 24800, 'last_purchase' => '2026-09-02', 'city' => 'Istanbul', 'created_at' => '2025-03-12'],
+            ['id' => 'mert-aydin', 'name' => 'Mert Aydın', 'phone' => '0533 210 88 41', 'email' => 'mert.aydin@email.com', 'orders' => 6, 'spent' => 9720, 'last_purchase' => '2026-09-01', 'city' => 'Ankara', 'created_at' => '2026-08-04'],
+            ['id' => 'selin-arslan', 'name' => 'Selin Arslan', 'phone' => '0542 118 03 76', 'email' => 'selin.arslan@email.com', 'orders' => 21, 'spent' => 41250, 'last_purchase' => '2026-08-30', 'city' => 'Izmir', 'created_at' => '2024-11-18'],
+            ['id' => 'can-demir', 'name' => 'Can Demir', 'phone' => '0505 667 91 20', 'email' => 'can.demir@email.com', 'orders' => 3, 'spent' => 3180, 'last_purchase' => '2026-08-22', 'city' => 'Bursa', 'created_at' => '2026-09-01'],
+            ['id' => 'deniz-yildiz', 'name' => 'Deniz Yıldız', 'phone' => '0536 904 55 12', 'email' => 'deniz.yildiz@email.com', 'orders' => 9, 'spent' => 15640, 'last_purchase' => '2026-08-18', 'city' => 'Istanbul', 'created_at' => '2026-01-20'],
+        ];
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function databaseCustomers(): Collection
+    {
+        if (! Schema::hasTable('customers') || ! Schema::hasColumn('customers', 'slug')) {
+            return collect();
+        }
+
+        return Customer::query()
+            ->withCount('orders')
+            ->orderBy('first_name')
+            ->get()
+            ->map(function (Customer $customer): array {
+                return [
+                    'id' => $customer->slug ?: $customer->id,
+                    'name' => trim($customer->first_name.' '.$customer->last_name),
+                    'phone' => (string) $customer->phone,
+                    'email' => (string) $customer->email,
+                    'orders' => (int) $customer->orders_count,
+                    'spent' => 0,
+                    'last_purchase' => $customer->updated_at?->toDateString() ?? '',
+                    'city' => '',
+                    'created_at' => $customer->created_at?->toDateString() ?? '',
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function databaseSuppliers(): Collection
+    {
+        if (! Schema::hasTable('suppliers') || ! Schema::hasColumn('suppliers', 'slug')) {
+            return collect();
+        }
+
+        return Supplier::query()
+            ->orderBy('company_name')
+            ->get()
+            ->map(function (Supplier $supplier): array {
+                return [
+                    'id' => $supplier->slug ?: $supplier->id,
+                    'name' => $supplier->company_name,
+                    'contact' => (string) $supplier->contact_name,
+                    'phone' => (string) $supplier->phone,
+                    'email' => (string) $supplier->email,
+                    'address' => (string) $supplier->address,
+                    'tax' => (string) $supplier->tax_number,
+                    'purchases' => 0,
+                    'total' => 0,
+                    'last_purchase' => '',
+                    'status' => $supplier->is_active ? 'active' : 'inactive',
+                    'balance' => 0,
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function databaseUsers(): Collection
+    {
+        if (! Schema::hasTable('users') || ! Schema::hasColumn('users', 'slug') || ! Schema::hasTable('roles')) {
+            return collect();
+        }
+
+        return User::query()
+            ->with('roles')
+            ->whereHas('roles')
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $user): array {
+                $parts = preg_split('/\s+/', trim($user->name), 2) ?: [];
+                $role = $user->roles->first();
+
+                return [
+                    'id' => $user->slug ?: Str::slug($user->name),
+                    'first_name' => $parts[0] ?? $user->name,
+                    'last_name' => $parts[1] ?? '',
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => (string) $user->phone,
+                    'role' => $role?->slug ?? StaffRole::Cashier->value,
+                    'abilities' => [],
+                    'status' => $user->is_active ? 'active' : 'inactive',
+                    'last_login' => '—',
+                    'created_at' => $user->created_at?->toDateString() ?? '',
+                ];
+            })
+            ->filter(fn (array $row): bool => filled($row['id']))
+            ->values();
     }
 
     /**

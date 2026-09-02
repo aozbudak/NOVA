@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\AuditController;
+use App\Http\Controllers\Admin\BarcodeController;
+use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CashController;
+use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExchangeController;
@@ -9,7 +12,6 @@ use App\Http\Controllers\Admin\IncomeExpenseController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\LogoutController;
 use App\Http\Controllers\Admin\NotificationController;
-use App\Http\Controllers\Admin\PanelPageController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -87,13 +89,13 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
         Route::post('/products/{product}/deactivate', [AdminProductController::class, 'deactivate'])->name('products.deactivate');
         Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
-        Route::get('/categories', PanelPageController::class)->name('categories.index');
-        Route::get('/brands', PanelPageController::class)->name('brands.index');
+        Route::get('/categories', CategoryController::class)->name('categories.index');
+        Route::get('/brands', BrandController::class)->name('brands.index');
         Route::get('/variants', VariantController::class)->name('variants.index');
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::post('/inventory/adjust', [InventoryController::class, 'adjust'])->name('inventory.adjust');
         Route::get('/inventory/movements', [InventoryController::class, 'movements'])->name('inventory.movements');
-        Route::get('/barcode', PanelPageController::class)->name('barcode.index');
+        Route::get('/barcode', BarcodeController::class)->name('barcode.index');
         Route::get('/pos', PosController::class)->name('pos.index');
         Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');
         Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
