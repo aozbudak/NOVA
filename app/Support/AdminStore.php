@@ -3,12 +3,19 @@
 namespace App\Support;
 
 use App\Enums\StaffRole;
+use App\Models\Product;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 final class AdminStore
 {
+    /**
+     * @var Collection<int, array<string, mixed>>|null
+     */
+    private ?Collection $productItems = null;
+
     public static function money(float|int $amount): string
     {
         return '₺'.number_format($amount, 0, '.', ',');
@@ -35,7 +42,81 @@ final class AdminStore
      */
     public function products(): Collection
     {
+        return $this->productItems ??= $this->resolveProducts();
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function resolveProducts(): Collection
+    {
+        $fromDatabase = $this->databaseProducts();
+
+        if ($fromDatabase->isNotEmpty()) {
+            return $fromDatabase;
+        }
+
         return collect($this->catalog());
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function databaseProducts(): Collection
+    {
+        if (! Schema::hasTable('products') || ! Schema::hasColumn('products', 'catalog_code')) {
+            return collect();
+        }
+
+        return Product::query()
+            ->with(['category', 'images', 'variants.stock'])
+            ->whereNull('catalog_code')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Product $product): array => $this->mapFromDatabase($product))
+            ->values();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapFromDatabase(Product $product): array
+    {
+        $attributes = $product->attributes ?? [];
+        $variants = $product->variants->map(function ($variant): array {
+            return [
+                'sku' => $variant->sku,
+                'barcode' => $variant->barcode,
+                'size' => $variant->size,
+                'color' => $variant->color,
+                'stock' => (int) ($variant->stock?->quantity ?? 0),
+                'price' => (int) ($variant->price ?? $product->base_price),
+            ];
+        })->values()->all();
+
+        $stock = (int) collect($variants)->sum('stock');
+        $minStock = (int) ($product->variants->first()?->stock?->minimum_quantity ?? $attributes['min_stock'] ?? 0);
+        $primaryImage = $product->images->first();
+
+        return [
+            'id' => $attributes['legacy_id'] ?? $product->id,
+            'slug' => $product->slug,
+            'name' => $product->name,
+            'sku' => $attributes['sku'] ?? $product->variants->first()?->sku ?? '',
+            'barcode' => $attributes['barcode'] ?? $product->variants->first()?->barcode ?? '',
+            'category' => $product->category?->name ?? '',
+            'brand' => (string) $product->brand,
+            'price' => (int) $product->base_price,
+            'purchase_price' => (int) ($attributes['purchase_price'] ?? 0),
+            'vat' => (int) ($attributes['vat'] ?? 20),
+            'stock' => $stock,
+            'min_stock' => $minStock,
+            'status' => $product->is_active ? 'active' : 'inactive',
+            'stock_status' => $this->stockStatus($stock, $minStock),
+            'image' => $primaryImage?->image_url ?? '',
+            'description' => (string) $product->description,
+            'variants' => $variants,
+        ];
     }
 
     /**

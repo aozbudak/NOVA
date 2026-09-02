@@ -2,17 +2,24 @@
 
 namespace App\Support;
 
+use App\Models\Product;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class Catalog
 {
     /**
+     * @var Collection<int, array<string, mixed>>|null
+     */
+    private ?Collection $items = null;
+
+    /**
      * @return Collection<int, array<string, mixed>>
      */
     public function all(): Collection
     {
-        return collect($this->products());
+        return $this->items ??= $this->resolve();
     }
 
     /**
@@ -21,6 +28,67 @@ class Catalog
     public function find(int $id): ?array
     {
         return $this->all()->firstWhere('id', $id);
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function resolve(): Collection
+    {
+        $fromDatabase = $this->databaseProducts();
+
+        if ($fromDatabase->isNotEmpty()) {
+            return $fromDatabase;
+        }
+
+        return collect($this->products());
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function databaseProducts(): Collection
+    {
+        if (! Schema::hasTable('products') || ! Schema::hasColumn('products', 'catalog_code')) {
+            return collect();
+        }
+
+        return Product::query()
+            ->with(['category.parent', 'images', 'variants.stock'])
+            ->whereNotNull('catalog_code')
+            ->orderBy('catalog_code')
+            ->get()
+            ->map(fn (Product $product): array => $this->mapFromDatabase($product))
+            ->values();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapFromDatabase(Product $product): array
+    {
+        $attributes = $product->attributes ?? [];
+        $onSale = $product->sale_price !== null;
+
+        return [
+            'id' => (int) $product->catalog_code,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'price' => (float) ($onSale ? $product->sale_price : $product->base_price),
+            'oldPrice' => $onSale ? (float) $product->base_price : null,
+            'currency' => $product->currency,
+            'images' => $product->images->pluck('image_url')->values()->all(),
+            'colors' => $attributes['colors'] ?? [],
+            'sizes' => $attributes['sizes'] ?? [],
+            'category' => $attributes['department'] ?? $product->category?->parent?->slug ?? $product->category?->slug,
+            'type' => $attributes['type'] ?? $product->category?->slug,
+            'collection' => $attributes['collection'] ?? '',
+            'stock' => (int) ($attributes['stock'] ?? $product->variants->sum(fn ($variant): int => (int) ($variant->stock?->quantity ?? 0))),
+            'description' => (string) $product->description,
+            'featured' => $product->is_featured,
+            'isNew' => $product->is_new,
+            'material' => $attributes['material'] ?? $this->t('product.material_see_details'),
+        ];
     }
 
     /**
