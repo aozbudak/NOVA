@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>@yield('title', 'NOVA') — NOVA</title>
+        <link rel="icon" href="{{ asset('favicon.png') }}" type="image/png">
+        <link rel="apple-touch-icon" href="{{ asset('favicon.png') }}">
         <meta name="description" content="@yield('description', __('storefront.layout.description'))">
         <script>
             (() => {
@@ -29,7 +31,7 @@
         @else
             <header class="fixed inset-x-0 top-0 z-40 glass border-b">
                 <div class="mx-auto flex h-14 max-w-[1600px] items-center justify-between px-4 md:px-8">
-                    <x-logo />
+                    <x-logo compact />
                     <x-locale-switcher />
                 </div>
             </header>

@@ -24,7 +24,7 @@
                 </button>
             </div>
 
-            <x-logo class="shrink-0 md:flex-none" />
+            <x-logo compact class="shrink-0 md:flex-none" />
 
             <nav class="hidden min-w-0 flex-1 items-center justify-center gap-4 lg:gap-6 md:flex" aria-label="{{ __('storefront.nav.primary') }}">
                 @foreach ($navItems as $item)

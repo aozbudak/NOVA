@@ -1,8 +1,12 @@
 <footer class="relative mt-24 overflow-hidden border-t border-glass-border">
-    <div class="pointer-events-none absolute inset-0 glass"></div>
+    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div class="absolute -top-20 left-[15%] size-72 rounded-full bg-foreground/7 blur-3xl"></div>
+        <div class="absolute right-[12%] -bottom-16 size-80 rounded-full bg-foreground/5 blur-3xl"></div>
+    </div>
+    <div class="pointer-events-none absolute inset-0 glass-panel"></div>
     <div class="relative mx-auto grid max-w-[1600px] gap-12 px-4 py-20 md:grid-cols-2 md:px-8 lg:grid-cols-6">
         <div class="flex flex-col gap-5 md:col-span-2">
-            <x-logo size="text-sm" />
+            <x-logo />
             <p class="max-w-xs text-sm leading-relaxed text-muted-foreground">
                 {{ __('storefront.footer.tagline') }}
             </p>

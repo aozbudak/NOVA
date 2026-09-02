@@ -7,7 +7,7 @@
     <div data-drawer-backdrop class="absolute inset-0 bg-foreground/25 opacity-0 backdrop-blur-sm transition-opacity duration-200"></div>
     <div data-drawer-panel class="glass-strong absolute inset-y-0 left-0 flex w-[min(100%,22rem)] -translate-x-full flex-col border-r transition-transform duration-200">
         <div class="flex h-14 items-center justify-between px-4">
-            <x-logo />
+            <x-logo compact />
             <button type="button" data-close="menu" aria-label="{{ __('storefront.header.close_menu') }}" class="p-1">
                 <x-icon name="x" />
             </button>
