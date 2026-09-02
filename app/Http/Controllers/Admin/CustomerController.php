@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminList;
 use App\Support\AdminStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,10 +11,26 @@ use Illuminate\View\View;
 
 class CustomerController extends Controller
 {
-    public function index(AdminStore $store): View
+    public function index(Request $request, AdminStore $store): View
     {
+        $filters = [
+            'search' => $request->string('search')->toString(),
+        ];
+        $search = strtolower($filters['search']);
+        $customers = $store->customers();
+
+        if ($search !== '') {
+            $customers = $customers->filter(function (array $customer) use ($search): bool {
+                return str_contains(strtolower($customer['name'].' '.$customer['email'].' '.$customer['phone']), $search);
+            })->values();
+        }
+
         return view('admin.customers.index', [
-            'customers' => $store->customers(),
+            'customers' => AdminList::apply($customers, ['name', 'orders', 'spent', 'last_purchase']),
+            'filters' => $filters,
+            'chips' => AdminList::chips($filters, [
+                'search' => ['label' => __('admin.common.search')],
+            ]),
         ]);
     }
 

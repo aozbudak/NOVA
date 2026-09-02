@@ -54,41 +54,37 @@
         </section>
     @endif
 
-    <section class="mt-6 overflow-hidden rounded-md border border-border bg-card">
-        <div class="border-b border-border px-4 py-3">
-            <h2 class="text-sm font-medium text-foreground">{{ __('admin.roles.users') }}</h2>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-[13px]">
-                <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                    <tr>
-                        <th class="px-3 py-2 font-medium">{{ __('admin.users.user') }}</th>
-                        <th class="px-3 py-2 font-medium">{{ __('admin.users.email') }}</th>
-                        <th class="px-3 py-2 font-medium">{{ __('admin.users.status') }}</th>
-                        <th class="px-3 py-2 font-medium">{{ __('admin.users.last_login') }}</th>
-                        <th class="px-3 py-2 font-medium">{{ __('admin.common.actions') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($users as $user)
+    <section class="mt-6">
+        <h2 class="mb-2 text-sm font-medium text-foreground">{{ __('admin.roles.users') }}</h2>
+        @if ($users->isEmpty())
+            <x-admin.table empty>
+                <x-admin.empty :title="__('admin.roles.empty_users')" />
+            </x-admin.table>
+        @else
+            <x-admin.table>
+                <x-slot:head>
+                    <x-admin.th>{{ __('admin.users.user') }}</x-admin.th>
+                    <x-admin.th>{{ __('admin.users.email') }}</x-admin.th>
+                    <x-admin.th>{{ __('admin.users.status') }}</x-admin.th>
+                    <x-admin.th>{{ __('admin.users.last_login') }}</x-admin.th>
+                    <x-admin.th align="end">{{ __('admin.common.actions') }}</x-admin.th>
+                </x-slot:head>
+                <x-slot:body>
+                    @foreach ($users as $user)
                         <tr class="border-b border-border last:border-b-0">
-                            <td class="px-3 py-2.5 text-foreground">{{ $user['name'] }}</td>
-                            <td class="px-3 py-2.5 text-muted-foreground">{{ $user['email'] }}</td>
-                            <td class="px-3 py-2.5"><x-admin.badge group="status" :status="$user['status']" /></td>
-                            <td class="px-3 py-2.5 text-muted-foreground">{{ $user['last_login'] }}</td>
-                            <td class="px-3 py-2.5">
-                                <a href="{{ route('admin.users.edit', $user['id']) }}" class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="{{ __('admin.common.edit') }}">
-                                    <x-icon name="edit" size="size-3.5" />
-                                </a>
-                            </td>
+                            <x-admin.td :label="__('admin.users.user')">{{ $user['name'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.users.email')" tone="muted">{{ $user['email'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.users.status')"><x-admin.badge group="status" :status="$user['status']" /></x-admin.td>
+                            <x-admin.td :label="__('admin.users.last_login')" tone="muted">{{ $user['last_login'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.common.actions')" align="end">
+                                <x-admin.row-actions>
+                                    <x-admin.icon-button icon="edit" :label="__('admin.common.edit')" :href="route('admin.users.edit', $user['id'])" />
+                                </x-admin.row-actions>
+                            </x-admin.td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">{{ __('admin.roles.empty_users') }}</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                    @endforeach
+                </x-slot:body>
+            </x-admin.table>
+        @endif
     </section>
 @endsection

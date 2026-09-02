@@ -13,26 +13,29 @@ class AdminNavigationTest extends TestCase
     {
         $keys = $this->itemKeys(StaffRole::Cashier);
 
-        $this->assertSame(['pos', 'sales', 'returns', 'customers'], $keys);
+        $this->assertSame(['pos', 'sales', 'returns', 'customers', 'notifications', 'profile'], $keys);
         $this->assertSame('admin.pos.index', $this->navigation(StaffRole::Cashier)->homeRoute());
     }
 
     public function test_warehouse_staff_only_receives_catalog_and_stock_items(): void
     {
         $this->assertSame(
-            ['products', 'inventory', 'barcode'],
+            ['products', 'inventory', 'stock_movements', 'barcode', 'notifications', 'profile'],
             $this->itemKeys(StaffRole::WarehouseStaff),
         );
     }
 
-    public function test_store_manager_receives_roles_instead_of_a_separate_users_item(): void
+    public function test_store_manager_receives_users_roles_and_profile_items(): void
     {
         $keys = $this->itemKeys(StaffRole::StoreManager);
 
         $this->assertContains('dashboard', $keys);
+        $this->assertContains('users', $keys);
         $this->assertContains('roles', $keys);
-        $this->assertContains('cash', $keys);
-        $this->assertNotContains('users', $keys);
+        $this->assertContains('cash_movements', $keys);
+        $this->assertContains('stock_movements', $keys);
+        $this->assertContains('notifications', $keys);
+        $this->assertContains('profile', $keys);
         $this->assertNotContains('audit', $keys);
         $this->assertNotContains('settings', $keys);
     }

@@ -5,36 +5,32 @@
 @section('content')
     <x-admin.page-header :title="__('admin.exchanges.title')" />
 
-    <div class="overflow-x-auto rounded-md border border-border bg-card">
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.exchanges.number') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.exchanges.date') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.exchanges.customer') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.exchanges.original') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.exchanges.new') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.exchanges.difference') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.common.actions') }}</th>
+    <x-admin.table :paginator="$exchanges">
+        <x-slot:head>
+            <x-admin.th sort="number">{{ __('admin.exchanges.number') }}</x-admin.th>
+            <x-admin.th sort="date">{{ __('admin.exchanges.date') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.exchanges.customer') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.exchanges.original') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.exchanges.new') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.exchanges.difference') }}</x-admin.th>
+            <x-admin.th align="end">{{ __('admin.common.actions') }}</x-admin.th>
+        </x-slot:head>
+        <x-slot:body>
+            @foreach ($exchanges as $exchange)
+                <tr class="border-b border-border last:border-b-0">
+                    <x-admin.td :label="__('admin.exchanges.number')">{{ $exchange['number'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.exchanges.date')" tone="muted">{{ $exchange['date'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.exchanges.customer')">{{ $exchange['customer'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.exchanges.original')" tone="muted">{{ $exchange['original']['product'] }} / {{ $exchange['original']['variant'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.exchanges.new')" tone="muted">{{ $exchange['new']['product'] }} / {{ $exchange['new']['variant'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.exchanges.difference')"><x-admin.badge group="status" :status="$exchange['difference']" /></x-admin.td>
+                    <x-admin.td :label="__('admin.common.actions')" align="end">
+                        <x-admin.row-actions>
+                            <x-admin.icon-button icon="eye" :label="__('admin.common.view')" :href="route('admin.exchanges.show', $exchange['id'])" />
+                        </x-admin.row-actions>
+                    </x-admin.td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach ($exchanges as $exchange)
-                    <tr class="border-b border-border last:border-b-0">
-                        <td class="px-3 py-2.5 text-foreground">{{ $exchange['number'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $exchange['date'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ $exchange['customer'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $exchange['original']['product'] }} / {{ $exchange['original']['variant'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $exchange['new']['product'] }} / {{ $exchange['new']['variant'] }}</td>
-                        <td class="px-3 py-2.5"><x-admin.badge group="status" :status="$exchange['difference']" /></td>
-                        <td class="px-3 py-2.5">
-                            <a href="{{ route('admin.exchanges.show', $exchange['id']) }}" class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="{{ __('admin.common.view') }}">
-                                <x-icon name="eye" size="size-3.5" />
-                            </a>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+            @endforeach
+        </x-slot:body>
+    </x-admin.table>
 @endsection

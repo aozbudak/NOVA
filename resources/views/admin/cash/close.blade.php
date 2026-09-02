@@ -13,21 +13,19 @@
                 <dd class="text-foreground">{{ \App\Support\AdminStore::money($register['expected']) }}</dd>
             </div>
         </dl>
-        <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-            {{ __('admin.cash.actual') }}
-            <input name="actual" type="number" value="{{ $register['expected'] }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-        </label>
+        <x-admin.field :label="__('admin.cash.actual')" name="actual" required>
+            <x-admin.input name="actual" type="number" value="{{ $register['expected'] }}" required />
+        </x-admin.field>
         <div class="flex justify-between text-[13px]">
             <span class="text-muted-foreground">{{ __('admin.cash.difference') }}</span>
             <span class="text-foreground">₺0</span>
         </div>
-        <button
+        <x-admin.button
             type="submit"
             data-confirm
             data-confirm-title="{{ __('admin.confirm.close_register') }}"
             data-confirm-body="{{ __('admin.confirm.close_register_body') }}"
             data-busy-label="{{ __('admin.common.processing') }}"
-            class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-[13px] font-medium text-primary-foreground"
-        >{{ __('admin.cash.submit_close') }}</button>
+        >{{ __('admin.cash.submit_close') }}</x-admin.button>
     </form>
 @endsection

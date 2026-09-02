@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminList;
 use App\Support\AdminStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,10 +22,26 @@ class ProductController extends Controller
         ];
 
         return view('admin.products.index', [
-            'products' => $store->filteredProducts($filters),
+            'products' => AdminList::apply(
+                $store->filteredProducts($filters),
+                ['name', 'sku', 'category', 'price', 'stock', 'status'],
+            ),
             'categories' => $store->categories(),
             'brands' => $store->brands(),
             'filters' => $filters,
+            'chips' => AdminList::chips($filters, [
+                'search' => ['label' => __('admin.common.search')],
+                'category' => ['label' => __('admin.products.filter_category')],
+                'brand' => ['label' => __('admin.products.filter_brand')],
+                'status' => [
+                    'label' => __('admin.products.filter_status'),
+                    'value' => $filters['status'] === '' ? '' : __('admin.products.status_'.$filters['status']),
+                ],
+                'stock' => [
+                    'label' => __('admin.products.filter_stock'),
+                    'value' => $filters['stock'] === '' ? '' : __('admin.stock.'.$filters['stock']),
+                ],
+            ]),
         ]);
     }
 

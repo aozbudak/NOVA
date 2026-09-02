@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminList;
 use App\Support\AdminStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -19,7 +20,7 @@ class CashController extends Controller
     public function movements(AdminStore $store): View
     {
         return view('admin.cash.movements', [
-            'movements' => $store->cashMovements(),
+            'movements' => AdminList::apply(collect($store->cashMovements()), ['date', 'amount']),
         ]);
     }
 

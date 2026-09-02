@@ -14,55 +14,47 @@
         <section class="rounded-md border border-border bg-card p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.basic') }}</h2>
             <div class="grid gap-4 md:grid-cols-2">
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground md:col-span-2">
-                    {{ __('admin.products.name') }}
-                    <input name="name" value="{{ $product['name'] ?? '' }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground md:col-span-2">
-                    {{ __('admin.products.description') }}
-                    <textarea name="description" rows="3" class="rounded-md border border-input bg-background px-3 py-2 text-[13px] text-foreground">{{ $product['description'] ?? '' }}</textarea>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.products.category') }}
-                    <select name="category" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+                <x-admin.field class="md:col-span-2" :label="__('admin.products.name')" name="name" required>
+                    <x-admin.input name="name" value="{{ $product['name'] ?? '' }}" required />
+                </x-admin.field>
+                <x-admin.field class="md:col-span-2" :label="__('admin.products.description')" name="description">
+                    <x-admin.textarea name="description" rows="3">{{ $product['description'] ?? '' }}</x-admin.textarea>
+                </x-admin.field>
+                <x-admin.field :label="__('admin.products.category')" name="category" required>
+                    <x-admin.select name="category">
                         @foreach ($categories as $category)
                             <option value="{{ $category }}" @selected(($product['category'] ?? '') === $category)>{{ $category }}</option>
                         @endforeach
-                    </select>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.products.brand') }}
-                    <select name="brand" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+                    </x-admin.select>
+                </x-admin.field>
+                <x-admin.field :label="__('admin.products.brand')" name="brand">
+                    <x-admin.select name="brand">
                         @foreach ($brands as $brand)
                             <option value="{{ $brand }}" @selected(($product['brand'] ?? '') === $brand)>{{ $brand }}</option>
                         @endforeach
-                    </select>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.products.status') }}
-                    <select name="status" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+                    </x-admin.select>
+                </x-admin.field>
+                <x-admin.field :label="__('admin.products.status')" name="status">
+                    <x-admin.select name="status">
                         <option value="active" @selected(($product['status'] ?? 'active') === 'active')>{{ __('admin.products.status_active') }}</option>
                         <option value="inactive" @selected(($product['status'] ?? '') === 'inactive')>{{ __('admin.products.status_inactive') }}</option>
-                    </select>
-                </label>
+                    </x-admin.select>
+                </x-admin.field>
             </div>
         </section>
 
         <section class="rounded-md border border-border bg-card p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.pricing') }}</h2>
             <div class="grid gap-4 md:grid-cols-3">
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.products.purchase_price') }}
-                    <input name="purchase_price" type="number" value="{{ $product['purchase_price'] ?? '' }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.products.sale_price') }}
-                    <input name="price" type="number" value="{{ $product['price'] ?? '' }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.products.vat') }}
-                    <input name="vat" type="number" value="{{ $product['vat'] ?? 20 }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-                </label>
+                <x-admin.field :label="__('admin.products.purchase_price')" name="purchase_price">
+                    <x-admin.input name="purchase_price" type="number" value="{{ $product['purchase_price'] ?? '' }}" />
+                </x-admin.field>
+                <x-admin.field :label="__('admin.products.sale_price')" name="price" required>
+                    <x-admin.input name="price" type="number" value="{{ $product['price'] ?? '' }}" required />
+                </x-admin.field>
+                <x-admin.field :label="__('admin.products.vat')" name="vat">
+                    <x-admin.input name="vat" type="number" value="{{ $product['vat'] ?? 20 }}" />
+                </x-admin.field>
             </div>
         </section>
 
@@ -75,7 +67,7 @@
                 </button>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-[13px]">
+                <table data-admin-table class="w-full min-w-[40rem] text-left text-[13px]">
                     <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
                         <tr>
                             <th class="py-2 pr-3 font-medium">{{ __('admin.products.color') }}</th>
@@ -89,12 +81,12 @@
                     <tbody data-variant-list>
                         @forelse ($product['variants'] ?? [['color' => '', 'size' => '', 'sku' => '', 'barcode' => '', 'stock' => '', 'price' => '']] as $variant)
                             <tr class="border-b border-border last:border-b-0">
-                                <td class="py-2 pr-3"><input name="variants[color][]" value="{{ $variant['color'] }}" class="h-8 w-28 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                                <td class="py-2 pr-3"><input name="variants[size][]" value="{{ $variant['size'] }}" class="h-8 w-16 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                                <td class="py-2 pr-3"><input name="variants[sku][]" value="{{ $variant['sku'] }}" class="h-8 w-36 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                                <td class="py-2 pr-3"><input name="variants[barcode][]" value="{{ $variant['barcode'] }}" class="h-8 w-36 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                                <td class="py-2 pr-3"><input name="variants[stock][]" type="number" value="{{ $variant['stock'] }}" class="h-8 w-20 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                                <td class="py-2"><input name="variants[price][]" type="number" value="{{ $variant['price'] }}" class="h-8 w-24 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                                <td class="py-2 pr-3" data-label="{{ __('admin.products.color') }}"><input name="variants[color][]" value="{{ $variant['color'] }}" class="h-8 w-28 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                                <td class="py-2 pr-3" data-label="{{ __('admin.products.size') }}"><input name="variants[size][]" value="{{ $variant['size'] }}" class="h-8 w-16 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                                <td class="py-2 pr-3" data-label="{{ __('admin.products.sku') }}"><input name="variants[sku][]" value="{{ $variant['sku'] }}" class="h-8 w-36 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                                <td class="py-2 pr-3" data-label="{{ __('admin.products.barcode') }}"><input name="variants[barcode][]" value="{{ $variant['barcode'] }}" class="h-8 w-36 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                                <td class="py-2 pr-3" data-label="{{ __('admin.products.stock') }}"><input name="variants[stock][]" type="number" value="{{ $variant['stock'] }}" class="h-8 w-20 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                                <td class="py-2" data-label="{{ __('admin.products.price') }}"><input name="variants[price][]" type="number" value="{{ $variant['price'] }}" class="h-8 w-24 rounded-md border border-input bg-background px-2 text-[13px]"></td>
                             </tr>
                         @empty
                         @endforelse
@@ -103,42 +95,38 @@
             </div>
             <template data-variant-template>
                 <tr class="border-b border-border last:border-b-0">
-                    <td class="py-2 pr-3"><input name="variants[color][]" class="h-8 w-28 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                    <td class="py-2 pr-3"><input name="variants[size][]" class="h-8 w-16 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                    <td class="py-2 pr-3"><input name="variants[sku][]" class="h-8 w-36 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                    <td class="py-2 pr-3"><input name="variants[barcode][]" class="h-8 w-36 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                    <td class="py-2 pr-3"><input name="variants[stock][]" type="number" class="h-8 w-20 rounded-md border border-input bg-background px-2 text-[13px]"></td>
-                    <td class="py-2"><input name="variants[price][]" type="number" class="h-8 w-24 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                    <td class="py-2 pr-3" data-label="{{ __('admin.products.color') }}"><input name="variants[color][]" class="h-8 w-28 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                    <td class="py-2 pr-3" data-label="{{ __('admin.products.size') }}"><input name="variants[size][]" class="h-8 w-16 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                    <td class="py-2 pr-3" data-label="{{ __('admin.products.sku') }}"><input name="variants[sku][]" class="h-8 w-36 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                    <td class="py-2 pr-3" data-label="{{ __('admin.products.barcode') }}"><input name="variants[barcode][]" class="h-8 w-36 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                    <td class="py-2 pr-3" data-label="{{ __('admin.products.stock') }}"><input name="variants[stock][]" type="number" class="h-8 w-20 rounded-md border border-input bg-background px-2 text-[13px]"></td>
+                    <td class="py-2" data-label="{{ __('admin.products.price') }}"><input name="variants[price][]" type="number" class="h-8 w-24 rounded-md border border-input bg-background px-2 text-[13px]"></td>
                 </tr>
             </template>
         </section>
 
         <section class="rounded-md border border-border bg-card p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.images') }}</h2>
-            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                {{ __('admin.products.product_images') }}
-                <input type="file" name="images[]" multiple accept="image/jpeg,image/webp" class="text-[13px] text-foreground">
-                <span>{{ __('admin.products.upload_hint') }}</span>
-            </label>
+            <x-admin.field :label="__('admin.products.product_images')" name="images" :help="__('admin.products.upload_hint')">
+                <x-admin.input type="file" name="images[]" multiple accept="image/jpeg,image/webp" />
+            </x-admin.field>
         </section>
 
         <section class="rounded-md border border-border bg-card p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.inventory') }}</h2>
             <div class="grid gap-4 md:grid-cols-2">
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.products.initial_stock') }}
-                    <input name="initial_stock" type="number" value="{{ $product['stock'] ?? '' }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.products.minimum_stock') }}
-                    <input name="min_stock" type="number" value="{{ $product['min_stock'] ?? '' }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-                </label>
+                <x-admin.field :label="__('admin.products.initial_stock')" name="initial_stock">
+                    <x-admin.input name="initial_stock" type="number" value="{{ $product['stock'] ?? '' }}" />
+                </x-admin.field>
+                <x-admin.field :label="__('admin.products.minimum_stock')" name="min_stock">
+                    <x-admin.input name="min_stock" type="number" value="{{ $product['min_stock'] ?? '' }}" />
+                </x-admin.field>
             </div>
         </section>
 
         <div class="flex items-center gap-2">
-            <button type="submit" data-busy-label="{{ __('admin.common.saving') }}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">{{ __('admin.common.save') }}</button>
-            <a href="{{ route('admin.products.index') }}" class="inline-flex h-9 items-center rounded-md px-4 text-[12px] text-muted-foreground hover:text-foreground">{{ __('admin.common.cancel') }}</a>
+            <x-admin.button type="submit" data-busy-label="{{ __('admin.common.saving') }}">{{ __('admin.common.save') }}</x-admin.button>
+            <x-admin.button variant="ghost" :href="route('admin.products.index')">{{ __('admin.common.cancel') }}</x-admin.button>
         </div>
     </form>
 @endsection

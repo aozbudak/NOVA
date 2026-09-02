@@ -61,55 +61,51 @@
         </section>
     </div>
 
-    <section class="mt-4 rounded-md border border-border bg-card">
-        <h2 class="border-b border-border px-4 py-3 text-sm font-medium text-foreground">{{ __('admin.suppliers.history') }}</h2>
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.suppliers.number') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.suppliers.date') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.suppliers.products') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.suppliers.total') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.suppliers.status') }}</th>
-                </tr>
-            </thead>
-            <tbody>
+    <section class="mt-4">
+        <h2 class="mb-2 text-sm font-medium text-foreground">{{ __('admin.suppliers.history') }}</h2>
+        <x-admin.table>
+            <x-slot:head>
+                <x-admin.th>{{ __('admin.suppliers.number') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.suppliers.date') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.suppliers.products') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.suppliers.total') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.suppliers.status') }}</x-admin.th>
+            </x-slot:head>
+            <x-slot:body>
                 @foreach ($supplier['history'] as $purchase)
                     <tr class="border-b border-border last:border-b-0">
-                        <td class="px-4 py-2.5 text-foreground">{{ $purchase['number'] }}</td>
-                        <td class="px-4 py-2.5 text-muted-foreground">{{ $purchase['date'] }}</td>
-                        <td class="px-4 py-2.5 text-muted-foreground">{{ $purchase['products'] }}</td>
-                        <td class="px-4 py-2.5 text-foreground">{{ \App\Support\AdminStore::money($purchase['total']) }}</td>
-                        <td class="px-4 py-2.5"><x-admin.badge group="status" :status="$purchase['status']" /></td>
+                        <x-admin.td :label="__('admin.suppliers.number')">{{ $purchase['number'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.suppliers.date')" tone="muted">{{ $purchase['date'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.suppliers.products')" tone="muted">{{ $purchase['products'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.suppliers.total')">{{ \App\Support\AdminStore::money($purchase['total']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.suppliers.status')"><x-admin.badge group="status" :status="$purchase['status']" /></x-admin.td>
                     </tr>
                 @endforeach
-            </tbody>
-        </table>
+            </x-slot:body>
+        </x-admin.table>
     </section>
 
     @if ($supplier['movements'] !== [])
-        <section class="mt-4 rounded-md border border-border bg-card">
-            <h2 class="border-b border-border px-4 py-3 text-sm font-medium text-foreground">{{ __('admin.suppliers.movements') }}</h2>
-            <table class="w-full text-left text-[13px]">
-                <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                    <tr>
-                        <th class="px-4 py-2 font-medium">{{ __('admin.inventory.date') }}</th>
-                        <th class="px-4 py-2 font-medium">{{ __('admin.inventory.product') }}</th>
-                        <th class="px-4 py-2 font-medium">{{ __('admin.inventory.quantity') }}</th>
-                        <th class="px-4 py-2 font-medium">{{ __('admin.inventory.reference') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <section class="mt-4">
+            <h2 class="mb-2 text-sm font-medium text-foreground">{{ __('admin.suppliers.movements') }}</h2>
+            <x-admin.table>
+                <x-slot:head>
+                    <x-admin.th>{{ __('admin.inventory.date') }}</x-admin.th>
+                    <x-admin.th>{{ __('admin.inventory.product') }}</x-admin.th>
+                    <x-admin.th>{{ __('admin.inventory.quantity') }}</x-admin.th>
+                    <x-admin.th>{{ __('admin.inventory.reference') }}</x-admin.th>
+                </x-slot:head>
+                <x-slot:body>
                     @foreach ($supplier['movements'] as $row)
                         <tr class="border-b border-border last:border-b-0">
-                            <td class="px-4 py-2.5 text-muted-foreground">{{ $row['date'] }}</td>
-                            <td class="px-4 py-2.5 text-foreground">{{ $row['product'] }}</td>
-                            <td class="px-4 py-2.5 text-success">+{{ $row['qty'] }}</td>
-                            <td class="px-4 py-2.5 text-muted-foreground">{{ $row['reference'] }}</td>
+                            <x-admin.td :label="__('admin.inventory.date')" tone="muted">{{ $row['date'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.inventory.product')">{{ $row['product'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.inventory.quantity')" tone="success">+{{ $row['qty'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.inventory.reference')" tone="muted">{{ $row['reference'] }}</x-admin.td>
                         </tr>
                     @endforeach
-                </tbody>
-            </table>
+                </x-slot:body>
+            </x-admin.table>
         </section>
     @endif
 @endsection

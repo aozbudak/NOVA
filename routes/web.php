@@ -131,6 +131,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
         Route::get('/roles/{role}', [RoleController::class, 'show'])->name('roles.show');
         Route::get('/search', AdminSearchController::class)->name('search');
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
         Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
         Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');

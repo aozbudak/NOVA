@@ -30,34 +30,32 @@
         </dl>
     </section>
 
-    <section class="mt-4 overflow-x-auto rounded-md border border-border bg-card">
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.sales.product') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.sales.variant') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.sales.sku') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.sales.quantity') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.sales.unit') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.sales.discount') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.sales.total') }}</th>
-                </tr>
-            </thead>
-            <tbody>
+    <section class="mt-4">
+        <x-admin.table>
+            <x-slot:head>
+                <x-admin.th>{{ __('admin.sales.product') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.sales.variant') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.sales.sku') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.sales.quantity') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.sales.unit') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.sales.discount') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.sales.total') }}</x-admin.th>
+            </x-slot:head>
+            <x-slot:body>
                 @foreach ($sale['items'] as $item)
                     <tr class="border-b border-border last:border-b-0">
-                        <td class="px-3 py-2.5 text-foreground">{{ $item['product'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $item['variant'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $item['sku'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ $item['qty'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ \App\Support\AdminStore::money($item['unit']) }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ \App\Support\AdminStore::money($item['discount']) }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ \App\Support\AdminStore::money($item['total']) }}</td>
+                        <x-admin.td :label="__('admin.sales.product')">{{ $item['product'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.sales.variant')" tone="muted">{{ $item['variant'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.sales.sku')" tone="muted">{{ $item['sku'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.sales.quantity')">{{ $item['qty'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.sales.unit')">{{ \App\Support\AdminStore::money($item['unit']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.sales.discount')" tone="muted">{{ \App\Support\AdminStore::money($item['discount']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.sales.total')">{{ \App\Support\AdminStore::money($item['total']) }}</x-admin.td>
                     </tr>
                 @endforeach
-            </tbody>
-        </table>
-        <dl class="ml-auto flex max-w-xs flex-col gap-1.5 border-t border-border px-4 py-3 text-[13px]">
+            </x-slot:body>
+        </x-admin.table>
+        <dl class="ml-auto flex max-w-xs flex-col gap-1.5 px-4 py-3 text-[13px]">
             <div class="flex justify-between">
                 <dt class="text-muted-foreground">{{ __('admin.sales.subtotal') }}</dt>
                 <dd class="text-foreground">{{ \App\Support\AdminStore::money($sale['subtotal']) }}</dd>

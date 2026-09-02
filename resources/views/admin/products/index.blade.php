@@ -5,110 +5,91 @@
 @section('content')
     <x-admin.page-header :title="__('admin.products.title')">
         <x-slot:actions>
-            <a href="{{ route('admin.products.create') }}" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">
-                <x-icon name="plus" size="size-3.5" />
-                {{ __('admin.products.add') }}
-            </a>
+            <x-admin.button :href="route('admin.products.create')" icon="plus">{{ __('admin.products.add') }}</x-admin.button>
         </x-slot:actions>
     </x-admin.page-header>
 
-    <form method="GET" action="{{ route('admin.products.index') }}" class="mb-4 grid gap-2 md:grid-cols-5" data-table-filter>
-        <input type="search" name="search" value="{{ $filters['search'] }}" placeholder="{{ __('admin.products.search') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
-        <select name="category" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+    <x-admin.filters :action="route('admin.products.index')" :chips="$chips" :columns="5">
+        <x-admin.input type="search" name="search" value="{{ $filters['search'] }}" placeholder="{{ __('admin.products.search') }}" />
+        <x-admin.select name="category">
             <option value="">{{ __('admin.products.filter_category') }}</option>
             @foreach ($categories as $category)
                 <option value="{{ $category }}" @selected($filters['category'] === $category)>{{ $category }}</option>
             @endforeach
-        </select>
-        <select name="brand" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+        </x-admin.select>
+        <x-admin.select name="brand">
             <option value="">{{ __('admin.products.filter_brand') }}</option>
             @foreach ($brands as $brand)
                 <option value="{{ $brand }}" @selected($filters['brand'] === $brand)>{{ $brand }}</option>
             @endforeach
-        </select>
-        <select name="status" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+        </x-admin.select>
+        <x-admin.select name="status">
             <option value="">{{ __('admin.products.filter_status') }}</option>
             <option value="active" @selected($filters['status'] === 'active')>{{ __('admin.products.status_active') }}</option>
             <option value="inactive" @selected($filters['status'] === 'inactive')>{{ __('admin.products.status_inactive') }}</option>
-        </select>
-        <select name="stock" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" onchange="this.form.submit()">
+        </x-admin.select>
+        <x-admin.select name="stock">
             <option value="">{{ __('admin.products.filter_stock') }}</option>
             <option value="in_stock" @selected($filters['stock'] === 'in_stock')>{{ __('admin.stock.in_stock') }}</option>
             <option value="low_stock" @selected($filters['stock'] === 'low_stock')>{{ __('admin.stock.low_stock') }}</option>
             <option value="out_of_stock" @selected($filters['stock'] === 'out_of_stock')>{{ __('admin.stock.out_of_stock') }}</option>
-        </select>
-    </form>
+        </x-admin.select>
+    </x-admin.filters>
 
-    <div data-table-shell class="relative">
-        <div data-table-skeleton hidden>
-            <x-admin.skeleton.table />
-        </div>
-        <div data-table-body>
     @if ($products->isEmpty())
-        <div class="rounded-md border border-border bg-card">
+        <x-admin.table empty>
             <x-admin.empty :title="__('admin.empty.products.title')">
                 {{ __('admin.empty.products.body') }}
                 <x-slot:action>
-                    <a href="{{ route('admin.products.create') }}" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">{{ __('admin.products.add') }}</a>
+                    <x-admin.button :href="route('admin.products.create')">{{ __('admin.products.add') }}</x-admin.button>
                 </x-slot:action>
             </x-admin.empty>
-        </div>
+        </x-admin.table>
     @else
-    <div class="overflow-x-auto rounded-md border border-border bg-card">
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.image') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.product') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.sku') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.barcode') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.category') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.price') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.stock') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.status') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.common.actions') }}</th>
-                </tr>
-            </thead>
-            <tbody>
+        <x-admin.table :paginator="$products">
+            <x-slot:head>
+                <x-admin.th>{{ __('admin.products.image') }}</x-admin.th>
+                <x-admin.th sort="name">{{ __('admin.products.product') }}</x-admin.th>
+                <x-admin.th sort="sku">{{ __('admin.products.sku') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.products.barcode') }}</x-admin.th>
+                <x-admin.th sort="category">{{ __('admin.products.category') }}</x-admin.th>
+                <x-admin.th sort="price" align="end">{{ __('admin.products.price') }}</x-admin.th>
+                <x-admin.th sort="stock" align="end">{{ __('admin.products.stock') }}</x-admin.th>
+                <x-admin.th sort="status">{{ __('admin.products.status') }}</x-admin.th>
+                <x-admin.th align="end">{{ __('admin.common.actions') }}</x-admin.th>
+            </x-slot:head>
+            <x-slot:body>
                 @foreach ($products as $product)
                     <tr class="border-b border-border last:border-b-0">
-                        <td class="px-3 py-2">
+                        <x-admin.td :label="__('admin.products.image')">
                             <img src="{{ $product['image'] }}" alt="" width="36" height="44" class="h-11 w-9 object-cover">
-                        </td>
-                        <td class="px-3 py-2 text-foreground">{{ $product['name'] }}</td>
-                        <td class="px-3 py-2 text-muted-foreground">{{ $product['sku'] }}</td>
-                        <td class="px-3 py-2 text-muted-foreground">{{ $product['barcode'] }}</td>
-                        <td class="px-3 py-2 text-muted-foreground">{{ $product['category'] }}</td>
-                        <td class="px-3 py-2 text-foreground">{{ \App\Support\AdminStore::money($product['price']) }}</td>
-                        <td class="px-3 py-2">
-                            <span class="text-foreground">{{ $product['stock'] }}</span>
+                        </x-admin.td>
+                        <x-admin.td :label="__('admin.products.product')">{{ $product['name'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.products.sku')" tone="muted">{{ $product['sku'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.products.barcode')" tone="muted">{{ $product['barcode'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.products.category')" tone="muted">{{ $product['category'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.products.price')" align="end">{{ \App\Support\AdminStore::money($product['price']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.products.stock')" align="end">
+                            <span>{{ $product['stock'] }}</span>
                             <x-admin.badge class="ml-2" :status="$product['stock_status']" />
-                        </td>
-                        <td class="px-3 py-2 text-muted-foreground">{{ __('admin.products.status_'.$product['status']) }}</td>
-                        <td class="px-3 py-2">
-                            <div class="flex items-center gap-1">
-                                <a href="{{ route('admin.products.edit', $product['slug']) }}" class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="{{ __('admin.common.edit') }}">
-                                    <x-icon name="edit" size="size-3.5" />
-                                </a>
-                                <button
-                                    type="button"
+                        </x-admin.td>
+                        <x-admin.td :label="__('admin.products.status')" tone="muted">{{ __('admin.products.status_'.$product['status']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.common.actions')" align="end">
+                            <x-admin.row-actions>
+                                <x-admin.icon-button icon="edit" :label="__('admin.common.edit')" :href="route('admin.products.edit', $product['slug'])" />
+                                <x-admin.icon-button
+                                    icon="delete"
+                                    :label="__('admin.common.deactivate')"
                                     data-confirm
                                     data-confirm-title="{{ __('admin.confirm.deactivate_product') }}"
                                     data-confirm-body="{{ __('admin.confirm.deactivate_product_body') }}"
                                     data-confirm-action="{{ route('admin.products.deactivate', $product['slug']) }}"
-                                    class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-                                    aria-label="{{ __('admin.common.deactivate') }}"
-                                >
-                                    <x-icon name="delete" size="size-3.5" />
-                                </button>
-                            </div>
-                        </td>
+                                />
+                            </x-admin.row-actions>
+                        </x-admin.td>
                     </tr>
                 @endforeach
-            </tbody>
-        </table>
-    </div>
+            </x-slot:body>
+        </x-admin.table>
     @endif
-        </div>
-    </div>
 @endsection

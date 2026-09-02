@@ -157,6 +157,12 @@ function initSearch() {
                 renderGroups(data.groups ?? {});
             })
             .catch(() => {
+                pages?.setAttribute('hidden', '');
+                empty?.removeAttribute('hidden');
+                if (empty) {
+                    empty.textContent = document.getElementById('admin-toast')?.dataset.errorFallback ?? '';
+                }
+                showAdminLoadError();
                 showAdminToast(document.getElementById('admin-toast')?.dataset.errorFallback ?? 'Something went wrong. Please try again.');
             });
     };
@@ -399,6 +405,19 @@ initConfirm();
 initBusyForms();
 initTableLoading();
 initAuditRows();
+initAdminRetry();
+
+function showAdminLoadError(shell = document.querySelector('[data-table-shell]')) {
+    shell?.querySelector('[data-table-error]')?.removeAttribute('hidden');
+    shell?.querySelector('[data-table-body]')?.setAttribute('hidden', '');
+    shell?.querySelector('[data-table-skeleton]')?.setAttribute('hidden', '');
+}
+
+function initAdminRetry() {
+    document.querySelectorAll('[data-admin-retry]').forEach((button) => {
+        button.addEventListener('click', () => window.location.reload());
+    });
+}
 
 function initUserAbilities() {
     const field = document.querySelector('[data-user-role]');
@@ -496,18 +515,18 @@ function initPos() {
 
         body.innerHTML = lines.map((line) => `
             <tr class="border-b border-border">
-                <td class="px-3 py-2">
+                <td class="px-3 py-2" data-label="${escapeHtml(table?.dataset.labelProduct ?? '')}">
                     <span class="block text-foreground">${escapeHtml(line.name)}</span>
                     <span class="block text-muted-foreground">${escapeHtml(line.variant)}</span>
                 </td>
-                <td class="px-3 py-2">
+                <td class="px-3 py-2" data-label="${escapeHtml(table?.dataset.labelQty ?? '')}">
                     <button type="button" data-pos-qty="${escapeHtml(line.sku)}" data-delta="-1" class="px-1 text-muted-foreground">−</button>
                     ${line.qty}
                     <button type="button" data-pos-qty="${escapeHtml(line.sku)}" data-delta="1" class="px-1 text-muted-foreground">+</button>
                 </td>
-                <td class="px-3 py-2 text-foreground">${money(line.price)}</td>
-                <td class="px-3 py-2 text-muted-foreground">${money(line.discount)}</td>
-                <td class="px-3 py-2 text-foreground">${money((line.price * line.qty) - line.discount)}</td>
+                <td class="px-3 py-2 text-foreground" data-label="${escapeHtml(table?.dataset.labelUnit ?? '')}">${money(line.price)}</td>
+                <td class="px-3 py-2 text-muted-foreground" data-label="${escapeHtml(table?.dataset.labelDiscount ?? '')}">${money(line.discount)}</td>
+                <td class="px-3 py-2 text-foreground" data-label="${escapeHtml(table?.dataset.labelTotal ?? '')}">${money((line.price * line.qty) - line.discount)}</td>
             </tr>
         `).join('');
 

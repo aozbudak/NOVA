@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminList;
 use App\Support\AdminStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +23,22 @@ class ReturnController extends Controller
         ];
 
         return view('admin.returns.index', [
-            'returns' => $store->returns($filters),
+            'returns' => AdminList::apply($store->returns($filters), ['number', 'date', 'amount', 'status']),
             'filters' => $filters,
+            'chips' => AdminList::chips($filters, [
+                'return' => ['label' => __('admin.returns.filter_return')],
+                'sale' => ['label' => __('admin.returns.filter_sale')],
+                'customer' => ['label' => __('admin.returns.filter_customer')],
+                'date' => ['label' => __('admin.returns.date')],
+                'reason' => [
+                    'label' => __('admin.returns.reason'),
+                    'value' => $filters['reason'] === '' ? '' : __('admin.status.'.$filters['reason']),
+                ],
+                'status' => [
+                    'label' => __('admin.returns.status'),
+                    'value' => $filters['status'] === '' ? '' : __('admin.status.'.$filters['status']),
+                ],
+            ]),
         ]);
     }
 

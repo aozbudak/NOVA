@@ -43,51 +43,47 @@
         </section>
     </div>
 
-    <section class="mt-4 rounded-md border border-border bg-card">
-        <h2 class="border-b border-border px-4 py-3 text-sm font-medium text-foreground">{{ __('admin.customers.history') }}</h2>
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.customers.reference') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.customers.date') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.customers.items') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.customers.total') }}</th>
-                </tr>
-            </thead>
-            <tbody>
+    <section class="mt-4">
+        <h2 class="mb-2 text-sm font-medium text-foreground">{{ __('admin.customers.history') }}</h2>
+        <x-admin.table>
+            <x-slot:head>
+                <x-admin.th>{{ __('admin.customers.reference') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.customers.date') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.customers.items') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.customers.total') }}</x-admin.th>
+            </x-slot:head>
+            <x-slot:body>
                 @foreach ($customer['sales'] as $sale)
                     <tr class="border-b border-border last:border-b-0">
-                        <td class="px-4 py-2.5 text-foreground">{{ $sale['ref'] }}</td>
-                        <td class="px-4 py-2.5 text-muted-foreground">{{ $sale['date'] }}</td>
-                        <td class="px-4 py-2.5 text-muted-foreground">{{ $sale['items'] }}</td>
-                        <td class="px-4 py-2.5 text-foreground">{{ \App\Support\AdminStore::money($sale['total']) }}</td>
+                        <x-admin.td :label="__('admin.customers.reference')">{{ $sale['ref'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.date')" tone="muted">{{ $sale['date'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.items')" tone="muted">{{ $sale['items'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.total')">{{ \App\Support\AdminStore::money($sale['total']) }}</x-admin.td>
                     </tr>
                 @endforeach
-            </tbody>
-        </table>
+            </x-slot:body>
+        </x-admin.table>
     </section>
 
-    <section class="mt-4 rounded-md border border-border bg-card">
-        <h2 class="border-b border-border px-4 py-3 text-sm font-medium text-foreground">{{ __('admin.customers.returns') }}</h2>
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.customers.reference') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.customers.date') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.customers.items') }}</th>
-                    <th class="px-4 py-2 font-medium">{{ __('admin.customers.total') }}</th>
-                </tr>
-            </thead>
-            <tbody>
+    <section class="mt-4">
+        <h2 class="mb-2 text-sm font-medium text-foreground">{{ __('admin.customers.returns') }}</h2>
+        <x-admin.table>
+            <x-slot:head>
+                <x-admin.th>{{ __('admin.customers.reference') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.customers.date') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.customers.items') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.customers.total') }}</x-admin.th>
+            </x-slot:head>
+            <x-slot:body>
                 @foreach ($customer['returns'] as $return)
                     <tr class="border-b border-border last:border-b-0">
-                        <td class="px-4 py-2.5 text-foreground">{{ $return['ref'] }}</td>
-                        <td class="px-4 py-2.5 text-muted-foreground">{{ $return['date'] }}</td>
-                        <td class="px-4 py-2.5 text-muted-foreground">{{ $return['items'] }}</td>
-                        <td class="px-4 py-2.5 text-foreground">{{ \App\Support\AdminStore::money($return['total']) }}</td>
+                        <x-admin.td :label="__('admin.customers.reference')">{{ $return['ref'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.date')" tone="muted">{{ $return['date'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.items')" tone="muted">{{ $return['items'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.total')">{{ \App\Support\AdminStore::money($return['total']) }}</x-admin.td>
                     </tr>
                 @endforeach
-            </tbody>
-        </table>
+            </x-slot:body>
+        </x-admin.table>
     </section>
 @endsection

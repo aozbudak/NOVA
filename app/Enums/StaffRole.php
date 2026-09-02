@@ -115,17 +115,20 @@ enum StaffRole: string
                 'reports',
                 'users',
                 'roles',
+                'profile',
             ],
             self::Cashier => [
                 'pos',
                 'sales',
                 'customers',
                 'returns',
+                'profile',
             ],
             self::WarehouseStaff => [
                 'products',
                 'inventory',
                 'barcode',
+                'profile',
             ],
         };
     }

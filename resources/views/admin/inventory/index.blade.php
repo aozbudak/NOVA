@@ -5,77 +5,63 @@
 @section('content')
     <x-admin.page-header :title="__('admin.inventory.title')">
         <x-slot:actions>
-            <button type="button" data-open-layer="stock-adjust" class="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-[12px] text-foreground hover:bg-accent">
-                {{ __('admin.inventory.adjust') }}
-            </button>
-            <a href="{{ route('admin.inventory.movements') }}" class="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-[12px] text-foreground hover:bg-accent">
-                {{ __('admin.inventory.movements') }}
-            </a>
+            <x-admin.button variant="secondary" type="button" data-open-layer="stock-adjust">{{ __('admin.inventory.adjust') }}</x-admin.button>
+            <x-admin.button variant="secondary" :href="route('admin.inventory.movements')">{{ __('admin.inventory.movements') }}</x-admin.button>
         </x-slot:actions>
     </x-admin.page-header>
 
-    <form method="GET" action="{{ route('admin.inventory.index') }}" class="mb-4 grid gap-2 md:grid-cols-4">
-        <input type="search" name="search" value="{{ request('search') }}" placeholder="{{ __('admin.inventory.search') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
-        <select name="category" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+    <x-admin.filters :action="route('admin.inventory.index')" :chips="$chips" :columns="3">
+        <x-admin.input type="search" name="search" value="{{ request('search') }}" placeholder="{{ __('admin.inventory.search') }}" />
+        <x-admin.select name="category">
             <option value="">{{ __('admin.inventory.filter_category') }}</option>
             @foreach ($categories as $category)
                 <option value="{{ $category }}" @selected(request('category') === $category)>{{ $category }}</option>
             @endforeach
-        </select>
-        <select name="stock" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+        </x-admin.select>
+        <x-admin.select name="stock">
             <option value="">{{ __('admin.inventory.filter_stock') }}</option>
             <option value="in_stock" @selected(request('stock') === 'in_stock')>{{ __('admin.stock.in_stock') }}</option>
             <option value="low_stock" @selected(request('stock') === 'low_stock')>{{ __('admin.stock.low_stock') }}</option>
             <option value="out_of_stock" @selected(request('stock') === 'out_of_stock')>{{ __('admin.stock.out_of_stock') }}</option>
-        </select>
-        <input type="date" name="date" value="{{ request('date') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" aria-label="{{ __('admin.inventory.filter_date') }}">
-    </form>
+        </x-admin.select>
+    </x-admin.filters>
 
-    <div class="overflow-x-auto rounded-md border border-border bg-card">
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.inventory.product') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.inventory.variant') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.inventory.sku') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.inventory.current') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.inventory.min') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.inventory.status') }}</th>
+    <x-admin.table :paginator="$rows">
+        <x-slot:head>
+            <x-admin.th sort="product">{{ __('admin.inventory.product') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.inventory.variant') }}</x-admin.th>
+            <x-admin.th sort="sku">{{ __('admin.inventory.sku') }}</x-admin.th>
+            <x-admin.th sort="stock" align="end">{{ __('admin.inventory.current') }}</x-admin.th>
+            <x-admin.th align="end">{{ __('admin.inventory.min') }}</x-admin.th>
+            <x-admin.th sort="status">{{ __('admin.inventory.status') }}</x-admin.th>
+        </x-slot:head>
+        <x-slot:body>
+            @foreach ($rows as $row)
+                <tr @class(['border-b border-border last:border-b-0', 'bg-muted/40' => $row['status'] !== 'in_stock'])>
+                    <x-admin.td :label="__('admin.inventory.product')">{{ $row['product'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.inventory.variant')" tone="muted">{{ $row['variant'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.inventory.sku')" tone="muted">{{ $row['sku'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.inventory.current')" align="end">{{ $row['stock'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.inventory.min')" align="end" tone="muted">{{ $row['min_stock'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.inventory.status')"><x-admin.badge :status="$row['status']" /></x-admin.td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach ($rows as $row)
-                    <tr @class(['border-b border-border last:border-b-0', 'bg-muted/40' => $row['status'] !== 'in_stock'])>
-                        <td class="px-3 py-2.5 text-foreground">{{ $row['product'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['variant'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['sku'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ $row['stock'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['min_stock'] }}</td>
-                        <td class="px-3 py-2.5"><x-admin.badge :status="$row['status']" /></td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+            @endforeach
+        </x-slot:body>
+    </x-admin.table>
 
     <x-admin.drawer name="stock-adjust" :title="__('admin.inventory.adjust')">
         <form method="POST" action="{{ route('admin.inventory.adjust') }}" class="flex flex-col gap-4">
             @csrf
-            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                {{ __('admin.inventory.sku') }}
-                <input name="sku" required class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-            </label>
-            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                {{ __('admin.inventory.quantity') }}
-                <input name="quantity" type="number" required class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-            </label>
-            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                {{ __('admin.inventory.reason') }}
-                <input name="reason" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-            </label>
-            <button type="submit" data-busy-label="{{ __('admin.common.processing') }}" class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">
-                {{ __('admin.common.save') }}
-            </button>
+            <x-admin.field :label="__('admin.inventory.sku')" name="sku" required>
+                <x-admin.input name="sku" required />
+            </x-admin.field>
+            <x-admin.field :label="__('admin.inventory.quantity')" name="quantity" required>
+                <x-admin.input name="quantity" type="number" required />
+            </x-admin.field>
+            <x-admin.field :label="__('admin.inventory.reason')" name="reason">
+                <x-admin.input name="reason" />
+            </x-admin.field>
+            <x-admin.button type="submit" data-busy-label="{{ __('admin.common.processing') }}">{{ __('admin.common.save') }}</x-admin.button>
         </form>
     </x-admin.drawer>
 @endsection

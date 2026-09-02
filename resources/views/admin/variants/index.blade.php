@@ -5,34 +5,30 @@
 @section('content')
     <x-admin.page-header :title="__('admin.variants.title')" />
 
-    <div class="overflow-x-auto rounded-md border border-border bg-card">
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.variants.product') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.color') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.size') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.sku') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.barcode') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.stock') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.price') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.products.status') }}</th>
+    <x-admin.table :paginator="$variants">
+        <x-slot:head>
+            <x-admin.th sort="product">{{ __('admin.variants.product') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.products.color') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.products.size') }}</x-admin.th>
+            <x-admin.th sort="sku">{{ __('admin.products.sku') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.products.barcode') }}</x-admin.th>
+            <x-admin.th sort="stock" align="end">{{ __('admin.products.stock') }}</x-admin.th>
+            <x-admin.th sort="price" align="end">{{ __('admin.products.price') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.products.status') }}</x-admin.th>
+        </x-slot:head>
+        <x-slot:body>
+            @foreach ($variants as $variant)
+                <tr class="border-b border-border last:border-b-0">
+                    <x-admin.td :label="__('admin.variants.product')">{{ $variant['product'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.products.color')" tone="muted">{{ $variant['color'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.products.size')" tone="muted">{{ $variant['size'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.products.sku')" tone="muted">{{ $variant['sku'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.products.barcode')" tone="muted">{{ $variant['barcode'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.products.stock')" align="end">{{ $variant['stock'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.products.price')" align="end">{{ \App\Support\AdminStore::money($variant['price']) }}</x-admin.td>
+                    <x-admin.td :label="__('admin.products.status')"><x-admin.badge :status="$variant['stock_status']" /></x-admin.td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach ($variants as $variant)
-                    <tr class="border-b border-border last:border-b-0">
-                        <td class="px-3 py-2.5 text-foreground">{{ $variant['product'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $variant['color'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $variant['size'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $variant['sku'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $variant['barcode'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ $variant['stock'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ \App\Support\AdminStore::money($variant['price']) }}</td>
-                        <td class="px-3 py-2.5"><x-admin.badge :status="$variant['stock_status']" /></td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+            @endforeach
+        </x-slot:body>
+    </x-admin.table>
 @endsection

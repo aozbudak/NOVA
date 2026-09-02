@@ -23,7 +23,7 @@
                 @foreach ($sections as $section)
                     @foreach ($section['items'] as $item)
                         <a
-                            href="{{ route($item['route']) }}"
+                            href="{{ route($item['route'], $item['parameters'] ?? []) }}"
                             data-search-item
                             data-search-label="{{ $item['label'] }}"
                             class="flex items-center gap-2 px-3 py-2 text-[13px] text-foreground hover:bg-accent"

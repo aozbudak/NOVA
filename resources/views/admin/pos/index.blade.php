@@ -57,9 +57,18 @@
             <div class="border-b border-border px-4 py-3">
                 <p class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.pos.cart') }}</p>
             </div>
-            <div data-pos-cart class="min-h-0 flex-1 overflow-y-auto">
+            <div data-pos-cart class="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
                 <p data-pos-cart-empty class="px-4 py-8 text-center text-[13px] text-muted-foreground">{{ __('admin.pos.cart_empty') }}</p>
-                <table class="hidden w-full text-left text-[12px]" data-pos-cart-table>
+                <table
+                    class="hidden w-full min-w-[28rem] text-left text-[12px]"
+                    data-pos-cart-table
+                    data-admin-table
+                    data-label-product="{{ __('admin.pos.product') }}"
+                    data-label-qty="{{ __('admin.pos.qty') }}"
+                    data-label-unit="{{ __('admin.pos.unit') }}"
+                    data-label-discount="{{ __('admin.pos.discount') }}"
+                    data-label-total="{{ __('admin.pos.line_total') }}"
+                >
                     <thead class="sticky top-0 bg-card text-[10px] tracking-wide text-muted-foreground uppercase">
                         <tr>
                             <th class="px-3 py-2 font-medium">{{ __('admin.pos.product') }}</th>

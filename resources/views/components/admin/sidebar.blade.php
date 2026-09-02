@@ -23,8 +23,8 @@
                         @foreach ($section['items'] as $item)
                             <li>
                                 <a
-                                    href="{{ route($item['route']) }}"
-                                    class="sidebar-link flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-sidebar-foreground transition-colors hover:bg-sidebar-accent {{ request()->routeIs($item['route']) || request()->routeIs(str_replace('.index', '', $item['route']).'.*') ? 'bg-sidebar-accent font-medium' : '' }}"
+                                    href="{{ route($item['route'], $item['parameters'] ?? []) }}"
+                                    class="sidebar-link flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-sidebar-foreground transition-colors hover:bg-sidebar-accent {{ ! empty($item['active']) ? 'bg-sidebar-accent font-medium' : '' }}"
                                 >
                                     <x-icon :name="$item['icon']" size="size-4" class="shrink-0 text-sidebar-muted" />
                                     <span class="sidebar-label truncate">{{ $item['label'] }}</span>

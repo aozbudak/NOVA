@@ -25,9 +25,9 @@
             @include('admin.settings.partials.'.$category, ['settings' => $settings])
             @if ($category !== 'system')
                 <div>
-                    <button type="submit" data-busy-label="{{ __('admin.common.saving') }}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">
+                    <x-admin.button type="submit" data-busy-label="{{ __('admin.common.saving') }}">
                         {{ __('admin.common.save') }}
-                    </button>
+                    </x-admin.button>
                 </div>
             @endif
         </form>

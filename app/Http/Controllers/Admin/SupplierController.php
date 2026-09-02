@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminList;
 use App\Support\AdminStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,8 +21,17 @@ class SupplierController extends Controller
         ];
 
         return view('admin.suppliers.index', [
-            'suppliers' => $store->suppliers($filters),
+            'suppliers' => AdminList::apply($store->suppliers($filters), ['name', 'total', 'last_purchase', 'status']),
             'filters' => $filters,
+            'chips' => AdminList::chips($filters, [
+                'search' => ['label' => __('admin.common.search')],
+                'status' => [
+                    'label' => __('admin.suppliers.filter_status'),
+                    'value' => $filters['status'] === '' ? '' : __('admin.status.'.$filters['status']),
+                ],
+                'date' => ['label' => __('admin.suppliers.filter_date')],
+                'sort' => ['label' => __('admin.suppliers.sort')],
+            ]),
         ]);
     }
 

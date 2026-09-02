@@ -18,44 +18,35 @@
 
         <section class="rounded-md border border-border bg-card p-4">
             <div class="grid gap-4 md:grid-cols-2">
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.users.first_name') }}
-                    <input name="first_name" value="{{ old('first_name', $user['first_name'] ?? '') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" required>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.users.last_name') }}
-                    <input name="last_name" value="{{ old('last_name', $user['last_name'] ?? '') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" required>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.users.email') }}
-                    <input name="email" type="email" value="{{ old('email', $user['email'] ?? '') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" required>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.users.phone') }}
-                    <input name="phone" value="{{ old('phone', $user['phone'] ?? '') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.users.role') }}
-                    <input name="role" value="{{ $roleKey }}" list="staff-roles" data-user-role data-role-abilities='@json($roleAbilities)' class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" required>
+                <x-admin.field :label="__('admin.users.first_name')" name="first_name" required>
+                    <x-admin.input name="first_name" value="{{ old('first_name', $user['first_name'] ?? '') }}" required />
+                </x-admin.field>
+                <x-admin.field :label="__('admin.users.last_name')" name="last_name" required>
+                    <x-admin.input name="last_name" value="{{ old('last_name', $user['last_name'] ?? '') }}" required />
+                </x-admin.field>
+                <x-admin.field :label="__('admin.users.email')" name="email" required>
+                    <x-admin.input name="email" type="email" value="{{ old('email', $user['email'] ?? '') }}" required />
+                </x-admin.field>
+                <x-admin.field :label="__('admin.users.phone')" name="phone">
+                    <x-admin.input name="phone" value="{{ old('phone', $user['phone'] ?? '') }}" />
+                </x-admin.field>
+                <x-admin.field :label="__('admin.users.role')" name="role" required :help="__('admin.users.role_hint')">
+                    <x-admin.input name="role" value="{{ $roleKey }}" list="staff-roles" data-user-role data-role-abilities='@json($roleAbilities)' required />
                     <datalist id="staff-roles">
                         @foreach ($roles as $option)
                             <option value="{{ $option['name'] }}"></option>
                         @endforeach
                     </datalist>
-                    <span>{{ __('admin.users.role_hint') }}</span>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.users.status') }}
-                    <select name="status" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+                </x-admin.field>
+                <x-admin.field :label="__('admin.users.status')" name="status" required>
+                    <x-admin.select name="status">
                         <option value="active" @selected(old('status', $user['status'] ?? 'active') === 'active')>{{ __('admin.status.active') }}</option>
                         <option value="inactive" @selected(old('status', $user['status'] ?? '') === 'inactive')>{{ __('admin.status.inactive') }}</option>
-                    </select>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground md:col-span-2">
-                    {{ __('admin.users.password') }}
-                    <input name="password" type="password" autocomplete="new-password" value="" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" @required(! $user)>
-                    <span>{{ $user ? __('admin.users.password_hint') : __('admin.users.password_help') }}</span>
-                </label>
+                    </x-admin.select>
+                </x-admin.field>
+                <x-admin.field class="md:col-span-2" :label="__('admin.users.password')" name="password" :required="! $user" :help="$user ? __('admin.users.password_hint') : __('admin.users.password_help')">
+                    <x-admin.input name="password" type="password" autocomplete="new-password" value="" @required(! $user) />
+                </x-admin.field>
             </div>
         </section>
 
@@ -73,8 +64,8 @@
         </section>
 
         <div class="flex items-center gap-2">
-            <button type="submit" data-busy-label="{{ __('admin.common.saving') }}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">{{ __('admin.common.save') }}</button>
-            <a href="{{ route('admin.roles.index') }}" class="inline-flex h-9 items-center rounded-md px-4 text-[12px] text-muted-foreground hover:text-foreground">{{ __('admin.common.cancel') }}</a>
+            <x-admin.button type="submit" data-busy-label="{{ __('admin.common.saving') }}">{{ __('admin.common.save') }}</x-admin.button>
+            <x-admin.button variant="ghost" :href="route('admin.users.index')">{{ __('admin.common.cancel') }}</x-admin.button>
         </div>
     </form>
 @endsection

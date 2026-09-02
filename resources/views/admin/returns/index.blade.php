@@ -5,77 +5,70 @@
 @section('content')
     <x-admin.page-header :title="__('admin.returns.title')">
         <x-slot:actions>
-            <a href="{{ route('admin.returns.create') }}" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">
-                <x-icon name="plus" size="size-3.5" />
-                {{ __('admin.returns.create') }}
-            </a>
+            <x-admin.button :href="route('admin.returns.create')" icon="plus">{{ __('admin.returns.create') }}</x-admin.button>
         </x-slot:actions>
     </x-admin.page-header>
 
-    <form method="GET" action="{{ route('admin.returns.index') }}" class="mb-4 grid gap-2 md:grid-cols-6" data-table-filter>
-        <input type="search" name="return" value="{{ $filters['return'] }}" placeholder="{{ __('admin.returns.filter_return') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
-        <input type="search" name="sale" value="{{ $filters['sale'] }}" placeholder="{{ __('admin.returns.filter_sale') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
-        <input type="search" name="customer" value="{{ $filters['customer'] }}" placeholder="{{ __('admin.returns.filter_customer') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
-        <input type="date" name="date" value="{{ $filters['date'] }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" aria-label="{{ __('admin.returns.date') }}">
-        <select name="reason" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+    <x-admin.filters :action="route('admin.returns.index')" :chips="$chips" :columns="6">
+        <x-admin.input type="search" name="return" value="{{ $filters['return'] }}" placeholder="{{ __('admin.returns.filter_return') }}" />
+        <x-admin.input type="search" name="sale" value="{{ $filters['sale'] }}" placeholder="{{ __('admin.returns.filter_sale') }}" />
+        <x-admin.input type="search" name="customer" value="{{ $filters['customer'] }}" placeholder="{{ __('admin.returns.filter_customer') }}" />
+        <x-admin.input type="date" name="date" value="{{ $filters['date'] }}" aria-label="{{ __('admin.returns.date') }}" />
+        <x-admin.select name="reason">
             <option value="">{{ __('admin.returns.reason') }}</option>
             <option value="wrong_size" @selected($filters['reason'] === 'wrong_size')>{{ __('admin.status.wrong_size') }}</option>
             <option value="defective" @selected($filters['reason'] === 'defective')>{{ __('admin.status.defective') }}</option>
             <option value="customer_request" @selected($filters['reason'] === 'customer_request')>{{ __('admin.status.customer_request') }}</option>
             <option value="other" @selected($filters['reason'] === 'other')>{{ __('admin.status.other') }}</option>
-        </select>
-        <select name="status" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" onchange="this.form.submit()">
+        </x-admin.select>
+        <x-admin.select name="status">
             <option value="">{{ __('admin.returns.status') }}</option>
             <option value="completed" @selected($filters['status'] === 'completed')>{{ __('admin.status.completed') }}</option>
             <option value="open" @selected($filters['status'] === 'open')>{{ __('admin.status.open') }}</option>
-        </select>
-    </form>
+        </x-admin.select>
+    </x-admin.filters>
 
     @if ($returns->isEmpty())
-        <div class="rounded-md border border-border bg-card">
+        <x-admin.table empty>
             <x-admin.empty :title="__('admin.empty.returns.title')">
                 {{ __('admin.empty.returns.body') }}
                 <x-slot:action>
-                    <a href="{{ route('admin.returns.create') }}" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">{{ __('admin.returns.create') }}</a>
+                    <x-admin.button :href="route('admin.returns.create')">{{ __('admin.returns.create') }}</x-admin.button>
                 </x-slot:action>
             </x-admin.empty>
-        </div>
+        </x-admin.table>
     @else
-    <div class="overflow-x-auto rounded-md border border-border bg-card">
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.returns.number') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.returns.sale') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.returns.customer') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.returns.products') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.returns.amount') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.returns.reason') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.returns.date') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.returns.status') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.common.actions') }}</th>
-                </tr>
-            </thead>
-            <tbody>
+        <x-admin.table :paginator="$returns">
+            <x-slot:head>
+                <x-admin.th sort="number">{{ __('admin.returns.number') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.returns.sale') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.returns.customer') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.returns.products') }}</x-admin.th>
+                <x-admin.th sort="amount" align="end">{{ __('admin.returns.amount') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.returns.reason') }}</x-admin.th>
+                <x-admin.th sort="date">{{ __('admin.returns.date') }}</x-admin.th>
+                <x-admin.th sort="status">{{ __('admin.returns.status') }}</x-admin.th>
+                <x-admin.th align="end">{{ __('admin.common.actions') }}</x-admin.th>
+            </x-slot:head>
+            <x-slot:body>
                 @foreach ($returns as $row)
                     <tr class="border-b border-border last:border-b-0">
-                        <td class="px-3 py-2.5 text-foreground">{{ $row['number'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['sale'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ $row['customer'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['products'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ \App\Support\AdminStore::money($row['amount']) }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ __('admin.status.'.$row['reason']) }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['date'] }}</td>
-                        <td class="px-3 py-2.5"><x-admin.badge group="status" :status="$row['status']" /></td>
-                        <td class="px-3 py-2.5">
-                            <a href="{{ route('admin.returns.show', $row['id']) }}" class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="{{ __('admin.common.view') }}">
-                                <x-icon name="eye" size="size-3.5" />
-                            </a>
-                        </td>
+                        <x-admin.td :label="__('admin.returns.number')">{{ $row['number'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.returns.sale')" tone="muted">{{ $row['sale'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.returns.customer')">{{ $row['customer'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.returns.products')" tone="muted">{{ $row['products'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.returns.amount')" align="end">{{ \App\Support\AdminStore::money($row['amount']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.returns.reason')" tone="muted">{{ __('admin.status.'.$row['reason']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.returns.date')" tone="muted">{{ $row['date'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.returns.status')"><x-admin.badge group="status" :status="$row['status']" /></x-admin.td>
+                        <x-admin.td :label="__('admin.common.actions')" align="end">
+                            <x-admin.row-actions>
+                                <x-admin.icon-button icon="eye" :label="__('admin.common.view')" :href="route('admin.returns.show', $row['id'])" />
+                            </x-admin.row-actions>
+                        </x-admin.td>
                     </tr>
                 @endforeach
-            </tbody>
-        </table>
-    </div>
+            </x-slot:body>
+        </x-admin.table>
     @endif
 @endsection

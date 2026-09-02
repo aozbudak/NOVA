@@ -34,7 +34,7 @@ class AdminRoleTest extends TestCase
             'status' => 'active',
             'password' => 'secret123',
             'abilities' => ['pos', 'sales'],
-        ])->assertRedirect(route('admin.roles.index'));
+        ])->assertRedirect(route('admin.users.index'));
 
         $this->get(route('admin.roles.index'))
             ->assertOk()

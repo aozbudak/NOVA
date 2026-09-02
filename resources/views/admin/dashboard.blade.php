@@ -76,24 +76,24 @@
     </div>
 
     <div class="mt-4 grid gap-4 xl:grid-cols-3">
-        <section class="rounded-md border border-border bg-card">
-            <div class="flex items-center justify-between border-b border-border px-4 py-3">
+        <section>
+            <div class="mb-2 flex items-center justify-between">
                 <h2 class="text-sm font-medium text-foreground">{{ __('admin.dashboard.charts.inventory') }}</h2>
                 <a href="{{ route('admin.inventory.index', ['stock' => 'low_stock']) }}" class="text-[12px] text-muted-foreground hover:text-foreground">{{ __('admin.dashboard.view_all') }}</a>
             </div>
-            <table class="w-full text-left text-[13px]">
-                <tbody>
+            <x-admin.table>
+                <x-slot:body>
                     @foreach ($inventoryAlerts as $row)
                         <tr class="border-b border-border last:border-b-0">
-                            <td class="px-4 py-2.5 text-foreground">{{ $row['product'] }}</td>
-                            <td class="px-4 py-2.5 text-muted-foreground">{{ $row['variant'] }}</td>
-                            <td class="px-4 py-2.5 text-right">
+                            <x-admin.td :label="__('admin.products.product')">{{ $row['product'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.nav.variants')" tone="muted">{{ $row['variant'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.products.status')" align="end">
                                 <x-admin.badge :status="$row['status']" />
-                            </td>
+                            </x-admin.td>
                         </tr>
                     @endforeach
-                </tbody>
-            </table>
+                </x-slot:body>
+            </x-admin.table>
         </section>
 
         <section class="rounded-md border border-border bg-card p-4">

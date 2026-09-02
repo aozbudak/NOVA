@@ -297,6 +297,40 @@
         transform: rotate(180deg);
     }
 
+    [data-admin-table] td::before {
+        display: none;
+    }
+
+    @media (max-width: 767px) {
+        [data-admin-table] thead {
+            display: none;
+        }
+
+        [data-admin-table] tr {
+            display: block;
+            border-bottom: 1px solid var(--border);
+            padding-block: 0.5rem;
+        }
+
+        [data-admin-table] td {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding-block: 0.35rem;
+        }
+
+        [data-admin-table] td::before {
+            display: block;
+            content: attr(data-label);
+            color: var(--muted-foreground);
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+    }
+
     @media (max-width: 1023px) {
         [data-panel].sidebar-open [data-admin-sidebar] {
             transform: translateX(0);

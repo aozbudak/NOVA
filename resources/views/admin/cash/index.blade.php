@@ -5,15 +5,9 @@
 @section('content')
     <x-admin.page-header :title="__('admin.cash.title')">
         <x-slot:actions>
-            <a href="{{ route('admin.cash.movements') }}" class="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-[12px] text-foreground hover:bg-accent">
-                {{ __('admin.cash.movements') }}
-            </a>
-            <a href="{{ route('admin.cash.open') }}" class="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-[12px] text-foreground hover:bg-accent">
-                {{ __('admin.cash.open') }}
-            </a>
-            <a href="{{ route('admin.cash.close') }}" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">
-                {{ __('admin.cash.close') }}
-            </a>
+            <x-admin.button variant="secondary" :href="route('admin.cash.movements')">{{ __('admin.cash.movements') }}</x-admin.button>
+            <x-admin.button variant="secondary" :href="route('admin.cash.open')">{{ __('admin.cash.open') }}</x-admin.button>
+            <x-admin.button :href="route('admin.cash.close')">{{ __('admin.cash.close') }}</x-admin.button>
         </x-slot:actions>
     </x-admin.page-header>
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\StaffRole;
 use App\Http\Controllers\Controller;
+use App\Support\AdminList;
 use App\Support\AdminStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,9 +13,20 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function index(): RedirectResponse
+    public function index(AdminStore $store): View
     {
-        return redirect()->route('admin.roles.index');
+        $users = $store->users()->map(function (array $user) use ($store): array {
+            $role = $store->role((string) $user['role']);
+
+            return [
+                ...$user,
+                'role_label' => $role['name'] ?? $user['role'],
+            ];
+        });
+
+        return view('admin.users.index', [
+            'users' => AdminList::apply($users, ['name', 'email', 'status', 'last_login', 'created_at']),
+        ]);
     }
 
     public function create(AdminStore $store): View
@@ -49,7 +61,7 @@ class UserController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.roles.index')
+            ->route('admin.users.index')
             ->with('status', __('admin.toast.user_created'));
     }
 
@@ -91,7 +103,7 @@ class UserController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.roles.index')
+            ->route('admin.users.index')
             ->with('status', __('admin.toast.user_updated'));
     }
 

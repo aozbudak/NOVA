@@ -6,8 +6,8 @@
     <x-admin.page-header :title="__('admin.returns.create')" />
 
     <form method="GET" action="{{ route('admin.returns.create') }}" class="mb-4 flex max-w-xl gap-2">
-        <input type="search" name="sale" value="{{ $query }}" placeholder="{{ __('admin.returns.sale_search') }}" class="h-9 flex-1 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
-        <button type="submit" class="inline-flex h-9 items-center rounded-md border border-border px-3 text-[13px] text-foreground">{{ __('admin.common.search') }}</button>
+        <x-admin.input type="search" name="sale" value="{{ $query }}" placeholder="{{ __('admin.returns.sale_search') }}" />
+        <x-admin.button type="submit" variant="secondary">{{ __('admin.common.search') }}</x-admin.button>
     </form>
 
     @if ($query !== '' && $sale === null)
@@ -40,25 +40,23 @@
             </section>
 
             <div class="grid gap-4 md:grid-cols-2">
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.returns.reason') }}
-                    <select name="reason" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+                <x-admin.field :label="__('admin.returns.reason')" name="reason">
+                    <x-admin.select name="reason">
                         <option value="wrong_size">{{ __('admin.status.wrong_size') }}</option>
                         <option value="defective">{{ __('admin.status.defective') }}</option>
                         <option value="customer_request">{{ __('admin.status.customer_request') }}</option>
                         <option value="other">{{ __('admin.status.other') }}</option>
-                    </select>
-                </label>
-                <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                    {{ __('admin.returns.type') }}
-                    <select name="type" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+                    </x-admin.select>
+                </x-admin.field>
+                <x-admin.field :label="__('admin.returns.type')" name="type">
+                    <x-admin.select name="type">
                         <option value="full">{{ __('admin.status.full') }}</option>
                         <option value="partial">{{ __('admin.status.partial') }}</option>
-                    </select>
-                </label>
+                    </x-admin.select>
+                </x-admin.field>
             </div>
 
-            <button type="submit" class="inline-flex h-9 w-fit items-center rounded-md bg-primary px-4 text-[13px] font-medium text-primary-foreground">{{ __('admin.common.save') }}</button>
+            <x-admin.button type="submit">{{ __('admin.common.save') }}</x-admin.button>
         </form>
     @endif
 @endsection

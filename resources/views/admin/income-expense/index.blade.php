@@ -5,64 +5,55 @@
 @section('content')
     <x-admin.page-header :title="__('admin.income_expense.title')">
         <x-slot:actions>
-            <a href="{{ route('admin.income-expense.create') }}" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">
-                <x-icon name="plus" size="size-3.5" />
-                {{ __('admin.income_expense.add') }}
-            </a>
+            <x-admin.button :href="route('admin.income-expense.create')" icon="plus">{{ __('admin.income_expense.add') }}</x-admin.button>
         </x-slot:actions>
     </x-admin.page-header>
 
-    <form method="GET" action="{{ route('admin.income-expense.index') }}" class="mb-4 grid gap-2 md:grid-cols-4">
-        <select name="type" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+    <x-admin.filters :action="route('admin.income-expense.index')" :chips="$chips" :columns="4">
+        <x-admin.select name="type">
             <option value="">{{ __('admin.income_expense.filter_type') }}</option>
             <option value="income" @selected($filters['type'] === 'income')>{{ __('admin.income_expense.income') }}</option>
             <option value="expense" @selected($filters['type'] === 'expense')>{{ __('admin.income_expense.expense') }}</option>
-        </select>
-        <select name="category" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+        </x-admin.select>
+        <x-admin.select name="category">
             <option value="">{{ __('admin.income_expense.filter_category') }}</option>
             @foreach ($categories as $category)
                 <option value="{{ $category }}" @selected($filters['category'] === $category)>{{ $category }}</option>
             @endforeach
-        </select>
-        <input type="date" name="date" value="{{ $filters['date'] }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" aria-label="{{ __('admin.income_expense.filter_date') }}">
-        <select name="user" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" onchange="this.form.submit()">
+        </x-admin.select>
+        <x-admin.input type="date" name="date" value="{{ $filters['date'] }}" aria-label="{{ __('admin.income_expense.filter_date') }}" />
+        <x-admin.select name="user">
             <option value="">{{ __('admin.income_expense.filter_user') }}</option>
             @foreach ($cashiers as $cashier)
                 <option value="{{ $cashier }}" @selected($filters['user'] === $cashier)>{{ $cashier }}</option>
             @endforeach
-        </select>
-    </form>
+        </x-admin.select>
+    </x-admin.filters>
 
-    <div class="overflow-x-auto rounded-md border border-border bg-card">
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.income_expense.date') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.income_expense.type') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.income_expense.category') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.income_expense.description') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.income_expense.amount') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.income_expense.user') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.income_expense.reference') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.common.actions') }}</th>
+    <x-admin.table :paginator="$transactions">
+        <x-slot:head>
+            <x-admin.th sort="date">{{ __('admin.income_expense.date') }}</x-admin.th>
+            <x-admin.th sort="type">{{ __('admin.income_expense.type') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.income_expense.category') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.income_expense.description') }}</x-admin.th>
+            <x-admin.th sort="amount" align="end">{{ __('admin.income_expense.amount') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.income_expense.user') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.income_expense.reference') }}</x-admin.th>
+        </x-slot:head>
+        <x-slot:body>
+            @foreach ($transactions as $row)
+                <tr class="border-b border-border last:border-b-0">
+                    <x-admin.td :label="__('admin.income_expense.date')" tone="muted">{{ $row['date'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.income_expense.type')"><x-admin.badge group="status" :status="$row['type']" /></x-admin.td>
+                    <x-admin.td :label="__('admin.income_expense.category')" tone="muted">{{ $row['category'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.income_expense.description')">{{ $row['description'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.income_expense.amount')" align="end" :tone="$row['type'] === 'income' ? 'success' : 'danger'">
+                        {{ \App\Support\AdminStore::money($row['amount']) }}
+                    </x-admin.td>
+                    <x-admin.td :label="__('admin.income_expense.user')" tone="muted">{{ $row['user'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.income_expense.reference')" tone="muted">{{ $row['reference'] }}</x-admin.td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach ($transactions as $row)
-                    <tr class="border-b border-border last:border-b-0">
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['date'] }}</td>
-                        <td class="px-3 py-2.5"><x-admin.badge group="status" :status="$row['type']" /></td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['category'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ $row['description'] }}</td>
-                        <td @class(['px-3 py-2.5', 'text-success' => $row['type'] === 'income', 'text-destructive' => $row['type'] === 'expense'])>
-                            {{ \App\Support\AdminStore::money($row['amount']) }}
-                        </td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['user'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $row['reference'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">—</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+            @endforeach
+        </x-slot:body>
+    </x-admin.table>
 @endsection

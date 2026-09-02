@@ -5,75 +5,67 @@
 @section('content')
     <x-admin.page-header :title="__('admin.customers.title')">
         <x-slot:actions>
-            <button type="button" data-open-layer="add-customer" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">
-                <x-icon name="plus" size="size-3.5" />
-                {{ __('admin.customers.add') }}
-            </button>
+            <x-admin.button type="button" icon="plus" data-open-layer="add-customer">{{ __('admin.customers.add') }}</x-admin.button>
         </x-slot:actions>
     </x-admin.page-header>
 
+    <x-admin.filters :action="route('admin.customers.index')" :chips="$chips" :columns="1">
+        <x-admin.input type="search" name="search" value="{{ $filters['search'] }}" placeholder="{{ __('admin.customers.search') }}" />
+    </x-admin.filters>
+
     @if ($customers->isEmpty())
-        <div class="rounded-md border border-border bg-card">
+        <x-admin.table empty>
             <x-admin.empty :title="__('admin.empty.customers.title')">
                 {{ __('admin.empty.customers.body') }}
                 <x-slot:action>
-                    <button type="button" data-open-layer="add-customer" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">{{ __('admin.customers.add') }}</button>
+                    <x-admin.button type="button" data-open-layer="add-customer">{{ __('admin.customers.add') }}</x-admin.button>
                 </x-slot:action>
             </x-admin.empty>
-        </div>
+        </x-admin.table>
     @else
-    <div class="overflow-x-auto rounded-md border border-border bg-card">
-        <table class="w-full text-left text-[13px]">
-            <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
-                <tr>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.customers.name') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.customers.phone') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.customers.email') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.customers.orders') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.customers.spent') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.customers.last_purchase') }}</th>
-                    <th class="px-3 py-2 font-medium">{{ __('admin.common.actions') }}</th>
-                </tr>
-            </thead>
-            <tbody>
+        <x-admin.table :paginator="$customers">
+            <x-slot:head>
+                <x-admin.th sort="name">{{ __('admin.customers.name') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.customers.phone') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.customers.email') }}</x-admin.th>
+                <x-admin.th sort="orders" align="end">{{ __('admin.customers.orders') }}</x-admin.th>
+                <x-admin.th sort="spent" align="end">{{ __('admin.customers.spent') }}</x-admin.th>
+                <x-admin.th sort="last_purchase">{{ __('admin.customers.last_purchase') }}</x-admin.th>
+                <x-admin.th align="end">{{ __('admin.common.actions') }}</x-admin.th>
+            </x-slot:head>
+            <x-slot:body>
                 @foreach ($customers as $customer)
                     <tr class="border-b border-border last:border-b-0">
-                        <td class="px-3 py-2.5 text-foreground">{{ $customer['name'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $customer['phone'] }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $customer['email'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ $customer['orders'] }}</td>
-                        <td class="px-3 py-2.5 text-foreground">{{ \App\Support\AdminStore::money($customer['spent']) }}</td>
-                        <td class="px-3 py-2.5 text-muted-foreground">{{ $customer['last_purchase'] }}</td>
-                        <td class="px-3 py-2.5">
-                            <a href="{{ route('admin.customers.show', $customer['id']) }}" class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="{{ __('admin.common.view') }}">
-                                <x-icon name="eye" size="size-3.5" />
-                            </a>
-                        </td>
+                        <x-admin.td :label="__('admin.customers.name')">{{ $customer['name'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.phone')" tone="muted">{{ $customer['phone'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.email')" tone="muted">{{ $customer['email'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.orders')" align="end">{{ $customer['orders'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.spent')" align="end">{{ \App\Support\AdminStore::money($customer['spent']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.customers.last_purchase')" tone="muted">{{ $customer['last_purchase'] }}</x-admin.td>
+                        <x-admin.td :label="__('admin.common.actions')" align="end">
+                            <x-admin.row-actions>
+                                <x-admin.icon-button icon="eye" :label="__('admin.common.view')" :href="route('admin.customers.show', $customer['id'])" />
+                            </x-admin.row-actions>
+                        </x-admin.td>
                     </tr>
                 @endforeach
-            </tbody>
-        </table>
-    </div>
+            </x-slot:body>
+        </x-admin.table>
     @endif
 
     <x-admin.drawer name="add-customer" :title="__('admin.customers.add')">
         <form method="POST" action="{{ route('admin.customers.store') }}" class="flex flex-col gap-4">
             @csrf
-            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                {{ __('admin.customers.name') }}
-                <input name="name" required class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-            </label>
-            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                {{ __('admin.customers.email') }}
-                <input name="email" type="email" required class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-            </label>
-            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
-                {{ __('admin.customers.phone') }}
-                <input name="phone" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
-            </label>
-            <button type="submit" data-busy-label="{{ __('admin.common.saving') }}" class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">
-                {{ __('admin.common.save') }}
-            </button>
+            <x-admin.field :label="__('admin.customers.name')" name="name" required>
+                <x-admin.input name="name" required />
+            </x-admin.field>
+            <x-admin.field :label="__('admin.customers.email')" name="email" required>
+                <x-admin.input name="email" type="email" required />
+            </x-admin.field>
+            <x-admin.field :label="__('admin.customers.phone')" name="phone">
+                <x-admin.input name="phone" />
+            </x-admin.field>
+            <x-admin.button type="submit" data-busy-label="{{ __('admin.common.saving') }}">{{ __('admin.common.save') }}</x-admin.button>
         </form>
     </x-admin.drawer>
 @endsection

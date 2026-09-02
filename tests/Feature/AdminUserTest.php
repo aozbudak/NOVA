@@ -37,10 +37,17 @@ class AdminUserTest extends TestCase
         ]);
     }
 
-    public function test_users_index_redirects_to_roles(): void
+    public function test_users_index_lists_staff_and_add_action(): void
     {
-        $this->get(route('admin.users.index'))
-            ->assertRedirect(route('admin.roles.index'));
+        $response = $this->get(route('admin.users.index'));
+
+        $response->assertOk();
+        $response->assertSee('Users');
+        $response->assertSee('Add user');
+        $response->assertSee('Ayşe Yılmaz');
+        $response->assertSee('ayse.yilmaz@nova.store');
+        $response->assertSee('Cashier');
+        $response->assertSee('Active');
     }
 
     public function test_create_form_collects_identity_role_status_and_password(): void
@@ -101,9 +108,9 @@ class AdminUserTest extends TestCase
             'status' => 'active',
             'password' => 'secret123',
             'abilities' => ['pos', 'sales', 'customers', 'returns', 'products', 'categories'],
-        ])->assertRedirect(route('admin.roles.index'));
+        ])->assertRedirect(route('admin.users.index'));
 
-        $this->get(route('admin.roles.index'))
+        $this->get(route('admin.users.index'))
             ->assertOk()
             ->assertSee('Lara Koç')
             ->assertSee('lara.koc@nova.store');
@@ -126,7 +133,7 @@ class AdminUserTest extends TestCase
             'role' => StaffRole::Cashier->value,
             'status' => 'active',
             'abilities' => ['pos', 'sales', 'customers', 'returns', 'products'],
-        ])->assertRedirect(route('admin.roles.index'));
+        ])->assertRedirect(route('admin.users.index'));
 
         $edit = $this->get(route('admin.users.edit', 'ayse-yilmaz'));
 
@@ -159,7 +166,7 @@ class AdminUserTest extends TestCase
             'phone' => '0532 441 00 11',
             'role' => StaffRole::Cashier->value,
             'status' => 'active',
-        ])->assertRedirect(route('admin.roles.index'));
+        ])->assertRedirect(route('admin.users.index'));
     }
 
     public function test_unknown_user_returns_404(): void

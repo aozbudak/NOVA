@@ -1,15 +1,12 @@
-<form method="GET" action="{{ route('admin.reports.show', $report['key']) }}" class="mb-6 flex flex-wrap items-end gap-2">
-    <label class="flex flex-col gap-1 text-[11px] text-muted-foreground">
-        {{ __('admin.dashboard.range.from') }}
-        <input type="date" name="from" value="{{ $report['from'] }}" class="h-8 rounded-md border border-input bg-background px-2 text-[13px] text-foreground">
-    </label>
-    <label class="flex flex-col gap-1 text-[11px] text-muted-foreground">
-        {{ __('admin.dashboard.range.to') }}
-        <input type="date" name="to" value="{{ $report['to'] }}" class="h-8 rounded-md border border-input bg-background px-2 text-[13px] text-foreground">
-    </label>
+<x-admin.filters :action="route('admin.reports.show', $report['key'])" :columns="2">
+    <x-admin.field :label="__('admin.dashboard.range.from')">
+        <x-admin.input type="date" name="from" value="{{ $report['from'] }}" />
+    </x-admin.field>
+    <x-admin.field :label="__('admin.dashboard.range.to')">
+        <x-admin.input type="date" name="to" value="{{ $report['to'] }}" />
+    </x-admin.field>
     <input type="hidden" name="date" value="{{ $report['date'] }}">
-    <button type="submit" class="h-8 rounded-md border border-border bg-card px-3 text-[12px] text-foreground hover:bg-accent">{{ __('admin.dashboard.range.apply') }}</button>
-</form>
+</x-admin.filters>
 
 @include('admin.reports.partials.metrics', ['report' => $report])
 

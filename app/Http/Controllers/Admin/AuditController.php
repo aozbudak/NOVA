@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminList;
 use App\Support\AdminStore;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,8 +20,17 @@ class AuditController extends Controller
         ];
 
         return view('admin.audit.index', [
-            'logs' => $store->auditLogs($filters),
+            'logs' => AdminList::apply($store->auditLogs($filters), ['datetime', 'user', 'module', 'status']),
             'filters' => $filters,
+            'chips' => AdminList::chips($filters, [
+                'search' => ['label' => __('admin.common.search')],
+                'module' => ['label' => __('admin.audit.module')],
+                'user' => ['label' => __('admin.audit.user')],
+                'status' => [
+                    'label' => __('admin.audit.status'),
+                    'value' => $filters['status'] === '' ? '' : __('admin.status.'.$filters['status']),
+                ],
+            ]),
         ]);
     }
 
