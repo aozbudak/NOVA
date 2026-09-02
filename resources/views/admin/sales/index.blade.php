@@ -5,7 +5,7 @@
 @section('content')
     <x-admin.page-header :title="__('admin.sales.title')" />
 
-    <form method="GET" action="{{ route('admin.sales.index') }}" class="mb-4 grid gap-2 md:grid-cols-6">
+    <form method="GET" action="{{ route('admin.sales.index') }}" class="mb-4 grid gap-2 md:grid-cols-6" data-table-filter>
         <input type="search" name="search" value="{{ $filters['search'] }}" placeholder="{{ __('admin.sales.search') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
         <input type="date" name="from" value="{{ $filters['from'] }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" aria-label="{{ __('admin.sales.from') }}">
         <input type="date" name="to" value="{{ $filters['to'] }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground" aria-label="{{ __('admin.sales.to') }}">
@@ -30,6 +30,18 @@
         </select>
     </form>
 
+    <div data-table-shell class="relative">
+        <div data-table-skeleton hidden>
+            <x-admin.skeleton.table />
+        </div>
+        <div data-table-body>
+    @if ($sales->isEmpty())
+        <div class="rounded-md border border-border bg-card">
+            <x-admin.empty :title="__('admin.empty.sales.title')">
+                {{ __('admin.empty.sales.body') }}
+            </x-admin.empty>
+        </div>
+    @else
     <div class="overflow-x-auto rounded-md border border-border bg-card">
         <table class="w-full text-left text-[13px]">
             <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
@@ -65,5 +77,8 @@
                 @endforeach
             </tbody>
         </table>
+    </div>
+    @endif
+        </div>
     </div>
 @endsection

@@ -21,6 +21,13 @@
             <span class="text-muted-foreground">{{ __('admin.cash.difference') }}</span>
             <span class="text-foreground">₺0</span>
         </div>
-        <button type="submit" class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-[13px] font-medium text-primary-foreground">{{ __('admin.cash.submit_close') }}</button>
+        <button
+            type="submit"
+            data-confirm
+            data-confirm-title="{{ __('admin.confirm.close_register') }}"
+            data-confirm-body="{{ __('admin.confirm.close_register_body') }}"
+            data-busy-label="{{ __('admin.common.processing') }}"
+            class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-[13px] font-medium text-primary-foreground"
+        >{{ __('admin.cash.submit_close') }}</button>
     </form>
 @endsection

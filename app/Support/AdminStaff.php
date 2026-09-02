@@ -10,6 +10,7 @@ final class AdminStaff
         public string $name,
         public string $email,
         public StaffRole $role,
+        public string $phone = '',
     ) {}
 
     public static function fromSession(): self
@@ -21,6 +22,7 @@ final class AdminStaff
             name: (string) session('admin.name', 'Ayşe Yılmaz'),
             email: (string) session('admin.email', 'ayse.yilmaz@nova.store'),
             role: $role,
+            phone: (string) session('admin.phone', '0532 441 00 11'),
         );
     }
 }

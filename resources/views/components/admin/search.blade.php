@@ -2,11 +2,7 @@
     'sections' => [],
 ])
 
-@php
-    $entries = collect($sections)->flatMap(fn (array $section) => $section['items'])->values();
-@endphp
-
-<div data-admin-search hidden class="fixed inset-0 z-50">
+<div data-admin-search hidden class="fixed inset-0 z-50" data-search-url="{{ route('admin.search') }}" data-search-groups='@json(__("admin.search.groups"))'>
     <div data-search-backdrop class="absolute inset-0 bg-foreground/20"></div>
     <div class="relative mx-auto mt-[12vh] w-full max-w-lg px-4">
         <div class="overflow-hidden rounded-md border border-border bg-card shadow-sm">
@@ -23,9 +19,9 @@
                     <x-icon name="x" size="size-4" />
                 </button>
             </div>
-            <ul data-admin-search-results class="max-h-80 overflow-y-auto py-1">
-                @foreach ($entries as $item)
-                    <li>
+            <div data-admin-search-pages class="max-h-80 overflow-y-auto py-1">
+                @foreach ($sections as $section)
+                    @foreach ($section['items'] as $item)
                         <a
                             href="{{ route($item['route']) }}"
                             data-search-item
@@ -35,9 +31,10 @@
                             <x-icon :name="$item['icon']" size="size-4" class="text-muted-foreground" />
                             {{ $item['label'] }}
                         </a>
-                    </li>
+                    @endforeach
                 @endforeach
-            </ul>
+            </div>
+            <div data-admin-search-groups hidden class="max-h-80 overflow-y-auto py-1"></div>
             <p data-admin-search-empty hidden class="px-3 py-6 text-center text-[13px] text-muted-foreground">{{ __('admin.search.empty') }}</p>
         </div>
     </div>

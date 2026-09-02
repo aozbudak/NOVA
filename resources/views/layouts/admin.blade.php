@@ -40,5 +40,7 @@
         </div>
 
         <x-admin.search :sections="$navSections" />
+        <x-admin.confirm />
+        <x-admin.toast />
     </body>
 </html>

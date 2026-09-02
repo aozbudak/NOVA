@@ -36,6 +36,11 @@
         </form>
     </div>
 
+    <div data-dashboard-skeleton hidden class="flex flex-col gap-6">
+        <x-admin.skeleton.kpi />
+        <x-admin.skeleton.chart />
+    </div>
+
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         @foreach ($kpis as $kpi)
             <article class="rounded-md border border-border bg-card px-4 py-3">

@@ -16,6 +16,8 @@ class AdminCustomerTest extends TestCase
         $response->assertSee('Total spent');
         $response->assertSee('Last purchase');
         $response->assertSee('₺24,800');
+        $response->assertSee('Add customer');
+        $response->assertSee('data-admin-layer="add-customer"', false);
     }
 
     public function test_customer_detail_renders_profile_sales_and_returns(): void

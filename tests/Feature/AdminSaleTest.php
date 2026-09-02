@@ -40,4 +40,11 @@ class AdminSaleTest extends TestCase
     {
         $this->get(route('admin.sales.show', 'missing'))->assertNotFound();
     }
+
+    public function test_empty_filters_render_no_sales(): void
+    {
+        $this->get(route('admin.sales.index', ['search' => 'no-such-sale']))
+            ->assertOk()
+            ->assertSee('No sales');
+    }
 }

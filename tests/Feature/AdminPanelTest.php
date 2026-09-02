@@ -26,6 +26,12 @@ class AdminPanelTest extends TestCase
         $response->assertSee('Cash summary');
         $response->assertSee('Audit log');
         $response->assertSee('Roles & permissions');
+        $response->assertSee('data-dashboard-skeleton', false);
+        $response->assertSee('data-admin-layer="confirm"', false);
+        $response->assertSee('id="admin-toast"', false);
+        $response->assertSee('Processing...');
+        $response->assertSee('Something went wrong.');
+        $response->assertSee('Please try again.');
     }
 
     public function test_cashier_is_redirected_from_dashboard_to_pos(): void

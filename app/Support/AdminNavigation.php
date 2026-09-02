@@ -13,11 +13,13 @@ final class AdminNavigation
         'admin.products.create' => 'products',
         'admin.products.store' => 'products',
         'admin.products.edit' => 'products',
+        'admin.products.deactivate' => 'products',
         'admin.products.update' => 'products',
         'admin.categories.index' => 'categories',
         'admin.brands.index' => 'brands',
         'admin.variants.index' => 'variants',
         'admin.inventory.index' => 'inventory',
+        'admin.inventory.adjust' => 'inventory',
         'admin.inventory.movements' => 'inventory',
         'admin.barcode.index' => 'barcode',
         'admin.pos.index' => 'pos',
@@ -30,6 +32,7 @@ final class AdminNavigation
         'admin.exchanges.index' => 'exchanges',
         'admin.exchanges.show' => 'exchanges',
         'admin.customers.index' => 'customers',
+        'admin.customers.store' => 'customers',
         'admin.customers.show' => 'customers',
         'admin.suppliers.index' => 'suppliers',
         'admin.suppliers.create' => 'suppliers',
@@ -55,9 +58,15 @@ final class AdminNavigation
         'admin.users.update' => 'users',
         'admin.roles.index' => 'roles',
         'admin.roles.show' => 'roles',
+        'admin.notifications.read' => 'profile',
+        'admin.notifications.read-all' => 'profile',
         'admin.audit.index' => 'audit',
+        'admin.audit.show' => 'audit',
         'admin.settings.index' => 'settings',
+        'admin.settings.update' => 'settings',
         'admin.profile.show' => 'profile',
+        'admin.profile.update' => 'profile',
+        'admin.profile.password' => 'profile',
     ];
 
     public function __construct(private AdminStaff $staff) {}
@@ -299,6 +308,10 @@ final class AdminNavigation
             'admin.roles.show' => [
                 ['label' => __('admin.nav.roles'), 'url' => route('admin.roles.index')],
                 ['label' => __('admin.roles.detail'), 'url' => null],
+            ],
+            'admin.audit.show' => [
+                ['label' => __('admin.nav.audit'), 'url' => route('admin.audit.index')],
+                ['label' => __('admin.audit.detail'), 'url' => null],
             ],
         ];
 

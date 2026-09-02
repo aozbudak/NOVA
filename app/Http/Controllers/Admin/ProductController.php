@@ -39,7 +39,9 @@ class ProductController extends Controller
 
     public function store(): RedirectResponse
     {
-        return redirect()->route('admin.products.index');
+        return redirect()
+            ->route('admin.products.index')
+            ->with('status', __('admin.toast.product_created'));
     }
 
     public function edit(string $product, AdminStore $store): View
@@ -59,6 +61,17 @@ class ProductController extends Controller
     {
         abort_if($store->product($product) === null, 404);
 
-        return redirect()->route('admin.products.index');
+        return redirect()
+            ->route('admin.products.index')
+            ->with('status', __('admin.toast.product_updated'));
+    }
+
+    public function deactivate(string $product, AdminStore $store): RedirectResponse
+    {
+        abort_if($store->product($product) === null, 404);
+
+        return redirect()
+            ->route('admin.products.index')
+            ->with('status', __('admin.toast.product_deactivated'));
     }
 }

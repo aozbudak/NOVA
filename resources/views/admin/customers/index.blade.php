@@ -3,8 +3,25 @@
 @section('title', __('admin.customers.title'))
 
 @section('content')
-    <x-admin.page-header :title="__('admin.customers.title')" />
+    <x-admin.page-header :title="__('admin.customers.title')">
+        <x-slot:actions>
+            <button type="button" data-open-layer="add-customer" class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">
+                <x-icon name="plus" size="size-3.5" />
+                {{ __('admin.customers.add') }}
+            </button>
+        </x-slot:actions>
+    </x-admin.page-header>
 
+    @if ($customers->isEmpty())
+        <div class="rounded-md border border-border bg-card">
+            <x-admin.empty :title="__('admin.empty.customers.title')">
+                {{ __('admin.empty.customers.body') }}
+                <x-slot:action>
+                    <button type="button" data-open-layer="add-customer" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">{{ __('admin.customers.add') }}</button>
+                </x-slot:action>
+            </x-admin.empty>
+        </div>
+    @else
     <div class="overflow-x-auto rounded-md border border-border bg-card">
         <table class="w-full text-left text-[13px]">
             <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
@@ -37,4 +54,26 @@
             </tbody>
         </table>
     </div>
+    @endif
+
+    <x-admin.drawer name="add-customer" :title="__('admin.customers.add')">
+        <form method="POST" action="{{ route('admin.customers.store') }}" class="flex flex-col gap-4">
+            @csrf
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
+                {{ __('admin.customers.name') }}
+                <input name="name" required class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+            </label>
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
+                {{ __('admin.customers.email') }}
+                <input name="email" type="email" required class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+            </label>
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
+                {{ __('admin.customers.phone') }}
+                <input name="phone" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+            </label>
+            <button type="submit" data-busy-label="{{ __('admin.common.saving') }}" class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">
+                {{ __('admin.common.save') }}
+            </button>
+        </form>
+    </x-admin.drawer>
 @endsection

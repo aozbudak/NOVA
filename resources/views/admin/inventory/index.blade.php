@@ -5,6 +5,9 @@
 @section('content')
     <x-admin.page-header :title="__('admin.inventory.title')">
         <x-slot:actions>
+            <button type="button" data-open-layer="stock-adjust" class="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-[12px] text-foreground hover:bg-accent">
+                {{ __('admin.inventory.adjust') }}
+            </button>
             <a href="{{ route('admin.inventory.movements') }}" class="inline-flex h-8 items-center rounded-md border border-border bg-card px-3 text-[12px] text-foreground hover:bg-accent">
                 {{ __('admin.inventory.movements') }}
             </a>
@@ -54,4 +57,25 @@
             </tbody>
         </table>
     </div>
+
+    <x-admin.drawer name="stock-adjust" :title="__('admin.inventory.adjust')">
+        <form method="POST" action="{{ route('admin.inventory.adjust') }}" class="flex flex-col gap-4">
+            @csrf
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
+                {{ __('admin.inventory.sku') }}
+                <input name="sku" required class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+            </label>
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
+                {{ __('admin.inventory.quantity') }}
+                <input name="quantity" type="number" required class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+            </label>
+            <label class="flex flex-col gap-1.5 text-[12px] text-muted-foreground">
+                {{ __('admin.inventory.reason') }}
+                <input name="reason" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
+            </label>
+            <button type="submit" data-busy-label="{{ __('admin.common.processing') }}" class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">
+                {{ __('admin.common.save') }}
+            </button>
+        </form>
+    </x-admin.drawer>
 @endsection

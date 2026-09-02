@@ -39,11 +39,15 @@ class CashController extends Controller
 
     public function storeOpening(): RedirectResponse
     {
-        return redirect()->route('admin.cash.index');
+        return redirect()
+            ->route('admin.cash.index')
+            ->with('status', __('admin.toast.register_opened'));
     }
 
     public function storeClosing(): RedirectResponse
     {
-        return redirect()->route('admin.cash.index');
+        return redirect()
+            ->route('admin.cash.index')
+            ->with('status', __('admin.toast.register_closed'));
     }
 }

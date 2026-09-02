@@ -12,7 +12,7 @@
         </x-slot:actions>
     </x-admin.page-header>
 
-    <form method="GET" action="{{ route('admin.suppliers.index') }}" class="mb-4 grid gap-2 md:grid-cols-4">
+    <form method="GET" action="{{ route('admin.suppliers.index') }}" class="mb-4 grid gap-2 md:grid-cols-4" data-table-filter>
         <input type="search" name="search" value="{{ $filters['search'] }}" placeholder="{{ __('admin.suppliers.search') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
         <select name="status" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
             <option value="">{{ __('admin.suppliers.filter_status') }}</option>
@@ -28,6 +28,16 @@
         </select>
     </form>
 
+    @if ($suppliers->isEmpty())
+        <div class="rounded-md border border-border bg-card">
+            <x-admin.empty :title="__('admin.empty.suppliers.title')">
+                {{ __('admin.empty.suppliers.body') }}
+                <x-slot:action>
+                    <a href="{{ route('admin.suppliers.create') }}" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">{{ __('admin.suppliers.add') }}</a>
+                </x-slot:action>
+            </x-admin.empty>
+        </div>
+    @else
     <div class="overflow-x-auto rounded-md border border-border bg-card">
         <table class="w-full text-left text-[13px]">
             <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
@@ -62,4 +72,5 @@
             </tbody>
         </table>
     </div>
+    @endif
 @endsection

@@ -12,7 +12,7 @@
         </x-slot:actions>
     </x-admin.page-header>
 
-    <form method="GET" action="{{ route('admin.returns.index') }}" class="mb-4 grid gap-2 md:grid-cols-6">
+    <form method="GET" action="{{ route('admin.returns.index') }}" class="mb-4 grid gap-2 md:grid-cols-6" data-table-filter>
         <input type="search" name="return" value="{{ $filters['return'] }}" placeholder="{{ __('admin.returns.filter_return') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
         <input type="search" name="sale" value="{{ $filters['sale'] }}" placeholder="{{ __('admin.returns.filter_sale') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
         <input type="search" name="customer" value="{{ $filters['customer'] }}" placeholder="{{ __('admin.returns.filter_customer') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
@@ -31,6 +31,16 @@
         </select>
     </form>
 
+    @if ($returns->isEmpty())
+        <div class="rounded-md border border-border bg-card">
+            <x-admin.empty :title="__('admin.empty.returns.title')">
+                {{ __('admin.empty.returns.body') }}
+                <x-slot:action>
+                    <a href="{{ route('admin.returns.create') }}" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">{{ __('admin.returns.create') }}</a>
+                </x-slot:action>
+            </x-admin.empty>
+        </div>
+    @else
     <div class="overflow-x-auto rounded-md border border-border bg-card">
         <table class="w-full text-left text-[13px]">
             <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
@@ -67,4 +77,5 @@
             </tbody>
         </table>
     </div>
+    @endif
 @endsection

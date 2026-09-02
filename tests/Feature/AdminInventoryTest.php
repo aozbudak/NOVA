@@ -31,4 +31,28 @@ class AdminInventoryTest extends TestCase
         $response->assertSee('Exchange');
         $response->assertSee('NV-10482');
     }
+
+    public function test_stock_adjustment_drawer_and_update_toast(): void
+    {
+        $this->get(route('admin.inventory.index'))
+            ->assertOk()
+            ->assertSee('Stock adjustment')
+            ->assertSee('data-admin-layer="stock-adjust"', false);
+
+        $this->post(route('admin.inventory.adjust'), [
+            'sku' => 'NOVA01-WHI-M',
+            'quantity' => 2,
+            'reason' => 'Count correction',
+        ])
+            ->assertRedirect(route('admin.inventory.index'))
+            ->assertSessionHas('status', 'Stock updated successfully.');
+    }
+
+    public function test_unknown_sku_adjustment_returns_404(): void
+    {
+        $this->post(route('admin.inventory.adjust'), [
+            'sku' => 'MISSING',
+            'quantity' => 1,
+        ])->assertNotFound();
+    }
 }

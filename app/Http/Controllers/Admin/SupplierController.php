@@ -32,7 +32,9 @@ class SupplierController extends Controller
 
     public function store(): RedirectResponse
     {
-        return redirect()->route('admin.suppliers.index');
+        return redirect()
+            ->route('admin.suppliers.index')
+            ->with('status', __('admin.toast.supplier_created'));
     }
 
     public function show(string $supplier, AdminStore $store): View

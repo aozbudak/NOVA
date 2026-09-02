@@ -48,7 +48,9 @@ class UserController extends Controller
             'abilities' => $data['abilities'] ?? [],
         ]);
 
-        return redirect()->route('admin.roles.index');
+        return redirect()
+            ->route('admin.roles.index')
+            ->with('status', __('admin.toast.user_created'));
     }
 
     public function edit(string $user, AdminStore $store): View
@@ -88,7 +90,9 @@ class UserController extends Controller
             'abilities' => $data['abilities'] ?? [],
         ]);
 
-        return redirect()->route('admin.roles.index');
+        return redirect()
+            ->route('admin.roles.index')
+            ->with('status', __('admin.toast.user_updated'));
     }
 
     /**

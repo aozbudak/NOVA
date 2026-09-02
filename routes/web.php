@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\CashController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -7,14 +8,18 @@ use App\Http\Controllers\Admin\ExchangeController;
 use App\Http\Controllers\Admin\IncomeExpenseController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\LogoutController;
+use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\PanelPageController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\ReturnController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SaleController;
+use App\Http\Controllers\Admin\SearchController as AdminSearchController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VariantController;
@@ -80,11 +85,13 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/products/create', [AdminProductController::class, 'create'])->name('products.create');
         Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
+        Route::post('/products/{product}/deactivate', [AdminProductController::class, 'deactivate'])->name('products.deactivate');
         Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
         Route::get('/categories', PanelPageController::class)->name('categories.index');
         Route::get('/brands', PanelPageController::class)->name('brands.index');
         Route::get('/variants', VariantController::class)->name('variants.index');
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+        Route::post('/inventory/adjust', [InventoryController::class, 'adjust'])->name('inventory.adjust');
         Route::get('/inventory/movements', [InventoryController::class, 'movements'])->name('inventory.movements');
         Route::get('/barcode', PanelPageController::class)->name('barcode.index');
         Route::get('/pos', PosController::class)->name('pos.index');
@@ -97,6 +104,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/exchanges', [ExchangeController::class, 'index'])->name('exchanges.index');
         Route::get('/exchanges/{exchange}', [ExchangeController::class, 'show'])->name('exchanges.show');
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
         Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
         Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
@@ -122,8 +130,15 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
         Route::get('/roles/{role}', [RoleController::class, 'show'])->name('roles.show');
-        Route::get('/audit', PanelPageController::class)->name('audit.index');
-        Route::get('/settings', PanelPageController::class)->name('settings.index');
-        Route::get('/profile', PanelPageController::class)->name('profile.show');
+        Route::get('/search', AdminSearchController::class)->name('search');
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+        Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+        Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+        Route::get('/audit/{audit}', [AuditController::class, 'show'])->name('audit.show');
+        Route::get('/settings/{category?}', [SettingController::class, 'index'])->name('settings.index');
+        Route::put('/settings/{category}', [SettingController::class, 'update'])->name('settings.update');
+        Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+        Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::put('/profile/password', [ProfileController::class, 'password'])->name('profile.password');
     });
 });

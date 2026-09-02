@@ -31,6 +31,7 @@ class AdminProductTest extends TestCase
         $response->assertSee('Variants');
         $response->assertSee('Images');
         $response->assertSee('Inventory');
+        $response->assertSee('Saving...');
         $response->assertSee('Dashboard');
         $response->assertSee('Add product');
     }
@@ -46,6 +47,45 @@ class AdminProductTest extends TestCase
         $response->assertSee('XS');
         $response->assertSee('XL');
         $response->assertSee('NOVA03-BLA-M');
+    }
+
+    public function test_empty_filters_render_no_products_found(): void
+    {
+        $response = $this->get(route('admin.products.index', ['search' => 'no-such-sku']));
+
+        $response->assertOk();
+        $response->assertSee('No products found');
+        $response->assertSee('Try changing your filters or add a new product.');
+        $response->assertSee('Add product');
+        $response->assertDontSee('Basic Shirt');
+    }
+
+    public function test_products_table_uses_deactivate_instead_of_delete(): void
+    {
+        $response = $this->get(route('admin.products.index'));
+
+        $response->assertOk();
+        $response->assertSee('Deactivate product?');
+        $response->assertSee(route('admin.products.deactivate', 'basic-shirt'), false);
+    }
+
+    public function test_create_redirects_with_a_success_toast(): void
+    {
+        $this->post(route('admin.products.store'))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHas('status', 'Product created successfully.');
+    }
+
+    public function test_deactivate_redirects_with_a_toast(): void
+    {
+        $this->post(route('admin.products.deactivate', 'basic-shirt'))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHas('status', 'Product deactivated successfully.');
+    }
+
+    public function test_unknown_product_deactivate_returns_404(): void
+    {
+        $this->post(route('admin.products.deactivate', 'missing'))->assertNotFound();
     }
 
     public function test_variants_index_lists_sku_barcode_and_stock(): void

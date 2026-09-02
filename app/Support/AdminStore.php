@@ -765,6 +765,236 @@ final class AdminStore
     }
 
     /**
+     * @param  array{search?: string|null, user?: string|null, module?: string|null, status?: string|null}  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function auditLogs(array $filters = []): Collection
+    {
+        $rows = collect($this->auditCatalog());
+        $search = Str::lower(trim((string) ($filters['search'] ?? '')));
+
+        if ($search !== '') {
+            $rows = $rows->filter(function (array $row) use ($search): bool {
+                return Str::contains(Str::lower($row['user'].' '.$row['action'].' '.$row['module'].' '.$row['reference'].' '.$row['endpoint']), $search);
+            });
+        }
+
+        foreach (['user', 'module', 'status'] as $key) {
+            if (filled($filters[$key] ?? null)) {
+                $rows = $rows->where($key, $filters[$key]);
+            }
+        }
+
+        return $rows->values();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function auditLog(string $id): ?array
+    {
+        return collect($this->auditCatalog())->firstWhere('id', $id);
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function notifications(): Collection
+    {
+        $read = collect(session('admin.notifications.read', []));
+
+        return collect($this->notificationCatalog())
+            ->map(function (array $item) use ($read): array {
+                $unread = $item['unread'] && ! $read->contains($item['id']);
+
+                return [
+                    ...$item,
+                    'unread' => $unread,
+                ];
+            })
+            ->values();
+    }
+
+    public function markNotificationRead(string $id): void
+    {
+        abort_if(collect($this->notificationCatalog())->firstWhere('id', $id) === null, 404);
+
+        $read = collect(session('admin.notifications.read', []));
+
+        session(['admin.notifications.read' => $read->push($id)->unique()->values()->all()]);
+    }
+
+    public function markAllNotificationsRead(): void
+    {
+        session([
+            'admin.notifications.read' => collect($this->notificationCatalog())->pluck('id')->all(),
+        ]);
+    }
+
+    /**
+     * @return list<array{key: string, label: string}>
+     */
+    public function settingCategories(): array
+    {
+        return collect(['general', 'store', 'sales', 'inventory', 'notifications', 'security', 'system'])
+            ->map(fn (string $key): array => [
+                'key' => $key,
+                'label' => __('admin.settings.categories.'.$key),
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function settings(): array
+    {
+        return [
+            ...$this->defaultSettings(),
+            ...session('admin.settings', []),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function updateSettings(array $data): array
+    {
+        $allowed = array_keys($this->defaultSettings());
+        $current = $this->settings();
+
+        foreach ($data as $key => $value) {
+            if (in_array($key, $allowed, true)) {
+                $current[$key] = $value;
+            }
+        }
+
+        session(['admin.settings' => $current]);
+
+        return $current;
+    }
+
+    /**
+     * @return array{name: string, email: string, phone: string, role: string, role_key: string, abilities: list<string>}
+     */
+    public function currentProfile(AdminStaff $staff): array
+    {
+        $user = $this->users()->firstWhere('email', $staff->email);
+
+        return [
+            'name' => $staff->name,
+            'email' => $staff->email,
+            'phone' => $staff->phone !== '' ? $staff->phone : (string) ($user['phone'] ?? ''),
+            'role' => $staff->role->label(),
+            'role_key' => $staff->role->value,
+            'abilities' => $staff->role->assignedOperations(),
+        ];
+    }
+
+    /**
+     * @return array<string, list<array{id: string, label: string, meta: string, url: string}>>
+     */
+    public function search(string $query, AdminStaff $staff): array
+    {
+        $needle = Str::lower(trim($query));
+        $groups = [
+            'products' => [],
+            'sales' => [],
+            'customers' => [],
+            'suppliers' => [],
+            'users' => [],
+        ];
+
+        if ($needle === '') {
+            return $groups;
+        }
+
+        if ($staff->role->can('products') || $staff->role->can('sales')) {
+            $matchedSales = $this->sales()->filter(function (array $sale) use ($needle): bool {
+                return Str::contains(Str::lower($sale['number'].' '.$sale['customer'].' '.$sale['items_label']), $needle);
+            });
+
+            if ($staff->role->can('sales')) {
+                foreach ($matchedSales as $sale) {
+                    $groups['sales'][] = [
+                        'id' => $sale['id'],
+                        'label' => $sale['number'],
+                        'meta' => $sale['customer'],
+                        'url' => route('admin.sales.show', $sale['id']),
+                    ];
+                }
+            }
+
+            if ($staff->role->can('products')) {
+                $products = $this->products()
+                    ->filter(function (array $product) use ($needle): bool {
+                        return Str::contains(Str::lower($product['name'].' '.$product['sku'].' '.$product['barcode']), $needle);
+                    })
+                    ->keyBy('slug');
+
+                foreach ($matchedSales as $sale) {
+                    foreach ($sale['items'] as $item) {
+                        $related = $this->products()->firstWhere('name', $item['product']);
+
+                        if ($related !== null) {
+                            $products->put($related['slug'], $related);
+                        }
+                    }
+                }
+
+                $groups['products'] = $products->values()->map(fn (array $product): array => [
+                    'id' => $product['slug'],
+                    'label' => $product['name'],
+                    'meta' => $product['sku'],
+                    'url' => route('admin.products.edit', $product['slug']),
+                ])->all();
+            }
+        }
+
+        if ($staff->role->can('customers')) {
+            $groups['customers'] = $this->customers()
+                ->filter(fn (array $customer): bool => Str::contains(Str::lower($customer['name'].' '.$customer['email'].' '.$customer['phone']), $needle))
+                ->map(fn (array $customer): array => [
+                    'id' => $customer['id'],
+                    'label' => $customer['name'],
+                    'meta' => $customer['email'],
+                    'url' => route('admin.customers.show', $customer['id']),
+                ])
+                ->values()
+                ->all();
+        }
+
+        if ($staff->role->can('suppliers')) {
+            $groups['suppliers'] = $this->suppliers()
+                ->filter(fn (array $supplier): bool => Str::contains(Str::lower($supplier['name'].' '.$supplier['contact'].' '.$supplier['email']), $needle))
+                ->map(fn (array $supplier): array => [
+                    'id' => $supplier['id'],
+                    'label' => $supplier['name'],
+                    'meta' => $supplier['contact'],
+                    'url' => route('admin.suppliers.show', $supplier['id']),
+                ])
+                ->values()
+                ->all();
+        }
+
+        if ($staff->role->can('users') || $staff->role->can('roles')) {
+            $groups['users'] = $this->users()
+                ->filter(fn (array $user): bool => Str::contains(Str::lower($user['name'].' '.$user['email']), $needle))
+                ->map(fn (array $user): array => [
+                    'id' => $user['id'],
+                    'label' => $user['name'],
+                    'meta' => $user['email'],
+                    'url' => route('admin.users.edit', $user['id']),
+                ])
+                ->values()
+                ->all();
+        }
+
+        return $groups;
+    }
+
+    /**
      * @param  array{label: string, key: string}  $meta
      * @param  array{range?: string|null, from?: string|null, to?: string|null}  $filters
      * @return array<string, mixed>
@@ -1380,6 +1610,149 @@ final class AdminStore
                 'status' => 'inactive',
                 'last_login' => '2026-08-12 16:05',
                 'created_at' => '2024-01-01',
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function defaultSettings(): array
+    {
+        return [
+            'store_name' => 'NOVA',
+            'store_email' => 'hello@nova.store',
+            'phone' => '0212 000 00 01',
+            'address' => 'Nişantaşı, Istanbul',
+            'currency' => 'TRY',
+            'store_info' => 'Contemporary ready-to-wear retail.',
+            'opening_hours' => '10:00–20:00',
+            'default_language' => 'en',
+            'default_discount' => 0,
+            'payment_cash' => true,
+            'payment_card' => true,
+            'receipt_footer' => 'Thank you for shopping at NOVA.',
+            'low_stock_threshold' => 8,
+            'allow_negative_stock' => false,
+            'notify_low_stock' => true,
+            'notify_sales' => true,
+            'notify_returns' => true,
+            'session_timeout' => 120,
+            'password_min' => 8,
+            'login_protection' => true,
+            'timezone' => 'Europe/Istanbul',
+            'api_url' => 'https://api.nova.store',
+            'api_status' => 'operational',
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function notificationCatalog(): array
+    {
+        return [
+            [
+                'id' => 'low-stock-basic',
+                'title' => __('admin.notifications.examples.low_stock'),
+                'body' => 'SKU NOVA01 · White / M',
+                'time' => '12m',
+                'unread' => true,
+            ],
+            [
+                'id' => 'return-created',
+                'title' => __('admin.notifications.examples.return'),
+                'body' => 'RT-2204 · Elif Kaya',
+                'time' => '38m',
+                'unread' => true,
+            ],
+            [
+                'id' => 'cash-close',
+                'title' => __('admin.notifications.examples.cash'),
+                'body' => __('admin.notifications.examples.cash_body'),
+                'time' => '1h',
+                'unread' => true,
+            ],
+            [
+                'id' => 'sale-completed',
+                'title' => __('admin.notifications.examples.sale'),
+                'body' => 'NOVA-1024 · ₺2,398',
+                'time' => '2h',
+                'unread' => false,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function auditCatalog(): array
+    {
+        return [
+            [
+                'id' => 'aud-1024',
+                'datetime' => '2026-09-02 09:42',
+                'user' => 'Admin',
+                'action' => 'Updated Product',
+                'module' => 'Products',
+                'reference' => '#NOVA-1024',
+                'ip' => '192.168.1.xxx',
+                'endpoint' => 'PUT /api/products/1024',
+                'status' => 'success',
+                'old' => ['price' => '₺849', 'status' => 'draft'],
+                'new' => ['price' => '₺899', 'status' => 'active'],
+            ],
+            [
+                'id' => 'aud-10482',
+                'datetime' => '2026-09-02 09:14',
+                'user' => 'Ayşe Yılmaz',
+                'action' => 'Created Sale',
+                'module' => 'Sales',
+                'reference' => '#NOVA-1024',
+                'ip' => '192.168.1.xxx',
+                'endpoint' => 'POST /api/sales',
+                'status' => 'success',
+                'old' => null,
+                'new' => ['total' => '₺2,398', 'payment' => 'cash'],
+            ],
+            [
+                'id' => 'aud-2204',
+                'datetime' => '2026-09-01 18:20',
+                'user' => 'Mert Kaya',
+                'action' => 'Created Return',
+                'module' => 'Returns',
+                'reference' => '#RT-2204',
+                'ip' => '192.168.1.xxx',
+                'endpoint' => 'POST /api/returns',
+                'status' => 'success',
+                'old' => null,
+                'new' => ['amount' => '₺449', 'reason' => 'wrong_size'],
+            ],
+            [
+                'id' => 'aud-close',
+                'datetime' => '2026-09-01 21:05',
+                'user' => 'Mert Kaya',
+                'action' => 'Closed Register',
+                'module' => 'Cash',
+                'reference' => '#CR-0901',
+                'ip' => '192.168.1.xxx',
+                'endpoint' => 'POST /api/cash/close',
+                'status' => 'success',
+                'old' => ['open' => true],
+                'new' => ['open' => false, 'actual' => '₺14,060'],
+            ],
+            [
+                'id' => 'aud-fail',
+                'datetime' => '2026-08-30 11:12',
+                'user' => 'Deniz Aksoy',
+                'action' => 'Adjusted Stock',
+                'module' => 'Inventory',
+                'reference' => '#ADJ-19',
+                'ip' => '10.0.0.xxx',
+                'endpoint' => 'POST /api/inventory/adjust',
+                'status' => 'failure',
+                'old' => ['stock' => 2],
+                'new' => ['stock' => 0],
             ],
         ];
     }

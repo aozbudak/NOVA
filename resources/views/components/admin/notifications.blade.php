@@ -20,22 +20,41 @@
     <div data-dropdown-panel hidden class="absolute right-0 z-30 mt-2 w-80 rounded-md border border-border bg-card shadow-sm">
         <div class="flex items-center justify-between border-b border-border px-3 py-2">
             <p class="text-[13px] font-medium text-foreground">{{ __('admin.notifications.title') }}</p>
+            @if (collect($items)->contains(fn (array $item): bool => $item['unread']))
+                <form method="POST" action="{{ route('admin.notifications.read-all') }}">
+                    @csrf
+                    <button type="submit" class="text-[11px] text-muted-foreground hover:text-foreground">{{ __('admin.notifications.mark_all') }}</button>
+                </form>
+            @endif
         </div>
         @forelse ($items as $item)
-            <div class="flex gap-3 border-b border-border px-3 py-2.5 last:border-b-0">
+            <div @class([
+                'flex gap-3 border-b border-border px-3 py-2.5 last:border-b-0',
+                'bg-muted/30' => $item['unread'],
+            ])>
                 <span @class([
                     'mt-1.5 size-1.5 shrink-0 rounded-full',
                     'bg-primary' => $item['unread'],
                     'bg-border' => ! $item['unread'],
                 ])></span>
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                     <p class="text-[13px] text-foreground">{{ $item['title'] }}</p>
                     <p class="truncate text-[12px] text-muted-foreground">{{ $item['body'] }}</p>
                     <p class="mt-0.5 text-[11px] text-muted-foreground">{{ $item['time'] }}</p>
                 </div>
+                @if ($item['unread'])
+                    <form method="POST" action="{{ route('admin.notifications.read', $item['id']) }}">
+                        @csrf
+                        <button type="submit" class="text-[11px] text-muted-foreground hover:text-foreground">{{ __('admin.notifications.read') }}</button>
+                    </form>
+                @else
+                    <span class="text-[11px] text-muted-foreground">{{ __('admin.notifications.read_state') }}</span>
+                @endif
             </div>
         @empty
-            <p class="px-3 py-6 text-center text-[13px] text-muted-foreground">{{ __('admin.notifications.empty') }}</p>
+            <x-admin.empty :title="__('admin.empty.notifications.title')" class="py-10">
+                {{ __('admin.empty.notifications.body') }}
+            </x-admin.empty>
         @endforelse
     </div>
 </div>

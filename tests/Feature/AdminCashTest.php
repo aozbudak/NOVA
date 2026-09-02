@@ -42,6 +42,7 @@ class AdminCashTest extends TestCase
         $response->assertSee('Actual balance');
         $response->assertSee('Difference');
         $response->assertSee('₺55,290');
+        $response->assertSee('Close cash register?');
     }
 
     public function test_cash_movements_render_each_operation_type(): void

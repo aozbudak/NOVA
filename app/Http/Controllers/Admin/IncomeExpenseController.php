@@ -36,6 +36,8 @@ class IncomeExpenseController extends Controller
 
     public function store(): RedirectResponse
     {
-        return redirect()->route('admin.income-expense.index');
+        return redirect()
+            ->route('admin.income-expense.index')
+            ->with('status', __('admin.toast.transaction_saved'));
     }
 }

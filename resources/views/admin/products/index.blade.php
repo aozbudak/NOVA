@@ -12,7 +12,7 @@
         </x-slot:actions>
     </x-admin.page-header>
 
-    <form method="GET" action="{{ route('admin.products.index') }}" class="mb-4 grid gap-2 md:grid-cols-5">
+    <form method="GET" action="{{ route('admin.products.index') }}" class="mb-4 grid gap-2 md:grid-cols-5" data-table-filter>
         <input type="search" name="search" value="{{ $filters['search'] }}" placeholder="{{ __('admin.products.search') }}" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground outline-none placeholder:text-muted-foreground">
         <select name="category" class="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground">
             <option value="">{{ __('admin.products.filter_category') }}</option>
@@ -39,6 +39,21 @@
         </select>
     </form>
 
+    <div data-table-shell class="relative">
+        <div data-table-skeleton hidden>
+            <x-admin.skeleton.table />
+        </div>
+        <div data-table-body>
+    @if ($products->isEmpty())
+        <div class="rounded-md border border-border bg-card">
+            <x-admin.empty :title="__('admin.empty.products.title')">
+                {{ __('admin.empty.products.body') }}
+                <x-slot:action>
+                    <a href="{{ route('admin.products.create') }}" class="inline-flex h-8 items-center rounded-md bg-primary px-3 text-[12px] font-medium text-primary-foreground">{{ __('admin.products.add') }}</a>
+                </x-slot:action>
+            </x-admin.empty>
+        </div>
+    @else
     <div class="overflow-x-auto rounded-md border border-border bg-card">
         <table class="w-full text-left text-[13px]">
             <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
@@ -75,14 +90,25 @@
                                 <a href="{{ route('admin.products.edit', $product['slug']) }}" class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="{{ __('admin.common.edit') }}">
                                     <x-icon name="edit" size="size-3.5" />
                                 </a>
-                                <a href="{{ route('admin.products.edit', $product['slug']) }}" class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="{{ __('admin.common.view') }}">
-                                    <x-icon name="eye" size="size-3.5" />
-                                </a>
+                                <button
+                                    type="button"
+                                    data-confirm
+                                    data-confirm-title="{{ __('admin.confirm.deactivate_product') }}"
+                                    data-confirm-body="{{ __('admin.confirm.deactivate_product_body') }}"
+                                    data-confirm-action="{{ route('admin.products.deactivate', $product['slug']) }}"
+                                    class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                                    aria-label="{{ __('admin.common.deactivate') }}"
+                                >
+                                    <x-icon name="delete" size="size-3.5" />
+                                </button>
                             </div>
                         </td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+    </div>
+    @endif
+        </div>
     </div>
 @endsection

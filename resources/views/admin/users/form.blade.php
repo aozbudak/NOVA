@@ -73,7 +73,7 @@
         </section>
 
         <div class="flex items-center gap-2">
-            <button type="submit" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">{{ __('admin.common.save') }}</button>
+            <button type="submit" data-busy-label="{{ __('admin.common.saving') }}" class="inline-flex h-9 items-center rounded-md bg-primary px-4 text-[12px] font-medium text-primary-foreground">{{ __('admin.common.save') }}</button>
             <a href="{{ route('admin.roles.index') }}" class="inline-flex h-9 items-center rounded-md px-4 text-[12px] text-muted-foreground hover:text-foreground">{{ __('admin.common.cancel') }}</a>
         </div>
     </form>

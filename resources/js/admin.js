@@ -80,7 +80,12 @@ function initSearch() {
     const overlay = document.querySelector('[data-admin-search]');
     const input = document.querySelector('[data-admin-search-input]');
     const empty = document.querySelector('[data-admin-search-empty]');
+    const pages = document.querySelector('[data-admin-search-pages]');
+    const groups = document.querySelector('[data-admin-search-groups]');
     const items = [...document.querySelectorAll('[data-search-item]')];
+    const labels = JSON.parse(overlay?.dataset.searchGroups ?? '{}');
+    const url = overlay?.dataset.searchUrl ?? '';
+    let timer = 0;
 
     if (! overlay || ! input) {
         return;
@@ -92,12 +97,68 @@ function initSearch() {
         document.body.classList.add('overflow-hidden');
     };
 
+    const reset = () => {
+        items.forEach((item) => item.classList.remove('hidden'));
+        pages?.removeAttribute('hidden');
+        groups?.setAttribute('hidden', '');
+        if (groups) {
+            groups.innerHTML = '';
+        }
+        empty?.setAttribute('hidden', '');
+    };
+
     const close = () => {
         overlay.hidden = true;
         input.value = '';
-        items.forEach((item) => item.parentElement?.classList.remove('hidden'));
-        empty?.setAttribute('hidden', '');
+        reset();
         document.body.classList.remove('overflow-hidden');
+    };
+
+    const renderGroups = (payload) => {
+        const sections = Object.entries(payload).filter(([, rows]) => rows.length > 0);
+
+        if (sections.length === 0) {
+            groups?.setAttribute('hidden', '');
+            empty?.removeAttribute('hidden');
+            return;
+        }
+
+        empty?.setAttribute('hidden', '');
+        groups?.removeAttribute('hidden');
+        groups.innerHTML = sections.map(([key, rows]) => `
+            <p class="px-3 pt-2 pb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">${escapeHtml(labels[key] ?? key)}</p>
+            ${rows.map((row) => `
+                <a href="${escapeHtml(row.url)}" class="flex flex-col px-3 py-2 hover:bg-accent">
+                    <span class="text-[13px] text-foreground">${escapeHtml(row.label)}</span>
+                    <span class="text-[11px] text-muted-foreground">${escapeHtml(row.meta)}</span>
+                </a>
+            `).join('')}
+        `).join('');
+    };
+
+    const queryRecords = (needle) => {
+        if (needle === '' || url === '') {
+            reset();
+            return;
+        }
+
+        fetch(`${url}?q=${encodeURIComponent(needle)}`, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+            .then((response) => {
+                if (! response.ok) {
+                    throw new Error('search');
+                }
+
+                return response.json();
+            })
+            .then((data) => {
+                pages?.setAttribute('hidden', '');
+                renderGroups(data.groups ?? {});
+            })
+            .catch(() => {
+                showAdminToast(document.getElementById('admin-toast')?.dataset.errorFallback ?? 'Something went wrong. Please try again.');
+            });
     };
 
     document.querySelectorAll('[data-open-search]').forEach((button) => {
@@ -108,18 +169,15 @@ function initSearch() {
     overlay.querySelector('[data-search-backdrop]')?.addEventListener('click', close);
 
     input.addEventListener('input', () => {
-        const needle = input.value.trim().toLowerCase();
-        let visible = 0;
+        const needle = input.value.trim();
+        window.clearTimeout(timer);
 
-        items.forEach((item) => {
-            const match = (item.dataset.searchLabel ?? '').toLowerCase().includes(needle);
-            item.parentElement?.classList.toggle('hidden', needle.length > 0 && ! match);
-            if (needle.length === 0 || match) {
-                visible += 1;
-            }
-        });
+        if (needle === '') {
+            reset();
+            return;
+        }
 
-        empty?.toggleAttribute('hidden', visible > 0);
+        timer = window.setTimeout(() => queryRecords(needle), 180);
     });
 
     document.addEventListener('keydown', (event) => {
@@ -134,6 +192,200 @@ function initSearch() {
     });
 }
 
+function showAdminToast(message) {
+    const root = document.getElementById('admin-toast');
+    const text = root?.querySelector('[data-toast-message]');
+
+    if (! root || ! text || ! message) {
+        return;
+    }
+
+    text.textContent = message;
+    root.hidden = false;
+    requestAnimationFrame(() => root.classList.remove('opacity-0'));
+    window.clearTimeout(root._timer);
+    root._timer = window.setTimeout(() => {
+        root.classList.add('opacity-0');
+        window.setTimeout(() => {
+            root.hidden = true;
+        }, 200);
+    }, 2200);
+}
+
+function initAdminToast() {
+    const root = document.getElementById('admin-toast');
+
+    if (! root) {
+        return;
+    }
+
+    const status = (root.dataset.flashStatus ?? '').trim();
+    const error = (root.dataset.flashError ?? '').trim();
+
+    if (status !== '') {
+        showAdminToast(status);
+        return;
+    }
+
+    if (error !== '') {
+        showAdminToast(root.dataset.errorFallback ?? error);
+    }
+}
+
+function openAdminLayer(name) {
+    const layer = document.querySelector(`[data-admin-layer="${name}"]`);
+
+    if (! layer) {
+        return;
+    }
+
+    layer.hidden = false;
+    document.body.classList.add('overflow-hidden');
+    layer.querySelector('input, button, textarea, select')?.focus();
+}
+
+function closeAdminLayer(name = null) {
+    const layers = name
+        ? [document.querySelector(`[data-admin-layer="${name}"]`)]
+        : [...document.querySelectorAll('[data-admin-layer]')];
+
+    layers.forEach((layer) => {
+        if (layer) {
+            layer.hidden = true;
+        }
+    });
+
+    if (! document.querySelector('[data-admin-layer]:not([hidden])')) {
+        document.body.classList.remove('overflow-hidden');
+    }
+}
+
+function initAdminLayers() {
+    document.addEventListener('click', (event) => {
+        const open = event.target.closest('[data-open-layer]');
+        if (open) {
+            openAdminLayer(open.dataset.openLayer);
+            return;
+        }
+
+        if (event.target.closest('[data-close-layer]') || event.target.closest('[data-layer-backdrop]')) {
+            const layer = event.target.closest('[data-admin-layer]');
+            closeAdminLayer(layer?.dataset.adminLayer ?? null);
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeAdminLayer();
+        }
+    });
+}
+
+function initConfirm() {
+    const form = document.querySelector('[data-confirm-form]');
+    const title = document.querySelector('[data-confirm-title]');
+    const body = document.querySelector('[data-confirm-body]');
+    const method = document.querySelector('[data-confirm-method]');
+    let pendingForm = null;
+
+    if (! form) {
+        return;
+    }
+
+    document.addEventListener('click', (event) => {
+        const trigger = event.target.closest('[data-confirm]');
+
+        if (! trigger) {
+            return;
+        }
+
+        event.preventDefault();
+        title.textContent = trigger.dataset.confirmTitle ?? '';
+        body.textContent = trigger.dataset.confirmBody ?? '';
+        method.value = trigger.dataset.confirmMethod ?? 'POST';
+        pendingForm = trigger.closest('form');
+
+        if (trigger.dataset.confirmAction) {
+            form.action = trigger.dataset.confirmAction;
+            pendingForm = null;
+        } else if (pendingForm) {
+            form.action = pendingForm.action;
+        }
+
+        openAdminLayer('confirm');
+    });
+
+    form.addEventListener('submit', (event) => {
+        if (! pendingForm) {
+            return;
+        }
+
+        event.preventDefault();
+        closeAdminLayer('confirm');
+        if (pendingForm.dataset.confirmed === 'true') {
+            return;
+        }
+        pendingForm.dataset.confirmed = 'true';
+        pendingForm.requestSubmit();
+    });
+}
+
+function initBusyForms() {
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+
+        if (! (form instanceof HTMLFormElement) || form.dataset.busy === 'true') {
+            if (form.dataset.busy === 'true') {
+                event.preventDefault();
+            }
+            return;
+        }
+
+        const button = form.querySelector('[data-busy-label], button[type="submit"]');
+
+        if (! button) {
+            return;
+        }
+
+        form.dataset.busy = 'true';
+        button.disabled = true;
+        if (button.dataset.busyLabel) {
+            button.textContent = button.dataset.busyLabel;
+        }
+    });
+}
+
+function initTableLoading() {
+    document.querySelectorAll('form[data-table-filter]').forEach((form) => {
+        form.addEventListener('submit', () => {
+            const shell = form.parentElement?.querySelector('[data-table-shell]') ?? document.querySelector('[data-table-shell]');
+            shell?.querySelector('[data-table-skeleton]')?.removeAttribute('hidden');
+            shell?.querySelector('[data-table-body]')?.setAttribute('hidden', '');
+        });
+    });
+
+    document.querySelectorAll('a[href*="range="]').forEach((link) => {
+        link.addEventListener('click', () => {
+            const skeleton = document.querySelector('[data-dashboard-skeleton]');
+            if (skeleton) {
+                skeleton.hidden = false;
+            }
+        });
+    });
+}
+
+function initAuditRows() {
+    document.querySelectorAll('[data-audit-row]').forEach((row) => {
+        row.addEventListener('click', (event) => {
+            if (event.target.closest('a')) {
+                return;
+            }
+
+            row.nextElementSibling?.toggleAttribute('hidden');
+        });
+    });
+}
+
 initSidebar();
 initDropdowns();
 initSearch();
@@ -141,6 +393,12 @@ initPos();
 initVariantRows();
 initFilterForms();
 initUserAbilities();
+initAdminToast();
+initAdminLayers();
+initConfirm();
+initBusyForms();
+initTableLoading();
+initAuditRows();
 
 function initUserAbilities() {
     const field = document.querySelector('[data-user-role]');

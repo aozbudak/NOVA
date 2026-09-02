@@ -40,7 +40,9 @@ class ReturnController extends Controller
 
     public function store(): RedirectResponse
     {
-        return redirect()->route('admin.returns.index');
+        return redirect()
+            ->route('admin.returns.index')
+            ->with('status', __('admin.toast.return_completed'));
     }
 
     public function show(string $return, AdminStore $store): View
