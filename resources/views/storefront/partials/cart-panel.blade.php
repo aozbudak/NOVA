@@ -4,12 +4,12 @@
 @endphp
 
 @if ($items->isEmpty())
-    <div class="flex flex-1 flex-col items-center justify-center gap-6 px-8 text-center">
+    <div class="flex flex-col items-center gap-4 px-6 py-8 text-center">
         <p class="text-[11px] tracking-nav uppercase">{{ __('storefront.cart.empty') }}</p>
         <x-button href="{{ route('shop.show', 'new-in') }}" data-close="cart">{{ __('storefront.cart.continue') }}</x-button>
     </div>
 @else
-    <ul class="flex-1 overflow-y-auto px-5 py-6">
+    <ul class="flex-1 overflow-y-auto px-5 py-3">
         @foreach ($items as $item)
             <li class="flex gap-4 border-b border-border py-4 first:pt-0">
                 <a href="{{ route('product.show', $item['product']['slug']) }}" class="block w-20 shrink-0">
@@ -46,11 +46,11 @@
             </li>
         @endforeach
     </ul>
-    <div class="border-t border-border px-5 py-5">
+    <div class="border-t border-border px-5 py-4">
         <div class="flex items-center justify-between text-sm">
             <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.cart.subtotal') }}</span>
             <span data-cart-subtotal>{{ Number::currency($subtotal, in: 'EUR') }}</span>
         </div>
-        <x-button href="{{ route('checkout.show') }}" class="mt-5 w-full">{{ __('storefront.cart.checkout') }}</x-button>
+        <x-button href="{{ route('checkout.show') }}" class="mt-4 w-full">{{ __('storefront.cart.checkout') }}</x-button>
     </div>
 @endif

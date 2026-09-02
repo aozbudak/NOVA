@@ -11,6 +11,50 @@ class StorefrontAccountTest extends TestCase
         $this->get(route('account.show'))->assertRedirect(route('login'));
     }
 
+    public function test_authenticated_customer_sees_account_dashboard(): void
+    {
+        $this->withSession([
+            'storefront.customer' => [
+                'first_name' => 'Ada',
+                'last_name' => 'Lovelace',
+                'email' => 'ada@nova.example',
+            ],
+        ]);
+
+        $this->get(route('account.show'))
+            ->assertSee('Ada')
+            ->assertSee('NOVA-1024')
+            ->assertSee('Overview');
+    }
+
+    public function test_authenticated_customer_sees_order_history(): void
+    {
+        $this->withSession([
+            'storefront.customer' => [
+                'first_name' => 'Ada',
+                'last_name' => 'Lovelace',
+                'email' => 'ada@nova.example',
+            ],
+        ]);
+
+        $this->get(route('account.orders'))->assertSee('NOVA-1024');
+    }
+
+    public function test_authenticated_customer_sees_profile_email(): void
+    {
+        $this->withSession([
+            'storefront.customer' => [
+                'first_name' => 'Ada',
+                'last_name' => 'Lovelace',
+                'email' => 'ada@nova.example',
+            ],
+        ]);
+
+        $this->get(route('account.profile'))
+            ->assertSee('ada@nova.example')
+            ->assertDontSee('Quiet luxury, considered construction');
+    }
+
     public function test_static_page_renders_editorial_copy(): void
     {
         $this->get(route('pages.show', 'about'))

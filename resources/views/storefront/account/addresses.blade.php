@@ -3,11 +3,17 @@
 @section('title', __('storefront.account.addresses'))
 
 @section('content')
-    <div class="mx-auto grid max-w-[1100px] gap-12 px-4 py-16 md:grid-cols-[14rem_minmax(0,1fr)] md:px-8">
-        @include('storefront.account.nav')
-        <div>
-            <h2 class="text-[11px] tracking-nav uppercase">{{ __('storefront.account.addresses') }}</h2>
-            <p class="mt-6 max-w-md text-sm text-muted-foreground">{{ __('storefront.account.no_addresses') }}</p>
-        </div>
-    </div>
+    <x-account.shell>
+        <x-account.card>
+            <div class="border-b border-border px-5 py-4">
+                <h1 class="font-serif text-2xl tracking-tight">{{ __('storefront.account.addresses') }}</h1>
+            </div>
+            <x-account.empty :title="__('storefront.account.no_addresses_title')" icon="map-pin">
+                {{ __('storefront.account.no_addresses') }}
+                <x-slot:action>
+                    <x-button href="{{ route('shop.show', 'new-in') }}">{{ __('storefront.wishlist.explore') }}</x-button>
+                </x-slot:action>
+            </x-account.empty>
+        </x-account.card>
+    </x-account.shell>
 @endsection

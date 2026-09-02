@@ -8,5 +8,5 @@
     <button type="button" data-gallery-next class="absolute top-1/2 right-4 z-10 -translate-y-1/2 p-2" aria-label="{{ __('storefront.product.next') }}">
         <x-icon name="chevron-right" />
     </button>
-    <img data-modal-image src="" alt="" class="h-full w-full object-contain p-8 md:p-16">
+    <img data-modal-image src="" alt="" class="h-full w-full object-contain p-4 md:p-8">
 </div>

@@ -30,12 +30,12 @@
                     </div>
                 </details>
             @endforeach
-            <div class="mt-8 flex flex-col gap-3 text-sm text-muted-foreground">
+            <div class="mt-6 flex flex-col gap-3 text-sm text-muted-foreground">
                 <a href="{{ $customer ? route('account.show') : route('login') }}">{{ __('storefront.header.account') }}</a>
                 <a href="{{ route('wishlist.index') }}">{{ __('storefront.header.wishlist') }}</a>
                 <a href="{{ route('pages.show', 'contact') }}">{{ __('storefront.header.help') }}</a>
             </div>
-            <div class="mt-auto flex flex-col gap-6 py-8">
+            <div class="mt-6 flex items-center justify-between gap-4 border-t border-glass-border py-4">
                 <x-locale-switcher />
                 <x-theme-toggle />
             </div>

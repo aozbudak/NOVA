@@ -6,7 +6,7 @@
 
 <div data-admin-layer="{{ $name }}" hidden class="fixed inset-0 z-50">
     <div data-layer-backdrop class="admin-layer-backdrop absolute inset-0"></div>
-    <div class="relative flex min-h-full items-start justify-center overflow-y-auto px-4 py-16">
+    <div class="relative flex min-h-full items-center justify-center overflow-y-auto px-4 py-6">
         <div
             data-layer-dialog
             @class([

@@ -337,6 +337,45 @@
         background-image: linear-gradient(to bottom right, color-mix(in oklab, white 10%, transparent), transparent);
     }
 
+    .account-atmosphere {
+        background-image:
+            radial-gradient(ellipse 70% 50% at 0% -8%, color-mix(in oklab, oklch(0.72 0.08 75) 18%, transparent), transparent 58%),
+            radial-gradient(ellipse 50% 40% at 100% 0%, color-mix(in oklab, var(--foreground) 7%, transparent), transparent 52%);
+    }
+
+    .dark .account-atmosphere {
+        background-image:
+            radial-gradient(ellipse 70% 50% at 0% -8%, color-mix(in oklab, oklch(0.78 0.1 75) 16%, transparent), transparent 58%),
+            radial-gradient(ellipse 50% 40% at 100% 0%, color-mix(in oklab, white 8%, transparent), transparent 52%);
+    }
+
+    .account-card {
+        background-color: color-mix(in oklab, var(--card) 84%, transparent);
+        border-color: var(--glass-border);
+        backdrop-filter: blur(28px) saturate(1.35);
+        -webkit-backdrop-filter: blur(28px) saturate(1.35);
+        box-shadow:
+            0 22px 56px -32px color-mix(in oklab, oklch(0.2 0.03 50) 42%, transparent),
+            inset 0 1px 0 color-mix(in oklab, white 52%, transparent);
+    }
+
+    .dark .account-card {
+        background-color: color-mix(in oklab, var(--card) 72%, transparent);
+        box-shadow:
+            0 22px 56px -28px color-mix(in oklab, black 52%, transparent),
+            inset 0 1px 0 color-mix(in oklab, white 10%, transparent);
+    }
+
+    .account-link[aria-current='page'] {
+        background-color: color-mix(in oklab, var(--foreground) 8%, transparent);
+    }
+
+    @media (min-width: 768px) {
+        .account-link[aria-current='page'] {
+            box-shadow: inset 2px 0 0 var(--foreground);
+        }
+    }
+
     .admin-popover {
         background-color: color-mix(in oklab, var(--card) 78%, transparent);
         border-color: var(--glass-border);

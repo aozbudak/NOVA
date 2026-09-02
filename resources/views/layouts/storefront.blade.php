@@ -42,7 +42,7 @@
             @yield('content')
         </main>
 
-        @unless($reducedChrome ?? false)
+        @unless(($reducedChrome ?? false) || request()->routeIs('account.*'))
             <x-footer />
         @endunless
 

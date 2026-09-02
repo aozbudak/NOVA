@@ -286,7 +286,7 @@ class Catalog
     }
 
     /**
-     * @return list<array{id: string, date: string, total: float, currency: string, status: string}>
+     * @return list<array{id: string, date: string, total: float, currency: string, status: string, status_key: string}>
      */
     public function sampleOrders(): array
     {
@@ -297,6 +297,7 @@ class Catalog
                 'total' => 389.00,
                 'currency' => 'EUR',
                 'status' => $this->t('account.status_delivered'),
+                'status_key' => 'delivered',
             ],
             [
                 'id' => 'NOVA-0981',
@@ -304,6 +305,7 @@ class Catalog
                 'total' => 229.00,
                 'currency' => 'EUR',
                 'status' => $this->t('account.status_in_transit'),
+                'status_key' => 'in_transit',
             ],
         ];
     }
