@@ -10,7 +10,7 @@
         default => null,
     };
     $action = match ((int) $code) {
-        401 => ['url' => route('login'), 'label' => __('admin.errors.login')],
+        401 => ['url' => route('admin.login'), 'label' => __('admin.errors.login')],
         default => ['url' => url('/admin'), 'label' => __('admin.errors.back')],
     };
 @endphp
