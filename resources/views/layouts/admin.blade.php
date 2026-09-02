@@ -30,7 +30,11 @@
         <div class="min-h-screen lg:pl-[var(--sidebar-width)]">
             <x-admin.header :staff="$staff" :breadcrumbs="$breadcrumbs" :notifications="$notifications" />
 
-            <main id="main" class="min-h-[calc(100vh-var(--header-height))] px-4 py-6 md:px-8">
+            <main id="main" @class([
+                'min-h-[calc(100vh-var(--header-height))]',
+                'px-4 py-6 md:px-8' => ! request()->routeIs('admin.pos.index'),
+                'h-[calc(100vh-var(--header-height))] overflow-hidden p-0' => request()->routeIs('admin.pos.index'),
+            ])>
                 @yield('content')
             </main>
         </div>

@@ -10,16 +10,22 @@ final class AdminNavigation
     private const ROUTE_PERMISSIONS = [
         'admin.dashboard' => 'dashboard',
         'admin.products.index' => 'products',
+        'admin.products.create' => 'products',
+        'admin.products.store' => 'products',
+        'admin.products.edit' => 'products',
+        'admin.products.update' => 'products',
         'admin.categories.index' => 'categories',
         'admin.brands.index' => 'brands',
         'admin.variants.index' => 'variants',
         'admin.inventory.index' => 'inventory',
+        'admin.inventory.movements' => 'inventory',
         'admin.barcode.index' => 'barcode',
         'admin.pos.index' => 'pos',
         'admin.sales.index' => 'sales',
         'admin.returns.index' => 'returns',
         'admin.exchanges.index' => 'exchanges',
         'admin.customers.index' => 'customers',
+        'admin.customers.show' => 'customers',
         'admin.suppliers.index' => 'suppliers',
         'admin.cash.index' => 'cash',
         'admin.income-expense.index' => 'income_expense',
@@ -166,6 +172,12 @@ final class AdminNavigation
             return [['label' => __('admin.nav.profile'), 'url' => null]];
         }
 
+        $nested = $this->nestedBreadcrumbs($routeName);
+
+        if ($nested !== []) {
+            return $nested;
+        }
+
         foreach ($this->sections() as $section) {
             foreach ($section['items'] as $item) {
                 if ($item['route'] !== $routeName) {
@@ -191,6 +203,46 @@ final class AdminNavigation
         }
 
         return [];
+    }
+
+    /**
+     * @return list<array{label: string, url: ?string}>
+     */
+    private function nestedBreadcrumbs(?string $routeName): array
+    {
+        $map = [
+            'admin.products.create' => [
+                ['label' => __('admin.nav.products'), 'url' => route('admin.products.index')],
+                ['label' => __('admin.products.add'), 'url' => null],
+            ],
+            'admin.products.edit' => [
+                ['label' => __('admin.nav.products'), 'url' => route('admin.products.index')],
+                ['label' => __('admin.products.edit'), 'url' => null],
+            ],
+            'admin.inventory.movements' => [
+                ['label' => __('admin.nav.inventory'), 'url' => route('admin.inventory.index')],
+                ['label' => __('admin.inventory.movements'), 'url' => null],
+            ],
+            'admin.customers.show' => [
+                ['label' => __('admin.nav.customers'), 'url' => route('admin.customers.index')],
+                ['label' => __('admin.customers.detail'), 'url' => null],
+            ],
+        ];
+
+        if ($routeName === null || ! isset($map[$routeName])) {
+            return [];
+        }
+
+        $crumbs = [];
+
+        if ($this->staff->role->can('dashboard')) {
+            $crumbs[] = [
+                'label' => __('admin.nav.dashboard'),
+                'url' => route('admin.dashboard'),
+            ];
+        }
+
+        return [...$crumbs, ...$map[$routeName]];
     }
 
     /**
