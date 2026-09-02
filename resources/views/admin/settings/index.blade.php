@@ -5,15 +5,15 @@
 @section('content')
     <x-admin.page-header :title="__('admin.settings.title')" />
 
-    <div class="grid gap-6 lg:grid-cols-[13rem_1fr]">
-        <nav class="flex flex-col gap-0.5" aria-label="{{ __('admin.settings.title') }}">
+    <div class="grid items-start gap-4 lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <nav class="admin-card flex flex-col gap-1 rounded-2xl border p-2" aria-label="{{ __('admin.settings.title') }}">
             @foreach ($categories as $item)
                 <a
                     href="{{ route('admin.settings.index', $item['key']) }}"
                     @class([
-                        'rounded-md px-3 py-2 text-[13px]',
-                        'bg-accent font-medium text-foreground' => $category === $item['key'],
-                        'text-muted-foreground hover:bg-accent hover:text-foreground' => $category !== $item['key'],
+                        'rounded-xl px-3 py-2 text-[12px] transition-colors',
+                        'bg-muted font-medium text-foreground' => $category === $item['key'],
+                        'text-muted-foreground hover:bg-muted hover:text-foreground' => $category !== $item['key'],
                     ])
                 >{{ $item['label'] }}</a>
             @endforeach

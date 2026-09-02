@@ -11,7 +11,7 @@
 @include('admin.reports.partials.metrics', ['report' => $report])
 
 @if (! empty($report['trend']))
-    <section class="mt-6 rounded-md border border-border bg-card p-4">
+    <section class="mt-6 admin-card rounded-2xl border p-4">
         <h2 class="text-sm font-medium text-foreground">{{ __('admin.reports.charts.movements') }}</h2>
         <x-admin.sparkline class="mt-3" :series="$report['trend']" />
     </section>

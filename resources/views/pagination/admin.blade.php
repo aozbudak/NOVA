@@ -10,9 +10,9 @@
                     <a
                         href="{{ $url }}"
                         @class([
-                            'inline-flex size-8 items-center justify-center rounded-md text-[12px]',
-                            'bg-primary text-primary-foreground' => $page == $paginator->currentPage(),
-                            'text-muted-foreground hover:bg-accent hover:text-foreground' => $page != $paginator->currentPage(),
+                            'inline-flex size-8 items-center justify-center rounded-xl text-[12px]',
+                            'bg-foreground text-background' => $page == $paginator->currentPage(),
+                            'text-muted-foreground hover:bg-muted hover:text-foreground' => $page != $paginator->currentPage(),
                         ])
                         @if ($page == $paginator->currentPage()) aria-current="page" @endif
                     >{{ $page }}</a>

@@ -5,7 +5,7 @@
 @section('content')
     <x-admin.page-header :title="'SALE #'.$sale['number']" />
 
-    <section class="rounded-md border border-border bg-card p-4">
+    <section class="admin-card rounded-2xl border p-4">
         <dl class="grid gap-3 text-[13px] md:grid-cols-5">
             <div>
                 <dt class="text-muted-foreground">{{ __('admin.sales.sale_number') }}</dt>
@@ -71,7 +71,7 @@
         </dl>
     </section>
 
-    <section class="mt-4 rounded-md border border-border bg-card p-4">
+    <section class="mt-4 admin-card rounded-2xl border p-4">
         <h2 class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.sales.payment_info') }}</h2>
         <dl class="mt-3 grid gap-3 text-[13px] md:grid-cols-3">
             <div>
@@ -90,7 +90,7 @@
     </section>
 
     <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        <section class="rounded-md border border-border bg-card">
+        <section class="admin-card rounded-2xl border">
             <h2 class="border-b border-border px-4 py-3 text-sm font-medium text-foreground">{{ __('admin.sales.stock_effects') }}</h2>
             <ul class="flex flex-col gap-2 px-4 py-3 text-[13px]">
                 @forelse ($sale['stock_effects'] as $row)
@@ -103,7 +103,7 @@
                 @endforelse
             </ul>
         </section>
-        <section class="rounded-md border border-border bg-card">
+        <section class="admin-card rounded-2xl border">
             <h2 class="border-b border-border px-4 py-3 text-sm font-medium text-foreground">{{ __('admin.sales.cash_effects') }}</h2>
             <ul class="flex flex-col gap-2 px-4 py-3 text-[13px]">
                 @forelse ($sale['cash_effects'] as $row)

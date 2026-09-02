@@ -3,13 +3,13 @@
     'notifications' => [],
 ])
 
-<header class="sticky top-0 z-20 flex h-[var(--header-height)] items-center gap-3 border-b border-glass-border px-3 glass md:px-4">
+<header class="admin-card sticky top-0 z-20 flex h-[var(--header-height)] items-center gap-3 border-x-0 border-t-0 px-3 md:px-4">
     <button
         type="button"
         data-sidebar-toggle
         data-collapse-label="{{ __('admin.sidebar.collapse') }}"
         data-expand-label="{{ __('admin.sidebar.expand') }}"
-        class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        class="inline-flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label="{{ __('admin.sidebar.collapse') }}"
     >
         <span class="lg:hidden">
@@ -26,11 +26,11 @@
         <button
             type="button"
             data-open-search
-            class="flex w-full items-center gap-2 rounded-lg border border-glass-border bg-card/70 px-3 py-1.5 text-left text-sm text-muted-foreground hover:border-input"
+            class="flex w-full items-center gap-2 rounded-xl border border-border bg-muted/60 px-3 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
             <x-icon name="search" size="size-4" />
             <span class="flex-1 truncate">{{ __('admin.search.placeholder') }}</span>
-            <kbd class="hidden rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground lg:inline">{{ __('admin.search.shortcut') }}</kbd>
+            <kbd class="hidden rounded-lg border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground lg:inline">{{ __('admin.search.shortcut') }}</kbd>
         </button>
     </div>
 
@@ -38,7 +38,7 @@
         <button
             type="button"
             data-open-search
-            class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground md:hidden"
+            class="inline-flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
             aria-label="{{ __('admin.search.placeholder') }}"
         >
             <x-icon name="search" size="size-4" />
@@ -50,7 +50,7 @@
             type="button"
             data-theme-toggle
             aria-label="{{ __('admin.theme.toggle') }}"
-            class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            class="inline-flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
             <span class="dark:hidden">
                 <x-icon name="moon" size="size-4" />

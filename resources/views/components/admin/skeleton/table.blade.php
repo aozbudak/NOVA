@@ -1,6 +1,6 @@
 @props(['rows' => 6])
 
-<div {{ $attributes->merge(['class' => 'overflow-hidden rounded-md border border-border bg-card']) }} aria-hidden="true">
+<div {{ $attributes->merge(['class' => 'overflow-hidden admin-card rounded-2xl border']) }} aria-hidden="true">
     <div class="flex gap-3 border-b border-border px-3 py-2">
         <div class="h-2.5 w-24 animate-pulse rounded-sm bg-muted"></div>
         <div class="h-2.5 w-20 animate-pulse rounded-sm bg-muted"></div>

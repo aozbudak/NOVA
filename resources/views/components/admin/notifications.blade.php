@@ -6,7 +6,7 @@
     <button
         type="button"
         data-dropdown-trigger
-        class="relative inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        class="relative inline-flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label="{{ __('admin.notifications.title') }}"
         aria-haspopup="menu"
         aria-expanded="false"
@@ -17,8 +17,8 @@
         @endif
     </button>
 
-    <div data-dropdown-panel hidden class="admin-popover absolute right-0 z-30 mt-2 w-[22rem] overflow-hidden rounded-xl border">
-        <div class="flex items-center justify-between border-b border-glass-border px-3.5 py-2.5">
+    <div data-dropdown-panel hidden class="admin-popover absolute right-0 z-30 mt-2 w-[22rem] overflow-hidden rounded-2xl border">
+        <div class="flex items-center justify-between border-b border-border px-3.5 py-2.5">
             <p class="text-[13px] font-medium text-foreground">{{ __('admin.notifications.title') }}</p>
             @if (collect($items)->contains(fn (array $item): bool => $item['unread']))
                 <form method="POST" action="{{ route('admin.notifications.read-all') }}">
@@ -30,12 +30,12 @@
         <div class="max-h-96 overflow-y-auto">
             @forelse ($items as $item)
                 <div @class([
-                    'flex gap-3 border-b border-glass-border px-3.5 py-3 last:border-b-0',
-                    'bg-accent/50' => $item['unread'],
+                    'flex gap-3 border-b border-border px-3.5 py-3 last:border-b-0',
+                    'bg-muted/50' => $item['unread'],
                 ])>
                     <span @class([
                         'mt-1.5 size-1.5 shrink-0 rounded-full',
-                        'bg-sidebar-glow' => $item['unread'],
+                        'bg-foreground' => $item['unread'],
                         'bg-border' => ! $item['unread'],
                     ])></span>
                     <div class="min-w-0 flex-1">

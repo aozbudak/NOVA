@@ -7,7 +7,7 @@
         <section class="flex min-h-0 flex-col border-b border-border lg:border-r lg:border-b-0">
             <div class="border-b border-border px-4 py-3">
                 <p class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.pos.search') }}</p>
-                <label class="mt-2 flex items-center gap-2 rounded-md border border-input bg-background px-3">
+                <label class="mt-2 flex items-center gap-2 rounded-xl border border-input bg-background px-3">
                     <x-icon name="barcode" size="size-4" class="text-muted-foreground" />
                     <input
                         type="text"

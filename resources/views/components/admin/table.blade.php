@@ -18,7 +18,7 @@
                 {{ $slot }}
             </x-admin.card>
         @else
-            <div class="overflow-x-auto rounded-md border border-border bg-card">
+            <div class="admin-card overflow-x-auto rounded-2xl border">
                 <table data-admin-table {{ $attributes->class('w-full text-left text-[13px]') }}>
                     @isset($head)
                         <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">

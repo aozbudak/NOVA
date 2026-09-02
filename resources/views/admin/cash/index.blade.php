@@ -19,7 +19,7 @@
             ['label' => __('admin.cash.today_expenses'), 'value' => \App\Support\AdminStore::money($register['today_expenses'])],
             ['label' => __('admin.cash.today_refunds'), 'value' => \App\Support\AdminStore::money($register['today_refunds'])],
         ] as $kpi)
-            <section class="rounded-md border border-border bg-card p-4">
+            <section class="admin-card rounded-2xl border p-4">
                 <p class="text-[11px] tracking-wide text-muted-foreground uppercase">{{ $kpi['label'] }}</p>
                 <p class="mt-2 font-serif text-2xl tracking-tight text-foreground">{{ $kpi['value'] }}</p>
             </section>

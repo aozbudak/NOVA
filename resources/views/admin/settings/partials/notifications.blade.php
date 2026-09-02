@@ -1,4 +1,4 @@
-<section class="rounded-md border border-border bg-card p-4">
+<section class="admin-card rounded-2xl border p-4">
     <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.settings.categories.notifications') }}</h2>
     <div class="flex flex-col gap-3">
         <label class="flex items-center gap-2 text-[13px] text-foreground">

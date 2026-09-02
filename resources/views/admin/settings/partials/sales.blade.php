@@ -1,4 +1,4 @@
-<section class="rounded-md border border-border bg-card p-4">
+<section class="admin-card rounded-2xl border p-4">
     <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.settings.categories.sales') }}</h2>
     <div class="grid gap-4">
         <x-admin.field :label="__('admin.settings.default_discount')" name="default_discount">

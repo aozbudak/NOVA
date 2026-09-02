@@ -5,7 +5,7 @@
 ])
 
 @php
-    $classes = 'inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground';
+    $classes = 'inline-flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground';
 @endphp
 
 @if ($href)

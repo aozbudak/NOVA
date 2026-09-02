@@ -5,7 +5,7 @@
 @section('content')
     <x-admin.page-header :title="__('admin.cash.close')" />
 
-    <form method="POST" action="{{ route('admin.cash.close.store') }}" class="flex max-w-md flex-col gap-4 rounded-md border border-border bg-card p-4">
+    <form method="POST" action="{{ route('admin.cash.close.store') }}" class="flex max-w-md flex-col gap-4 admin-card rounded-2xl border p-4">
         @csrf
         <dl class="flex flex-col gap-2 text-[13px]">
             <div class="flex justify-between gap-3">

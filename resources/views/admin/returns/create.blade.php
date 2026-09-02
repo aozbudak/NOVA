@@ -19,7 +19,7 @@
             @csrf
             <input type="hidden" name="sale" value="{{ $sale['number'] }}">
 
-            <section class="rounded-md border border-border bg-card p-4">
+            <section class="admin-card rounded-2xl border p-4">
                 <h2 class="mb-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ $sale['number'] }} · {{ $sale['customer'] }}</h2>
                 <p class="mb-3 text-[12px] text-muted-foreground">{{ __('admin.returns.select_items') }}</p>
                 <ul class="flex flex-col gap-3">

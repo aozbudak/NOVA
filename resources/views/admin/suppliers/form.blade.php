@@ -7,7 +7,7 @@
 
     <form method="POST" action="{{ route('admin.suppliers.store') }}" class="flex max-w-3xl flex-col gap-6">
         @csrf
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.suppliers.general') }}</h2>
             <div class="grid gap-4 md:grid-cols-2">
                 <x-admin.field class="md:col-span-2" :label="__('admin.suppliers.company')" name="name" required>

@@ -5,7 +5,7 @@
 @section('content')
     <x-admin.page-header :title="__('admin.cash.open')" />
 
-    <form method="POST" action="{{ route('admin.cash.open.store') }}" class="flex max-w-md flex-col gap-4 rounded-md border border-border bg-card p-4">
+    <form method="POST" action="{{ route('admin.cash.open.store') }}" class="flex max-w-md flex-col gap-4 admin-card rounded-2xl border p-4">
         @csrf
         <x-admin.field :label="__('admin.cash.opening')" name="opening" required>
             <x-admin.input name="opening" type="number" value="{{ $register['opening'] }}" required />

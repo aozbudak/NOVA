@@ -15,8 +15,8 @@
     };
 
     $base = $variant === 'icon'
-        ? 'inline-flex items-center justify-center rounded-md'
-        : 'inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-[12px] font-medium';
+        ? 'inline-flex items-center justify-center rounded-xl'
+        : 'inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-3 text-[12px] font-medium';
 @endphp
 
 @if ($href)

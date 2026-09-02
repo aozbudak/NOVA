@@ -6,7 +6,7 @@
     <x-admin.page-header :title="$return['number']" />
 
     <div class="grid gap-4 lg:grid-cols-2">
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <h2 class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.returns.record') }}</h2>
             <dl class="mt-3 flex flex-col gap-2 text-[13px]">
                 <div class="flex justify-between gap-3">
@@ -36,7 +36,7 @@
             </dl>
         </section>
 
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <h2 class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.returns.refund') }}</h2>
             <dl class="mt-3 flex flex-col gap-2 text-[13px]">
                 <div class="flex justify-between gap-3">
@@ -56,7 +56,7 @@
     </div>
 
     <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        <section class="rounded-md border border-border bg-card">
+        <section class="admin-card rounded-2xl border">
             <h2 class="border-b border-border px-4 py-3 text-sm font-medium text-foreground">{{ __('admin.returns.stock') }}</h2>
             <ul class="flex flex-col gap-2 px-4 py-3 text-[13px]">
                 @forelse ($return['stock_effects'] as $row)
@@ -69,7 +69,7 @@
                 @endforelse
             </ul>
         </section>
-        <section class="rounded-md border border-border bg-card">
+        <section class="admin-card rounded-2xl border">
             <h2 class="border-b border-border px-4 py-3 text-sm font-medium text-foreground">{{ __('admin.returns.cash') }}</h2>
             <ul class="flex flex-col gap-2 px-4 py-3 text-[13px]">
                 @forelse ($return['cash_effects'] as $row)

@@ -11,7 +11,7 @@
             @method('PUT')
         @endif
 
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.basic') }}</h2>
             <div class="grid gap-4 md:grid-cols-2">
                 <x-admin.field class="md:col-span-2" :label="__('admin.products.name')" name="name" required>
@@ -43,7 +43,7 @@
             </div>
         </section>
 
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.pricing') }}</h2>
             <div class="grid gap-4 md:grid-cols-3">
                 <x-admin.field :label="__('admin.products.purchase_price')" name="purchase_price">
@@ -58,7 +58,7 @@
             </div>
         </section>
 
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.variants') }}</h2>
                 <button type="button" data-variant-add class="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground">
@@ -105,14 +105,14 @@
             </template>
         </section>
 
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.images') }}</h2>
             <x-admin.field :label="__('admin.products.product_images')" name="images" :help="__('admin.products.upload_hint')">
                 <x-admin.input type="file" name="images[]" multiple accept="image/jpeg,image/webp" />
             </x-admin.field>
         </section>
 
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.inventory') }}</h2>
             <div class="grid gap-4 md:grid-cols-2">
                 <x-admin.field :label="__('admin.products.initial_stock')" name="initial_stock">

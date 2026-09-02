@@ -21,7 +21,7 @@
     @if ($chips !== [])
         <div class="flex flex-wrap gap-1.5">
             @foreach ($chips as $chip)
-                <a href="{{ $chip['url'] }}" class="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-[12px] text-foreground hover:bg-accent">
+                <a href="{{ $chip['url'] }}" class="inline-flex items-center gap-1 rounded-xl bg-muted px-2.5 py-1 text-[12px] text-foreground hover:bg-accent">
                     <span class="text-muted-foreground">{{ $chip['label'] }}:</span>
                     {{ $chip['value'] }}
                     <x-icon name="x" size="size-3" class="text-muted-foreground" />

@@ -1,3 +1,3 @@
-<div {{ $attributes->class('rounded-md border border-border bg-card') }}>
+<div {{ $attributes->class('admin-card rounded-2xl border') }}>
     {{ $slot }}
 </div>

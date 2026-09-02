@@ -1,6 +1,6 @@
 @include('admin.reports.partials.metrics', ['report' => $report])
 
-<section class="mt-6 rounded-md border border-border bg-card p-4">
+<section class="mt-6 admin-card rounded-2xl border p-4">
     <h2 class="text-sm font-medium text-foreground">{{ __('admin.reports.charts.top_suppliers') }}</h2>
     <ul class="mt-3 flex flex-col gap-3">
         @foreach ($report['top_suppliers'] as $item)

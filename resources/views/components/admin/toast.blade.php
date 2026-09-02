@@ -8,5 +8,5 @@
     data-flash-error="{{ session('error') }}"
     data-error-fallback="{{ __('admin.toast.error') }} {{ __('admin.toast.retry') }}"
 >
-    <p data-toast-message class="rounded-md bg-foreground px-4 py-2 text-[12px] text-background"></p>
+    <p data-toast-message class="rounded-2xl bg-foreground px-4 py-2 text-[11px] tracking-nav text-background uppercase"></p>
 </div>

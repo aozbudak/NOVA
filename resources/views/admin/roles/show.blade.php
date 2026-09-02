@@ -6,7 +6,7 @@
     <x-admin.page-header :title="$role['name']" :description="$role['builtin'] ? __('admin.roles.matrix') : __('admin.roles.custom_hint')" />
 
     @if ($matrix !== null)
-        <div class="overflow-x-auto rounded-md border border-border bg-card">
+        <div class="overflow-x-auto admin-card rounded-2xl border">
             <table class="w-full text-left text-[13px]">
                 <thead class="border-b border-border text-[11px] tracking-wide text-muted-foreground uppercase">
                     <tr>
@@ -35,7 +35,7 @@
             </table>
         </div>
     @else
-        <section class="overflow-hidden rounded-md border border-border bg-card">
+        <section class="overflow-hidden admin-card rounded-2xl border">
             <div class="border-b border-border px-4 py-3">
                 <h2 class="text-sm font-medium text-foreground">{{ __('admin.users.abilities') }}</h2>
             </div>

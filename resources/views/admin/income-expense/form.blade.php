@@ -5,7 +5,7 @@
 @section('content')
     <x-admin.page-header :title="__('admin.income_expense.add')" />
 
-    <form method="POST" action="{{ route('admin.income-expense.store') }}" class="flex max-w-md flex-col gap-4 rounded-md border border-border bg-card p-4">
+    <form method="POST" action="{{ route('admin.income-expense.store') }}" class="flex max-w-md flex-col gap-4 admin-card rounded-2xl border p-4">
         @csrf
         <x-admin.field :label="__('admin.income_expense.type')" name="type" required>
             <x-admin.select name="type">

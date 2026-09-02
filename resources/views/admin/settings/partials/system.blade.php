@@ -1,4 +1,4 @@
-<section class="rounded-md border border-border bg-card p-4">
+<section class="admin-card rounded-2xl border p-4">
     <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.settings.categories.system') }}</h2>
     <dl class="flex flex-col gap-3 text-[13px]">
         <div class="flex justify-between gap-3">

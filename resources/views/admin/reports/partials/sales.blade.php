@@ -1,11 +1,11 @@
 <form method="GET" action="{{ route('admin.reports.show', $report['key']) }}" class="mb-6 flex flex-wrap items-end gap-2">
-    <div class="flex rounded-md border border-border bg-card p-0.5 text-[12px]">
+    <div class="flex rounded-xl border border-border bg-muted/50 p-0.5 text-[12px]">
         @foreach (['today', 'week', 'month', 'custom'] as $key)
             <a
                 href="{{ route('admin.reports.show', ['report' => $report['key'], 'range' => $key]) }}"
                 @class([
-                    'px-2.5 py-1 rounded-sm',
-                    'bg-primary text-primary-foreground' => ($report['range'] ?? '') === $key,
+                    'px-2.5 py-1 rounded-lg',
+                    'bg-foreground text-background' => ($report['range'] ?? '') === $key,
                     'text-muted-foreground hover:text-foreground' => ($report['range'] ?? '') !== $key,
                 ])
             >{{ __('admin.reports.range.'.$key) }}</a>
@@ -21,18 +21,18 @@
             <input type="date" name="to" value="{{ $report['to'] }}" class="h-8 rounded-md border border-input bg-background px-2 text-[13px] text-foreground">
         </label>
         <input type="hidden" name="range" value="custom">
-        <button type="submit" class="h-8 rounded-md border border-border bg-card px-3 text-[12px] text-foreground hover:bg-accent">{{ __('admin.dashboard.range.apply') }}</button>
+        <button type="submit" class="h-8 admin-card rounded-2xl border px-3 text-[12px] text-foreground hover:bg-accent">{{ __('admin.dashboard.range.apply') }}</button>
     @endif
 </form>
 
 @include('admin.reports.partials.metrics', ['report' => $report])
 
 <div class="mt-6 grid gap-4 xl:grid-cols-3">
-    <section class="rounded-md border border-border bg-card p-4 xl:col-span-2">
+    <section class="admin-card rounded-2xl border p-4 xl:col-span-2">
         <h2 class="text-sm font-medium text-foreground">{{ __('admin.reports.charts.trend') }}</h2>
         <x-admin.sparkline class="mt-3" :series="$report['trend']" />
     </section>
-    <section class="rounded-md border border-border bg-card p-4">
+    <section class="admin-card rounded-2xl border p-4">
         <h2 class="text-sm font-medium text-foreground">{{ __('admin.reports.charts.payment') }}</h2>
         <ul class="mt-3 flex flex-col gap-3">
             @foreach ($report['payments'] as $payment)
@@ -50,7 +50,7 @@
     </section>
 </div>
 
-<section class="mt-4 rounded-md border border-border bg-card p-4">
+<section class="mt-4 admin-card rounded-2xl border p-4">
     <h2 class="text-sm font-medium text-foreground">{{ __('admin.reports.charts.top_products') }}</h2>
     <ul class="mt-3 flex flex-col gap-3">
         @foreach ($report['top_products'] as $item)

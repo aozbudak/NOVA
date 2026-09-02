@@ -7,22 +7,19 @@
 
     <div class="flex flex-col gap-6">
         <x-admin.card class="overflow-hidden">
-            <div class="h-20 bg-muted/70"></div>
-            <div class="flex flex-col gap-5 px-5 pb-5 sm:flex-row sm:items-end sm:justify-between">
-                <div class="flex min-w-0 items-end gap-4">
-                    <span class="-mt-8 flex size-16 shrink-0 items-center justify-center rounded-lg border border-border bg-card font-serif text-xl text-foreground shadow-sm">
-                        {{ mb_strtoupper(mb_substr($profile['name'], 0, 1)) }}
-                    </span>
-                    <div class="min-w-0 pb-1">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h2 class="truncate font-serif text-xl tracking-tight text-foreground">{{ $profile['name'] }}</h2>
-                            <span class="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{{ $profile['role'] }}</span>
-                        </div>
-                        <p class="mt-1 truncate text-[13px] text-muted-foreground">{{ $profile['email'] }}</p>
-                        @if (filled($profile['phone']))
-                            <p class="truncate text-[13px] text-muted-foreground">{{ $profile['phone'] }}</p>
-                        @endif
+            <div class="flex items-center gap-4 px-5 py-4">
+                <span class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-foreground text-sm font-medium tracking-wide text-background uppercase">
+                    {{ mb_strtoupper(mb_substr($profile['name'], 0, 1)) }}
+                </span>
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h2 class="truncate font-serif text-2xl tracking-tight text-foreground">{{ $profile['name'] }}</h2>
+                        <span class="rounded-xl bg-muted px-2 py-0.5 text-[10px] font-medium tracking-nav text-muted-foreground uppercase">{{ $profile['role'] }}</span>
                     </div>
+                    <p class="mt-0.5 truncate text-sm text-muted-foreground">{{ $profile['email'] }}</p>
+                    @if (filled($profile['phone']))
+                        <p class="truncate text-sm text-muted-foreground">{{ $profile['phone'] }}</p>
+                    @endif
                 </div>
             </div>
             @if ($profile['abilities'] !== [])
@@ -38,7 +35,7 @@
         </x-admin.card>
 
         <div class="grid items-stretch gap-6 xl:grid-cols-2">
-            <form method="POST" action="{{ route('admin.profile.update') }}" class="flex flex-col rounded-md border border-border bg-card">
+            <form method="POST" action="{{ route('admin.profile.update') }}" class="flex flex-col admin-card rounded-2xl border">
                 @csrf
                 @method('PUT')
                 <div class="border-b border-border px-5 py-4">
@@ -56,7 +53,7 @@
                         <x-admin.input name="phone" value="{{ old('phone', $profile['phone']) }}" />
                     </x-admin.field>
                     <x-admin.field :label="__('admin.profile.role')">
-                        <p class="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-[13px] text-foreground">{{ $profile['role'] }}</p>
+                        <p class="flex h-9 items-center rounded-xl border border-border bg-muted/40 px-3 text-[13px] text-foreground">{{ $profile['role'] }}</p>
                     </x-admin.field>
                 </div>
                 <div class="border-t border-border px-5 py-3">
@@ -66,7 +63,7 @@
                 </div>
             </form>
 
-            <form method="POST" action="{{ route('admin.profile.password') }}" class="flex flex-col rounded-md border border-border bg-card">
+            <form method="POST" action="{{ route('admin.profile.password') }}" class="flex flex-col admin-card rounded-2xl border">
                 @csrf
                 @method('PUT')
                 <div class="border-b border-border px-5 py-4">

@@ -6,7 +6,7 @@
     <x-admin.page-header :title="$customer['name']" />
 
     <div class="grid gap-4 lg:grid-cols-3">
-        <section class="rounded-md border border-border bg-card p-4">
+        <section class="admin-card rounded-2xl border p-4">
             <h2 class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.customers.profile') }}</h2>
             <dl class="mt-3 flex flex-col gap-2 text-[13px]">
                 <div class="flex justify-between gap-3">
@@ -28,7 +28,7 @@
             </dl>
         </section>
 
-        <section class="rounded-md border border-border bg-card p-4 lg:col-span-2">
+        <section class="admin-card rounded-2xl border p-4 lg:col-span-2">
             <h2 class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.customers.contact') }}</h2>
             <dl class="mt-3 grid gap-2 text-[13px] md:grid-cols-2">
                 <div>
