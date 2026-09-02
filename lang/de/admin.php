@@ -96,11 +96,13 @@ return [
     'profile' => [
         'title' => 'Mein Profil',
         'info' => 'Profilinformationen',
+        'info_hint' => 'Aktualisieren Sie Name, Kontaktdaten und Rolle.',
         'name' => 'Name',
         'email' => 'E-Mail',
         'phone' => 'Telefon',
         'role' => 'Rolle',
         'password' => 'Passwort ändern',
+        'password_hint' => 'Wählen Sie ein Passwort mit mindestens 8 Zeichen.',
         'current_password' => 'Aktuelles Passwort',
         'new_password' => 'Neues Passwort',
         'password_confirmation' => 'Passwort bestätigen',

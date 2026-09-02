@@ -96,11 +96,13 @@ return [
     'profile' => [
         'title' => 'Mon profil',
         'info' => 'Informations du profil',
+        'info_hint' => 'Mettez à jour votre nom, vos coordonnées et votre rôle.',
         'name' => 'Nom',
         'email' => 'E-mail',
         'phone' => 'Téléphone',
         'role' => 'Rôle',
         'password' => 'Changer le mot de passe',
+        'password_hint' => 'Choisissez un mot de passe d’au moins 8 caractères.',
         'current_password' => 'Mot de passe actuel',
         'new_password' => 'Nouveau mot de passe',
         'password_confirmation' => 'Confirmer le mot de passe',

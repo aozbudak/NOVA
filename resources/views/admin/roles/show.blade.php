@@ -72,7 +72,9 @@
                 <x-slot:body>
                     @foreach ($users as $user)
                         <tr class="border-b border-border last:border-b-0">
-                            <x-admin.td :label="__('admin.users.user')">{{ $user['name'] }}</x-admin.td>
+                            <x-admin.td :label="__('admin.users.user')">
+                                <x-admin.person :name="$user['name']" :meta="$user['email']" />
+                            </x-admin.td>
                             <x-admin.td :label="__('admin.users.email')" tone="muted">{{ $user['email'] }}</x-admin.td>
                             <x-admin.td :label="__('admin.users.status')"><x-admin.badge group="status" :status="$user['status']" /></x-admin.td>
                             <x-admin.td :label="__('admin.users.last_login')" tone="muted">{{ $user['last_login'] }}</x-admin.td>
