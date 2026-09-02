@@ -58,6 +58,7 @@ final class AdminNavigation
         'admin.users.update' => 'users',
         'admin.roles.index' => 'roles',
         'admin.roles.show' => 'roles',
+        'admin.notifications.index' => 'profile',
         'admin.notifications.read' => 'profile',
         'admin.notifications.read-all' => 'profile',
         'admin.audit.index' => 'audit',
@@ -96,6 +97,7 @@ final class AdminNavigation
                     $this->item('brands', 'brands', 'admin.brands.index', 'brands'),
                     $this->item('variants', 'variants', 'admin.variants.index', 'variants'),
                     $this->item('inventory', 'inventory', 'admin.inventory.index', 'inventory'),
+                    $this->item('stock_movements', 'inventory', 'admin.inventory.movements', 'inventory'),
                     $this->item('barcode', 'barcode', 'admin.barcode.index', 'barcode'),
                 ],
             ],
@@ -119,6 +121,7 @@ final class AdminNavigation
                 'label' => __('admin.nav.finance'),
                 'items' => [
                     $this->item('cash', 'cash', 'admin.cash.index', 'cash'),
+                    $this->item('cash_movements', 'cash', 'admin.cash.movements', 'cash'),
                     $this->item('income_expense', 'income-expense', 'admin.income-expense.index', 'income_expense'),
                     $this->item('payments', 'payments', 'admin.payments.index', 'payments'),
                 ],
@@ -126,12 +129,18 @@ final class AdminNavigation
             [
                 'label' => __('admin.nav.reporting'),
                 'items' => [
-                    $this->item('reports', 'reports', 'admin.reports.index', 'reports'),
+                    $this->item('report_sales', 'reports', 'admin.reports.show', 'reports', ['sales']),
+                    $this->item('report_inventory', 'reports', 'admin.reports.show', 'reports', ['inventory']),
+                    $this->item('report_returns', 'reports', 'admin.reports.show', 'reports', ['returns']),
+                    $this->item('report_cash', 'reports', 'admin.reports.show', 'reports', ['cash']),
+                    $this->item('report_customers', 'reports', 'admin.reports.show', 'reports', ['customers']),
+                    $this->item('report_suppliers', 'reports', 'admin.reports.show', 'reports', ['suppliers']),
                 ],
             ],
             [
                 'label' => __('admin.nav.management'),
                 'items' => [
+                    $this->item('users', 'users', 'admin.users.index', 'users'),
                     $this->item('roles', 'roles', 'admin.roles.index', 'roles'),
                     $this->item('audit', 'audit', 'admin.audit.index', 'audit'),
                 ],
@@ -139,6 +148,8 @@ final class AdminNavigation
             [
                 'label' => __('admin.nav.system'),
                 'items' => [
+                    $this->item('notifications', 'bell', 'admin.notifications.index', 'profile'),
+                    $this->item('profile', 'user', 'admin.profile.show', 'profile'),
                     $this->item('settings', 'settings', 'admin.settings.index', 'settings'),
                 ],
             ],
@@ -147,10 +158,16 @@ final class AdminNavigation
         $visible = [];
 
         foreach ($sections as $section) {
-            $items = array_values(array_filter(
-                $section['items'],
-                fn (array $item): bool => $this->staff->role->can($item['permission']),
-            ));
+            $items = [];
+
+            foreach ($section['items'] as $item) {
+                if (! $this->staff->role->can($item['permission'])) {
+                    continue;
+                }
+
+                $item['active'] = $this->itemIsActive($item);
+                $items[] = $item;
+            }
 
             if ($items === []) {
                 continue;
@@ -206,7 +223,7 @@ final class AdminNavigation
 
         foreach ($this->sections() as $section) {
             foreach ($section['items'] as $item) {
-                if ($item['route'] !== $routeName) {
+                if (! $this->itemIsActive($item)) {
                     continue;
                 }
 
@@ -298,11 +315,11 @@ final class AdminNavigation
                 ['label' => __('admin.reports.detail'), 'url' => null],
             ],
             'admin.users.create' => [
-                ['label' => __('admin.nav.roles'), 'url' => route('admin.roles.index')],
+                ['label' => __('admin.nav.users'), 'url' => route('admin.users.index')],
                 ['label' => __('admin.users.add'), 'url' => null],
             ],
             'admin.users.edit' => [
-                ['label' => __('admin.nav.roles'), 'url' => route('admin.roles.index')],
+                ['label' => __('admin.nav.users'), 'url' => route('admin.users.index')],
                 ['label' => __('admin.users.edit'), 'url' => null],
             ],
             'admin.roles.show' => [
@@ -332,9 +349,9 @@ final class AdminNavigation
     }
 
     /**
-     * @return array{key: string, label: string, icon: string, route: string, permission: string}
+     * @return array{key: string, label: string, icon: string, route: string, permission: string, parameters: list<string>}
      */
-    private function item(string $key, string $icon, string $route, string $permission): array
+    private function item(string $key, string $icon, string $route, string $permission, array $parameters = []): array
     {
         return [
             'key' => $key,
@@ -342,6 +359,37 @@ final class AdminNavigation
             'icon' => $icon,
             'route' => $route,
             'permission' => $permission,
+            'parameters' => $parameters,
         ];
+    }
+
+    /**
+     * @param  array{route: string, parameters?: list<string>}  $item
+     */
+    public function itemIsActive(array $item): bool
+    {
+        $current = request()->route()?->getName();
+        $route = $item['route'];
+        $parameters = $item['parameters'] ?? [];
+
+        if ($parameters !== []) {
+            return $current === $route && request()->route('report') === $parameters[0];
+        }
+
+        if ($current === $route) {
+            return true;
+        }
+
+        if (! str_ends_with($route, '.index')) {
+            return false;
+        }
+
+        $prefix = str_replace('.index', '', $route);
+
+        if (! request()->routeIs($prefix.'.*')) {
+            return false;
+        }
+
+        return ! in_array($current, ['admin.inventory.movements', 'admin.cash.movements'], true);
     }
 }
