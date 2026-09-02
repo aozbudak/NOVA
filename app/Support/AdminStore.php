@@ -133,7 +133,9 @@ final class AdminStore
     public function movements(): array
     {
         return [
-            ['date' => '2026-09-02 09:14', 'product' => 'Basic Shirt', 'type' => 'sale', 'qty' => -1, 'before' => 43, 'after' => 42, 'user' => 'Ayşe Yılmaz', 'reference' => 'NV-10482'],
+            ['date' => '2026-09-02 09:14', 'product' => 'Basic Shirt', 'type' => 'sale', 'qty' => -1, 'before' => 43, 'after' => 42, 'user' => 'Ayşe Yılmaz', 'reference' => 'NOVA-1024'],
+            ['date' => '2026-09-02 09:14', 'product' => 'Tailored Trouser', 'type' => 'sale', 'qty' => -1, 'before' => 23, 'after' => 22, 'user' => 'Ayşe Yılmaz', 'reference' => 'NOVA-1024'],
+            ['date' => '2026-09-02 09:14', 'product' => 'Basic Shirt', 'type' => 'sale', 'qty' => -1, 'before' => 42, 'after' => 41, 'user' => 'Ayşe Yılmaz', 'reference' => 'NV-10482'],
             ['date' => '2026-09-02 08:51', 'product' => 'Wool Coat', 'type' => 'sale', 'qty' => -1, 'before' => 9, 'after' => 8, 'user' => 'Ayşe Yılmaz', 'reference' => 'NV-10481'],
             ['date' => '2026-09-01 18:20', 'product' => 'Cotton T-Shirt', 'type' => 'return', 'qty' => 1, 'before' => 37, 'after' => 38, 'user' => 'Mert Kaya', 'reference' => 'RT-2204'],
             ['date' => '2026-09-01 14:05', 'product' => 'Merino Crew Knit', 'type' => 'exchange', 'qty' => -1, 'before' => 5, 'after' => 4, 'user' => 'Ayşe Yılmaz', 'reference' => 'EX-118'],
@@ -194,6 +196,366 @@ final class AdminStore
             'stock' => $variant['stock'],
             'image' => $variant['image'],
         ]);
+    }
+
+    /**
+     * @param  array{search?: string|null, status?: string|null, date?: string|null, sort?: string|null}  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function suppliers(array $filters = []): Collection
+    {
+        $rows = collect($this->supplierCatalog());
+        $search = Str::lower(trim((string) ($filters['search'] ?? '')));
+
+        if ($search !== '') {
+            $rows = $rows->filter(function (array $supplier) use ($search): bool {
+                return Str::contains(Str::lower($supplier['name'].' '.$supplier['contact'].' '.$supplier['email']), $search);
+            });
+        }
+
+        if (filled($filters['status'] ?? null)) {
+            $rows = $rows->where('status', $filters['status']);
+        }
+
+        if (filled($filters['date'] ?? null)) {
+            $rows = $rows->where('last_purchase', $filters['date']);
+        }
+
+        $sort = $filters['sort'] ?? 'name';
+
+        $rows = match ($sort) {
+            'purchases' => $rows->sortByDesc('total'),
+            'recent' => $rows->sortByDesc('last_purchase'),
+            default => $rows->sortBy('name'),
+        };
+
+        return $rows->values();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function supplier(string $id): ?array
+    {
+        $supplier = collect($this->supplierCatalog())->firstWhere('id', $id);
+
+        if ($supplier === null) {
+            return null;
+        }
+
+        $supplier['history'] = collect($this->purchases())
+            ->where('supplier_id', $id)
+            ->values()
+            ->all();
+        $supplier['movements'] = collect($this->movements())
+            ->filter(fn (array $row): bool => collect($supplier['history'])->contains('number', $row['reference']))
+            ->values()
+            ->all();
+
+        return $supplier;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function purchases(): array
+    {
+        return [
+            ['number' => 'PO-441', 'supplier_id' => 'atelier-mills', 'date' => '2026-08-30', 'products' => 'Tailored Trouser ×20', 'total' => 14200, 'status' => 'received'],
+            ['number' => 'PO-438', 'supplier_id' => 'atelier-mills', 'date' => '2026-08-12', 'products' => 'Wool Coat ×8', 'total' => 9440, 'status' => 'received'],
+            ['number' => 'PO-402', 'supplier_id' => 'studio-textiles', 'date' => '2026-07-18', 'products' => 'Merino Crew Knit ×12', 'total' => 6480, 'status' => 'received'],
+            ['number' => 'PO-390', 'supplier_id' => 'nova-leather', 'date' => '2026-06-04', 'products' => 'Leather Belt ×40', 'total' => 9600, 'status' => 'open'],
+        ];
+    }
+
+    /**
+     * @param  array{search?: string|null, from?: string|null, to?: string|null, payment?: string|null, cashier?: string|null, status?: string|null}  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function sales(array $filters = []): Collection
+    {
+        $rows = collect($this->saleCatalog());
+        $search = Str::lower(trim((string) ($filters['search'] ?? '')));
+
+        if ($search !== '') {
+            $rows = $rows->filter(function (array $sale) use ($search): bool {
+                return Str::contains(Str::lower($sale['number'].' '.$sale['customer']), $search);
+            });
+        }
+
+        if (filled($filters['payment'] ?? null)) {
+            $rows = $rows->where('payment', $filters['payment']);
+        }
+
+        if (filled($filters['cashier'] ?? null)) {
+            $rows = $rows->where('cashier', $filters['cashier']);
+        }
+
+        if (filled($filters['status'] ?? null)) {
+            $rows = $rows->where('status', $filters['status']);
+        }
+
+        if (filled($filters['from'] ?? null)) {
+            $from = $filters['from'];
+            $rows = $rows->filter(fn (array $sale): bool => $sale['date'] >= $from);
+        }
+
+        if (filled($filters['to'] ?? null)) {
+            $to = $filters['to'];
+            $rows = $rows->filter(fn (array $sale): bool => $sale['date'] <= $to.' 23:59');
+        }
+
+        return $rows->values();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function sale(string $id): ?array
+    {
+        $sale = collect($this->saleCatalog())->first(fn (array $row): bool => $row['id'] === $id || $row['number'] === $id);
+
+        if ($sale === null) {
+            return null;
+        }
+
+        $sale['stock_effects'] = collect($this->movements())
+            ->where('reference', $sale['number'])
+            ->values()
+            ->all();
+        $sale['cash_effects'] = collect($this->cashMovements())
+            ->where('reference', $sale['number'])
+            ->values()
+            ->all();
+
+        return $sale;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function cashiers(): array
+    {
+        return ['Ayşe Yılmaz', 'Mert Kaya'];
+    }
+
+    /**
+     * @param  array{return?: string|null, sale?: string|null, customer?: string|null, date?: string|null, reason?: string|null, status?: string|null}  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function returns(array $filters = []): Collection
+    {
+        $rows = collect($this->returnCatalog());
+        $searchReturn = Str::lower(trim((string) ($filters['return'] ?? '')));
+        $searchSale = Str::lower(trim((string) ($filters['sale'] ?? '')));
+        $searchCustomer = Str::lower(trim((string) ($filters['customer'] ?? '')));
+
+        if ($searchReturn !== '') {
+            $rows = $rows->filter(fn (array $row): bool => Str::contains(Str::lower($row['number']), $searchReturn));
+        }
+
+        if ($searchSale !== '') {
+            $rows = $rows->filter(fn (array $row): bool => Str::contains(Str::lower($row['sale']), $searchSale));
+        }
+
+        if ($searchCustomer !== '') {
+            $rows = $rows->filter(fn (array $row): bool => Str::contains(Str::lower($row['customer']), $searchCustomer));
+        }
+
+        foreach (['date' => 'date', 'reason' => 'reason', 'status' => 'status'] as $filter => $field) {
+            if (filled($filters[$filter] ?? null)) {
+                $rows = $rows->where($field, $filters[$filter]);
+            }
+        }
+
+        return $rows->values();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function returnRecord(string $id): ?array
+    {
+        $record = collect($this->returnCatalog())->firstWhere('id', $id);
+
+        if ($record === null) {
+            return null;
+        }
+
+        $record['stock_effects'] = collect($this->movements())
+            ->where('reference', $record['number'])
+            ->values()
+            ->all();
+        $record['cash_effects'] = collect($this->cashMovements())
+            ->where('reference', $record['number'])
+            ->values()
+            ->all();
+
+        return $record;
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function exchanges(): Collection
+    {
+        return collect($this->exchangeCatalog());
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function exchange(string $id): ?array
+    {
+        return collect($this->exchangeCatalog())->firstWhere('id', $id);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function cashRegister(): array
+    {
+        return [
+            'open' => true,
+            'date' => '2026-09-02',
+            'user' => 'Ayşe Yılmaz',
+            'opening' => 12000,
+            'current' => 55290,
+            'today_sales' => 48250,
+            'today_expenses' => 620,
+            'today_refunds' => 4340,
+            'expected' => 55290,
+            'actual' => null,
+            'difference' => null,
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function cashMovements(): array
+    {
+        return [
+            ['date' => '2026-09-02 08:00', 'type' => 'opening', 'description' => 'Register opened', 'reference' => 'CR-0902', 'amount' => 12000, 'balance' => 12000, 'user' => 'Ayşe Yılmaz', 'flow' => 'in'],
+            ['date' => '2026-09-02 09:14', 'type' => 'sale', 'description' => 'NOVA-1024 cash sale', 'reference' => 'NOVA-1024', 'amount' => 2398, 'balance' => 14398, 'user' => 'Ayşe Yılmaz', 'flow' => 'in'],
+            ['date' => '2026-09-02 09:14', 'type' => 'sale', 'description' => 'NV-10482 cash sale', 'reference' => 'NV-10482', 'amount' => 1860, 'balance' => 15720, 'user' => 'Ayşe Yılmaz', 'flow' => 'in'],
+            ['date' => '2026-09-01 18:20', 'type' => 'refund', 'description' => 'RT-2204 refund', 'reference' => 'RT-2204', 'amount' => -449, 'balance' => 13860, 'user' => 'Mert Kaya', 'flow' => 'out'],
+            ['date' => '2026-09-02 11:40', 'type' => 'expense', 'description' => 'Packaging supplies', 'reference' => 'EX-19', 'amount' => -620, 'balance' => 54670, 'user' => 'Ayşe Yılmaz', 'flow' => 'out'],
+            ['date' => '2026-09-01 10:02', 'type' => 'income', 'description' => 'Alteration fee', 'reference' => 'IN-08', 'amount' => 250, 'balance' => 14310, 'user' => 'Mert Kaya', 'flow' => 'in'],
+            ['date' => '2026-09-01 21:05', 'type' => 'closing', 'description' => 'Register closed', 'reference' => 'CR-0901', 'amount' => 0, 'balance' => 14060, 'user' => 'Mert Kaya', 'flow' => 'neutral'],
+            ['date' => '2026-08-30 16:12', 'type' => 'adjustment', 'description' => 'Till count correction', 'reference' => 'ADJ-04', 'amount' => -40, 'balance' => 11960, 'user' => 'Deniz Aksoy', 'flow' => 'out'],
+        ];
+    }
+
+    /**
+     * @param  array{type?: string|null, category?: string|null, date?: string|null, user?: string|null}  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function incomeExpenses(array $filters = []): Collection
+    {
+        $rows = collect($this->incomeExpenseCatalog());
+
+        foreach (['type', 'category', 'date', 'user'] as $key) {
+            if (filled($filters[$key] ?? null)) {
+                $rows = $rows->where($key, $filters[$key]);
+            }
+        }
+
+        return $rows->values();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function incomeExpenseCategories(): array
+    {
+        return ['Packaging', 'Alterations', 'Shipping', 'Utilities', 'Other'];
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function payments(): Collection
+    {
+        return collect([
+            ['date' => '2026-09-02 09:14', 'sale' => 'NOVA-1024', 'customer' => 'Elif Kaya', 'method' => 'cash', 'amount' => 2398, 'status' => 'completed', 'reference' => 'PAY-1024'],
+            ['date' => '2026-09-02 08:51', 'sale' => 'NV-10481', 'customer' => 'Mert Aydın', 'method' => 'card', 'amount' => 2499, 'status' => 'completed', 'reference' => 'PAY-10481'],
+            ['date' => '2026-09-01 16:40', 'sale' => 'NV-10390', 'customer' => 'Selin Arslan', 'method' => 'other', 'amount' => 1380, 'status' => 'completed', 'reference' => 'PAY-10390'],
+            ['date' => '2026-09-01 18:20', 'sale' => 'NV-10311', 'customer' => 'Elif Kaya', 'method' => 'cash', 'amount' => -449, 'status' => 'refunded', 'reference' => 'PAY-RT-2204'],
+        ]);
+    }
+
+    /**
+     * @return list<array{key: string, label: string, route: string}>
+     */
+    public function reportCategories(): array
+    {
+        return [
+            ['key' => 'sales', 'label' => __('admin.reports.categories.sales'), 'route' => 'sales'],
+            ['key' => 'products', 'label' => __('admin.reports.categories.products'), 'route' => 'products'],
+            ['key' => 'inventory', 'label' => __('admin.reports.categories.inventory'), 'route' => 'inventory'],
+            ['key' => 'cash', 'label' => __('admin.reports.categories.cash'), 'route' => 'cash'],
+            ['key' => 'returns', 'label' => __('admin.reports.categories.returns'), 'route' => 'returns'],
+            ['key' => 'customers', 'label' => __('admin.reports.categories.customers'), 'route' => 'customers'],
+            ['key' => 'suppliers', 'label' => __('admin.reports.categories.suppliers'), 'route' => 'suppliers'],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function report(string $category): ?array
+    {
+        $meta = collect($this->reportCategories())->firstWhere('key', $category);
+
+        if ($meta === null) {
+            return null;
+        }
+
+        $rows = match ($category) {
+            'sales' => [
+                ['label' => 'Today', 'value' => self::money(48250)],
+                ['label' => 'Orders', 'value' => '126'],
+                ['label' => 'Average ticket', 'value' => self::money(383)],
+            ],
+            'products' => [
+                ['label' => 'Basic Shirt', 'value' => '38 units'],
+                ['label' => 'Cotton T-Shirt', 'value' => '29 units'],
+                ['label' => 'Wool Coat', 'value' => '9 units'],
+            ],
+            'inventory' => [
+                ['label' => 'Low stock SKUs', 'value' => '18'],
+                ['label' => 'Out of stock', 'value' => '2'],
+                ['label' => 'Units on hand', 'value' => '160'],
+            ],
+            'cash' => [
+                ['label' => 'Opening', 'value' => self::money(12000)],
+                ['label' => "Today's sales", 'value' => self::money(48250)],
+                ['label' => 'Expected', 'value' => self::money(55290)],
+            ],
+            'returns' => [
+                ['label' => 'Returns today', 'value' => '7'],
+                ['label' => 'Return rate', 'value' => '5.6%'],
+                ['label' => 'Refunded', 'value' => self::money(4340)],
+            ],
+            'customers' => [
+                ['label' => 'Active buyers', 'value' => '5'],
+                ['label' => 'Top spender', 'value' => 'Selin Arslan'],
+                ['label' => 'Repeat rate', 'value' => '68%'],
+            ],
+            'suppliers' => [
+                ['label' => 'Active suppliers', 'value' => '2'],
+                ['label' => 'Open POs', 'value' => '1'],
+                ['label' => 'Outstanding', 'value' => self::money(8400)],
+            ],
+            default => [],
+        };
+
+        return [
+            'key' => $category,
+            'title' => $meta['label'],
+            'rows' => $rows,
+        ];
     }
 
     /**
@@ -279,6 +641,280 @@ final class AdminStore
         }
 
         return 'in_stock';
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function supplierCatalog(): array
+    {
+        return [
+            [
+                'id' => 'atelier-mills',
+                'name' => 'Atelier Mills',
+                'contact' => 'Hakan Demir',
+                'phone' => '0212 555 10 20',
+                'email' => 'hakan@ateliermills.com',
+                'address' => 'Merkez Mah. Atatürk Cad. No:12, Istanbul',
+                'tax' => '1234567890',
+                'purchases' => 12,
+                'total' => 186400,
+                'last_purchase' => '2026-08-30',
+                'status' => 'active',
+                'balance' => 8400,
+            ],
+            [
+                'id' => 'studio-textiles',
+                'name' => 'Studio Textiles',
+                'contact' => 'Lara Koç',
+                'phone' => '0232 441 08 11',
+                'email' => 'lara@studiotextiles.com',
+                'address' => 'Alsancak Liman Cad. 8, Izmir',
+                'tax' => '9876543210',
+                'purchases' => 4,
+                'total' => 28600,
+                'last_purchase' => '2026-07-18',
+                'status' => 'active',
+                'balance' => 0,
+            ],
+            [
+                'id' => 'nova-leather',
+                'name' => 'NOVA Leather Co.',
+                'contact' => 'Emre Şahin',
+                'phone' => '0312 220 44 90',
+                'email' => 'emre@novaleather.com',
+                'address' => 'Ostim OSB 12. Cad. 5, Ankara',
+                'tax' => '1122334455',
+                'purchases' => 2,
+                'total' => 9600,
+                'last_purchase' => '2026-06-04',
+                'status' => 'inactive',
+                'balance' => 9600,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function saleCatalog(): array
+    {
+        return [
+            [
+                'id' => 'nova-1024',
+                'number' => 'NOVA-1024',
+                'date' => '2026-09-02 09:14',
+                'customer' => 'Elif Kaya',
+                'customer_id' => 'elif-kaya',
+                'items_count' => 2,
+                'items_label' => 'Basic Shirt, Tailored Trouser',
+                'items' => [
+                    ['product' => 'Basic Shirt', 'variant' => 'White / M', 'sku' => 'NOVA01-WHI-M', 'qty' => 1, 'unit' => 899, 'discount' => 0, 'total' => 899],
+                    ['product' => 'Tailored Trouser', 'variant' => 'Black / 46', 'sku' => 'NOVA05-BLK-46', 'qty' => 1, 'unit' => 1499, 'discount' => 0, 'total' => 1499],
+                ],
+                'subtotal' => 2398,
+                'discount' => 0,
+                'total' => 2398,
+                'payment' => 'cash',
+                'cashier' => 'Ayşe Yılmaz',
+                'status' => 'completed',
+            ],
+            [
+                'id' => 'nv-10482',
+                'number' => 'NV-10482',
+                'date' => '2026-09-02 09:14',
+                'customer' => 'Elif Kaya',
+                'customer_id' => 'elif-kaya',
+                'items_count' => 2,
+                'items_label' => 'Basic Shirt, Leather Belt',
+                'items' => [
+                    ['product' => 'Basic Shirt', 'variant' => 'White / M', 'sku' => 'NOVA01-WHI-M', 'qty' => 1, 'unit' => 899, 'discount' => 0, 'total' => 899],
+                    ['product' => 'Leather Belt', 'variant' => 'Cognac / 85', 'sku' => 'NOVA07-CGN-85', 'qty' => 1, 'unit' => 961, 'discount' => 0, 'total' => 961],
+                ],
+                'subtotal' => 1860,
+                'discount' => 0,
+                'total' => 1860,
+                'payment' => 'cash',
+                'cashier' => 'Ayşe Yılmaz',
+                'status' => 'completed',
+            ],
+            [
+                'id' => 'nv-10481',
+                'number' => 'NV-10481',
+                'date' => '2026-09-02 08:51',
+                'customer' => 'Mert Aydın',
+                'customer_id' => 'mert-aydin',
+                'items_count' => 1,
+                'items_label' => 'Wool Coat',
+                'items' => [
+                    ['product' => 'Wool Coat', 'variant' => 'Camel / M', 'sku' => 'NOVA02-CML-M', 'qty' => 1, 'unit' => 2499, 'discount' => 0, 'total' => 2499],
+                ],
+                'subtotal' => 2499,
+                'discount' => 0,
+                'total' => 2499,
+                'payment' => 'card',
+                'cashier' => 'Ayşe Yılmaz',
+                'status' => 'completed',
+            ],
+            [
+                'id' => 'nv-10390',
+                'number' => 'NV-10390',
+                'date' => '2026-08-28 10:02',
+                'customer' => 'Selin Arslan',
+                'customer_id' => 'selin-arslan',
+                'items_count' => 2,
+                'items_label' => 'Leather Belt',
+                'items' => [
+                    ['product' => 'Leather Belt', 'variant' => 'Black / 90', 'sku' => 'NOVA07-BLK-90', 'qty' => 2, 'unit' => 690, 'discount' => 0, 'total' => 1380],
+                ],
+                'subtotal' => 1380,
+                'discount' => 0,
+                'total' => 1380,
+                'payment' => 'other',
+                'cashier' => 'Mert Kaya',
+                'status' => 'cancelled',
+            ],
+            [
+                'id' => 'nv-10311',
+                'number' => 'NV-10311',
+                'date' => '2026-08-14 16:20',
+                'customer' => 'Elif Kaya',
+                'customer_id' => 'elif-kaya',
+                'items_count' => 1,
+                'items_label' => 'Cotton T-Shirt',
+                'items' => [
+                    ['product' => 'Cotton T-Shirt', 'variant' => 'White / M', 'sku' => 'NOVA03-WHI-M', 'qty' => 1, 'unit' => 449, 'discount' => 0, 'total' => 449],
+                ],
+                'subtotal' => 449,
+                'discount' => 0,
+                'total' => 449,
+                'payment' => 'cash',
+                'cashier' => 'Mert Kaya',
+                'status' => 'returned',
+            ],
+            [
+                'id' => 'nv-10104',
+                'number' => 'NV-10104',
+                'date' => '2026-07-02 13:08',
+                'customer' => 'Elif Kaya',
+                'customer_id' => 'elif-kaya',
+                'items_count' => 2,
+                'items_label' => 'Basic Shirt, Cotton T-Shirt',
+                'items' => [
+                    ['product' => 'Basic Shirt', 'variant' => 'Blue / L', 'sku' => 'NOVA01-BLU-L', 'qty' => 1, 'unit' => 899, 'discount' => 0, 'total' => 899],
+                    ['product' => 'Cotton T-Shirt', 'variant' => 'Black / M', 'sku' => 'NOVA03-BLA-M', 'qty' => 1, 'unit' => 449, 'discount' => 0, 'total' => 449],
+                ],
+                'subtotal' => 1348,
+                'discount' => 0,
+                'total' => 1348,
+                'payment' => 'card',
+                'cashier' => 'Ayşe Yılmaz',
+                'status' => 'partially_returned',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function returnCatalog(): array
+    {
+        return [
+            [
+                'id' => 'rt-2204',
+                'number' => 'RT-2204',
+                'sale' => 'NV-10311',
+                'customer' => 'Elif Kaya',
+                'products' => 'Cotton T-Shirt / White / M',
+                'amount' => 449,
+                'reason' => 'wrong_size',
+                'date' => '2026-09-01',
+                'status' => 'completed',
+                'type' => 'full',
+                'refund' => 449,
+            ],
+            [
+                'id' => 'rt-2210',
+                'number' => 'RT-2210',
+                'sale' => 'NV-10104',
+                'customer' => 'Elif Kaya',
+                'products' => 'Cotton T-Shirt / Black / M',
+                'amount' => 449,
+                'reason' => 'customer_request',
+                'date' => '2026-08-20',
+                'status' => 'completed',
+                'type' => 'partial',
+                'refund' => 449,
+            ],
+            [
+                'id' => 'rt-2188',
+                'number' => 'RT-2188',
+                'sale' => 'NV-10390',
+                'customer' => 'Selin Arslan',
+                'products' => 'Leather Belt / Black / 90',
+                'amount' => 690,
+                'reason' => 'defective',
+                'date' => '2026-08-29',
+                'status' => 'open',
+                'type' => 'partial',
+                'refund' => 0,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function exchangeCatalog(): array
+    {
+        return [
+            [
+                'id' => 'ex-118',
+                'number' => 'EX-118',
+                'date' => '2026-09-01',
+                'customer' => 'Elif Kaya',
+                'original' => ['product' => 'Cotton T-Shirt', 'variant' => 'Black / M', 'sku' => 'NOVA03-BLA-M', 'price' => 449],
+                'new' => ['product' => 'Cotton T-Shirt', 'variant' => 'Black / L', 'sku' => 'NOVA03-BLA-L', 'price' => 449],
+                'difference' => 'no_difference',
+                'difference_amount' => 0,
+                'status' => 'completed',
+            ],
+            [
+                'id' => 'ex-121',
+                'number' => 'EX-121',
+                'date' => '2026-08-22',
+                'customer' => 'Can Demir',
+                'original' => ['product' => 'Basic Shirt', 'variant' => 'White / M', 'sku' => 'NOVA01-WHI-M', 'price' => 899],
+                'new' => ['product' => 'Wool Coat', 'variant' => 'Camel / S', 'sku' => 'NOVA02-CML-S', 'price' => 2499],
+                'difference' => 'additional_payment',
+                'difference_amount' => 1600,
+                'status' => 'completed',
+            ],
+            [
+                'id' => 'ex-109',
+                'number' => 'EX-109',
+                'date' => '2026-08-10',
+                'customer' => 'Deniz Yıldız',
+                'original' => ['product' => 'Wool Coat', 'variant' => 'Black / M', 'sku' => 'NOVA02-BLK-M', 'price' => 2499],
+                'new' => ['product' => 'Structured Blazer', 'variant' => 'Navy / 46', 'sku' => 'NOVA08-NVY-46', 'price' => 2190],
+                'difference' => 'refund',
+                'difference_amount' => -309,
+                'status' => 'completed',
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function incomeExpenseCatalog(): array
+    {
+        return [
+            ['id' => 'ex-19', 'date' => '2026-09-02', 'type' => 'expense', 'category' => 'Packaging', 'description' => 'Packaging supplies', 'amount' => 620, 'user' => 'Ayşe Yılmaz', 'reference' => 'EX-19'],
+            ['id' => 'in-08', 'date' => '2026-09-01', 'type' => 'income', 'category' => 'Alterations', 'description' => 'Alteration fee', 'amount' => 250, 'user' => 'Mert Kaya', 'reference' => 'IN-08'],
+            ['id' => 'ex-14', 'date' => '2026-08-28', 'type' => 'expense', 'category' => 'Shipping', 'description' => 'Supplier inbound freight', 'amount' => 480, 'user' => 'Deniz Aksoy', 'reference' => 'EX-14'],
+            ['id' => 'in-04', 'date' => '2026-08-20', 'type' => 'income', 'category' => 'Other', 'description' => 'Gift wrap', 'amount' => 90, 'user' => 'Ayşe Yılmaz', 'reference' => 'IN-04'],
+        ];
     }
 
     /**

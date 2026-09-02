@@ -22,17 +22,31 @@ final class AdminNavigation
         'admin.barcode.index' => 'barcode',
         'admin.pos.index' => 'pos',
         'admin.sales.index' => 'sales',
+        'admin.sales.show' => 'sales',
         'admin.returns.index' => 'returns',
+        'admin.returns.create' => 'returns',
+        'admin.returns.store' => 'returns',
+        'admin.returns.show' => 'returns',
         'admin.exchanges.index' => 'exchanges',
+        'admin.exchanges.show' => 'exchanges',
         'admin.customers.index' => 'customers',
         'admin.customers.show' => 'customers',
         'admin.suppliers.index' => 'suppliers',
+        'admin.suppliers.create' => 'suppliers',
+        'admin.suppliers.store' => 'suppliers',
+        'admin.suppliers.show' => 'suppliers',
         'admin.cash.index' => 'cash',
+        'admin.cash.movements' => 'cash',
+        'admin.cash.open' => 'cash',
+        'admin.cash.open.store' => 'cash',
+        'admin.cash.close' => 'cash',
+        'admin.cash.close.store' => 'cash',
         'admin.income-expense.index' => 'income_expense',
+        'admin.income-expense.create' => 'income_expense',
+        'admin.income-expense.store' => 'income_expense',
         'admin.payments.index' => 'payments',
-        'admin.reports.sales' => 'reports_sales',
-        'admin.reports.inventory' => 'reports_inventory',
-        'admin.reports.cash' => 'reports_cash',
+        'admin.reports.index' => 'reports',
+        'admin.reports.show' => 'reports',
         'admin.users.index' => 'users',
         'admin.roles.index' => 'roles',
         'admin.audit.index' => 'audit',
@@ -97,9 +111,7 @@ final class AdminNavigation
             [
                 'label' => __('admin.nav.reporting'),
                 'items' => [
-                    $this->item('reports_sales', 'reports', 'admin.reports.sales', 'reports_sales'),
-                    $this->item('reports_inventory', 'inventory', 'admin.reports.inventory', 'reports_inventory'),
-                    $this->item('reports_cash', 'cash', 'admin.reports.cash', 'reports_cash'),
+                    $this->item('reports', 'reports', 'admin.reports.index', 'reports'),
                 ],
             ],
             [
@@ -226,6 +238,50 @@ final class AdminNavigation
             'admin.customers.show' => [
                 ['label' => __('admin.nav.customers'), 'url' => route('admin.customers.index')],
                 ['label' => __('admin.customers.detail'), 'url' => null],
+            ],
+            'admin.suppliers.create' => [
+                ['label' => __('admin.nav.suppliers'), 'url' => route('admin.suppliers.index')],
+                ['label' => __('admin.suppliers.add'), 'url' => null],
+            ],
+            'admin.suppliers.show' => [
+                ['label' => __('admin.nav.suppliers'), 'url' => route('admin.suppliers.index')],
+                ['label' => __('admin.suppliers.detail'), 'url' => null],
+            ],
+            'admin.sales.show' => [
+                ['label' => __('admin.nav.sales'), 'url' => route('admin.sales.index')],
+                ['label' => __('admin.sales.detail'), 'url' => null],
+            ],
+            'admin.returns.create' => [
+                ['label' => __('admin.nav.returns'), 'url' => route('admin.returns.index')],
+                ['label' => __('admin.returns.create'), 'url' => null],
+            ],
+            'admin.returns.show' => [
+                ['label' => __('admin.nav.returns'), 'url' => route('admin.returns.index')],
+                ['label' => __('admin.returns.detail'), 'url' => null],
+            ],
+            'admin.exchanges.show' => [
+                ['label' => __('admin.nav.exchanges'), 'url' => route('admin.exchanges.index')],
+                ['label' => __('admin.exchanges.detail'), 'url' => null],
+            ],
+            'admin.cash.movements' => [
+                ['label' => __('admin.nav.cash'), 'url' => route('admin.cash.index')],
+                ['label' => __('admin.cash.movements'), 'url' => null],
+            ],
+            'admin.cash.open' => [
+                ['label' => __('admin.nav.cash'), 'url' => route('admin.cash.index')],
+                ['label' => __('admin.cash.open'), 'url' => null],
+            ],
+            'admin.cash.close' => [
+                ['label' => __('admin.nav.cash'), 'url' => route('admin.cash.index')],
+                ['label' => __('admin.cash.close'), 'url' => null],
+            ],
+            'admin.income-expense.create' => [
+                ['label' => __('admin.nav.income_expense'), 'url' => route('admin.income-expense.index')],
+                ['label' => __('admin.income_expense.add'), 'url' => null],
+            ],
+            'admin.reports.show' => [
+                ['label' => __('admin.nav.reports'), 'url' => route('admin.reports.index')],
+                ['label' => __('admin.reports.detail'), 'url' => null],
             ],
         ];
 

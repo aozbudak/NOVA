@@ -43,9 +43,7 @@ enum StaffRole: string
                 'cash',
                 'income_expense',
                 'payments',
-                'reports_sales',
-                'reports_inventory',
-                'reports_cash',
+                'reports',
                 'users',
             ],
             self::Cashier => [
