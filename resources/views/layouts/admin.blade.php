@@ -37,7 +37,7 @@
             };
         </script>
     </head>
-    <body class="min-h-screen bg-background font-sans text-foreground antialiased">
+    <body class="account-atmosphere min-h-screen bg-background font-sans text-foreground antialiased">
         <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground">Skip to content</a>
 
         <x-admin.sidebar :sections="$navSections" :home-route="$homeRoute" :staff="$staff" />
@@ -47,7 +47,7 @@
 
             <main id="main" @class([
                 'min-h-[calc(100vh-var(--header-height))]',
-                'px-4 py-6 md:px-8' => ! request()->routeIs('admin.pos.index'),
+                'px-4 py-5 md:px-8 md:py-6' => ! request()->routeIs('admin.pos.index'),
                 'h-[calc(100vh-var(--header-height))] overflow-hidden p-0' => request()->routeIs('admin.pos.index'),
             ])>
                 @yield('content')
