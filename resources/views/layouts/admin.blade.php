@@ -21,6 +21,20 @@
         </script>
         @fonts
         @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/admin.js'])
+        <script>
+            window.NOVA = {
+                csrf: @json(csrf_token()),
+                api: {
+                    search: @json(route('api.admin.search')),
+                    sales: @json(route('api.sales.store')),
+                    products: @json(url('/api/products')),
+                    inventoryAdjust: @json(route('api.inventory.adjust')),
+                    cashClose: @json(route('api.cash.close')),
+                    returns: @json(route('api.returns.store')),
+                    posItems: @json(route('api.pos.items')),
+                },
+            };
+        </script>
     </head>
     <body class="min-h-screen bg-background font-sans text-foreground antialiased">
         <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground">Skip to content</a>

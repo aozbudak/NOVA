@@ -2,7 +2,7 @@
     'sections' => [],
 ])
 
-<div data-admin-search hidden class="fixed inset-0 z-50" data-search-url="{{ route('admin.search') }}" data-search-groups='@json(__("admin.search.groups"))'>
+<div data-admin-search hidden class="fixed inset-0 z-50" data-search-url="{{ route('api.admin.search') }}" data-search-groups='@json(__("admin.search.groups"))'>
     <div data-search-backdrop class="absolute inset-0 bg-foreground/20"></div>
     <div class="relative mx-auto mt-[12vh] w-full max-w-lg px-4">
         <div class="overflow-hidden rounded-md border border-border bg-card shadow-sm">

@@ -556,6 +556,40 @@ function initPos() {
         renderCart();
     };
 
+    const checkout = async (payment) => {
+        if (cart.size === 0) {
+            return;
+        }
+
+        const response = await fetch(window.NOVA?.api?.sales ?? '/api/sales', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': window.NOVA?.csrf ?? document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                payment,
+                items: [...cart.values()].map((line) => ({
+                    sku: line.sku,
+                    quantity: line.qty,
+                    discount: line.discount,
+                })),
+            }),
+        });
+
+        if (! response.ok) {
+            showAdminToast(document.getElementById('admin-toast')?.dataset.errorFallback ?? 'Something went wrong. Please try again.');
+            return;
+        }
+
+        const data = await response.json();
+        cart.clear();
+        renderCart();
+        showAdminToast(data.message ?? data.data?.number ?? 'OK');
+    };
+
     const visibleItems = () => items.filter((item) => ! item.closest('li')?.classList.contains('hidden'));
 
     const filter = (needle) => {
@@ -612,6 +646,13 @@ function initPos() {
                 cart.delete(line.sku);
             }
             renderCart();
+            return;
+        }
+
+        const pay = event.target.closest('[data-pos-pay]');
+        if (pay) {
+            event.preventDefault();
+            checkout(pay.dataset.posPay);
         }
     });
 
@@ -622,6 +663,7 @@ function initPos() {
 
         if (event.key === 'F2' || event.key === 'F3' || event.key === 'F4') {
             event.preventDefault();
+            checkout({ F2: 'cash', F3: 'card', F4: 'other' }[event.key]);
         }
 
         if (event.target instanceof HTMLInputElement && event.target !== search) {

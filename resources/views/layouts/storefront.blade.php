@@ -52,12 +52,14 @@
         <script>
             window.NOVA = {
                 routes: {
-                    cart: @json(route('cart.store')),
+                    cart: @json(route('api.cart.store')),
                     cartPanel: @json(route('cart.panel')),
-                    cartUpdate: @json(url('/cart')),
-                    wishlist: @json(route('wishlist.store')),
-                    search: @json(route('search')),
+                    cartUpdate: @json(url('/api/cart')),
+                    wishlist: @json(route('api.wishlist.store')),
+                    search: @json(route('api.search')),
                     product: @json(url('/product')),
+                    catalog: @json(route('api.catalog.index')),
+                    checkout: @json(route('api.checkout.store')),
                 },
                 csrf: @json(csrf_token()),
                 catalog: @json($searchIndex),
