@@ -571,3 +571,9 @@ initTheme();
 initHeader();
 initMegaMenu();
 initGallery();
+
+const flashStatus = document.getElementById('toast')?.dataset.flashStatus?.trim();
+
+if (flashStatus) {
+    toast(flashStatus);
+}

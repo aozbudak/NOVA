@@ -588,6 +588,136 @@ final class DatabaseRecords
         return $user;
     }
 
+    /**
+     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null}  $data
+     */
+    public function updateCustomerProfile(string $email, array $data): ?Customer
+    {
+        if (! Schema::hasTable('customers')) {
+            return null;
+        }
+
+        $customer = Customer::query()->where('email', $email)->first();
+
+        if ($customer === null) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($customer, $email, $data): Customer {
+            $phone = filled($data['phone'] ?? null) ? $data['phone'] : null;
+
+            $customer->update([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'phone' => $phone,
+            ]);
+
+            $user = $customer->user ?? User::query()->where('email', $email)->first();
+
+            $user?->update([
+                'name' => trim($data['first_name'].' '.$data['last_name']),
+                'email' => $data['email'],
+                'phone' => $phone,
+            ]);
+
+            return $customer->fresh() ?? $customer;
+        });
+    }
+
+    public function updateCustomerPassword(string $email, string $current, string $password): bool
+    {
+        if (! Schema::hasTable('users')) {
+            return false;
+        }
+
+        $user = User::query()->where('email', $email)->first();
+
+        if ($user === null) {
+            return false;
+        }
+
+        if (! Hash::check($current, $user->password)) {
+            return false;
+        }
+
+        $user->update(['password' => $password]);
+
+        return true;
+    }
+
+    /**
+     * @param  array{title: string, first_name: string, last_name: string, phone?: string|null, city: string, district: string, address_line: string, postal_code?: string|null, is_default?: bool}  $data
+     */
+    public function saveCustomerAddress(Customer $customer, array $data, ?CustomerAddress $address = null): ?CustomerAddress
+    {
+        if (! Schema::hasTable('customer_addresses')) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($customer, $data, $address): CustomerAddress {
+            $makeDefault = (bool) ($data['is_default'] ?? false) || $customer->addresses()->doesntExist();
+
+            if ($makeDefault) {
+                $customer->addresses()->update(['is_default' => false]);
+            }
+
+            $payload = [
+                'title' => $data['title'],
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'phone' => filled($data['phone'] ?? null) ? $data['phone'] : null,
+                'city' => $data['city'],
+                'district' => $data['district'],
+                'address_line' => $data['address_line'],
+                'postal_code' => filled($data['postal_code'] ?? null) ? $data['postal_code'] : null,
+                'is_default' => $makeDefault,
+            ];
+
+            if ($address instanceof CustomerAddress) {
+                $address->update($payload);
+
+                return $address->fresh() ?? $address;
+            }
+
+            return $customer->addresses()->create($payload);
+        });
+    }
+
+    public function deleteCustomerAddress(Customer $customer, CustomerAddress $address): void
+    {
+        if (! Schema::hasTable('customer_addresses')) {
+            return;
+        }
+
+        DB::transaction(function () use ($customer, $address): void {
+            $wasDefault = $address->is_default;
+            $address->delete();
+
+            if (! $wasDefault) {
+                return;
+            }
+
+            $customer->addresses()
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->first()
+                ?->update(['is_default' => true]);
+        });
+    }
+
+    public function setDefaultCustomerAddress(Customer $customer, CustomerAddress $address): void
+    {
+        if (! Schema::hasTable('customer_addresses')) {
+            return;
+        }
+
+        DB::transaction(function () use ($customer, $address): void {
+            $customer->addresses()->update(['is_default' => false]);
+            $address->update(['is_default' => true]);
+        });
+    }
+
     public function updatePassword(string $email, string $current, string $password): bool
     {
         if (! Schema::hasTable('users')) {

@@ -3,23 +3,29 @@
 namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
-use App\Support\Catalog;
+use App\Models\Customer;
+use App\Models\CustomerAddress;
+use App\Models\Order;
+use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AccountController extends Controller
 {
-    public function show(Catalog $catalog): View|RedirectResponse
+    public function show(): View|RedirectResponse
     {
         return $this->guardedView('storefront.account.index', [
-            'orders' => $catalog->sampleOrders(),
+            'orders' => $this->accountOrders(),
         ]);
     }
 
-    public function orders(Catalog $catalog): View|RedirectResponse
+    public function orders(): View|RedirectResponse
     {
         return $this->guardedView('storefront.account.orders', [
-            'orders' => $catalog->sampleOrders(),
+            'orders' => $this->accountOrders(),
         ]);
     }
 
@@ -28,9 +34,142 @@ class AccountController extends Controller
         return $this->guardedView('storefront.account.profile');
     }
 
+    public function update(Request $request, DatabaseRecords $records): RedirectResponse
+    {
+        $customer = $this->authenticatedCustomer();
+
+        if ($customer === null) {
+            return redirect()->route('login');
+        }
+
+        $currentEmail = (string) ($customer['email'] ?? '');
+
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:80'],
+            'last_name' => ['required', 'string', 'max:80'],
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($currentEmail, 'email'),
+                Rule::unique('customers', 'email')->ignore($currentEmail, 'email'),
+            ],
+            'phone' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        $records->updateCustomerProfile($currentEmail, $data);
+
+        $this->storeCustomerSession($data);
+
+        return redirect()
+            ->route('account.profile')
+            ->with('status', __('storefront.account.profile_updated'));
+    }
+
+    public function password(Request $request, DatabaseRecords $records): RedirectResponse
+    {
+        $customer = $this->authenticatedCustomer();
+
+        if ($customer === null) {
+            return redirect()->route('login');
+        }
+
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if (! $records->updateCustomerPassword(
+            (string) ($customer['email'] ?? ''),
+            $request->string('current_password')->toString(),
+            $request->string('password')->toString(),
+        )) {
+            return back()->withErrors(['current_password' => __('auth.password')]);
+        }
+
+        return redirect()
+            ->route('account.profile')
+            ->with('status', __('storefront.account.password_updated'));
+    }
+
     public function addresses(): View|RedirectResponse
     {
-        return $this->guardedView('storefront.account.addresses');
+        return $this->guardedView('storefront.account.addresses', $this->addressViewData());
+    }
+
+    public function editAddress(CustomerAddress $address): View|RedirectResponse
+    {
+        $customer = $this->customerRecord();
+
+        if ($this->authenticatedCustomer() === null) {
+            return redirect()->route('login');
+        }
+
+        abort_if($customer === null, 404);
+
+        $this->ownedAddress($customer, $address);
+
+        return $this->guardedView('storefront.account.addresses', $this->addressViewData($address));
+    }
+
+    public function storeAddress(Request $request, DatabaseRecords $records): RedirectResponse
+    {
+        $customer = $this->writableCustomer();
+
+        if ($customer instanceof RedirectResponse) {
+            return $customer;
+        }
+
+        $records->saveCustomerAddress($customer, $this->validatedAddress($request));
+
+        return redirect()
+            ->route('account.addresses')
+            ->with('status', __('storefront.account.address_saved'));
+    }
+
+    public function updateAddress(Request $request, CustomerAddress $address, DatabaseRecords $records): RedirectResponse
+    {
+        $customer = $this->writableCustomer();
+
+        if ($customer instanceof RedirectResponse) {
+            return $customer;
+        }
+
+        $records->saveCustomerAddress($customer, $this->validatedAddress($request), $this->ownedAddress($customer, $address));
+
+        return redirect()
+            ->route('account.addresses')
+            ->with('status', __('storefront.account.address_saved'));
+    }
+
+    public function destroyAddress(CustomerAddress $address, DatabaseRecords $records): RedirectResponse
+    {
+        $customer = $this->writableCustomer();
+
+        if ($customer instanceof RedirectResponse) {
+            return $customer;
+        }
+
+        $records->deleteCustomerAddress($customer, $this->ownedAddress($customer, $address));
+
+        return redirect()
+            ->route('account.addresses')
+            ->with('status', __('storefront.account.address_deleted'));
+    }
+
+    public function defaultAddress(CustomerAddress $address, DatabaseRecords $records): RedirectResponse
+    {
+        $customer = $this->writableCustomer();
+
+        if ($customer instanceof RedirectResponse) {
+            return $customer;
+        }
+
+        $records->setDefaultCustomerAddress($customer, $this->ownedAddress($customer, $address));
+
+        return redirect()
+            ->route('account.addresses')
+            ->with('status', __('storefront.account.address_default_updated'));
     }
 
     public function settings(): View|RedirectResponse
@@ -50,10 +189,153 @@ class AccountController extends Controller
      */
     private function guardedView(string $view, array $data = []): View|RedirectResponse
     {
-        if (! is_array(session('storefront.customer'))) {
+        if ($this->authenticatedCustomer() === null) {
             return redirect()->route('login');
         }
 
         return view($view, $data);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function authenticatedCustomer(): ?array
+    {
+        $customer = session('storefront.customer');
+
+        return is_array($customer) ? $customer : null;
+    }
+
+    /**
+     * @param  array{first_name: string, last_name: string, email: string, phone?: string|null}  $customer
+     */
+    private function storeCustomerSession(array $customer): void
+    {
+        session([
+            'storefront.customer' => [
+                'first_name' => $customer['first_name'],
+                'last_name' => $customer['last_name'],
+                'email' => $customer['email'],
+                'phone' => $customer['phone'] ?? '',
+            ],
+        ]);
+    }
+
+    private function customerRecord(): ?Customer
+    {
+        $session = $this->authenticatedCustomer();
+        $email = (string) ($session['email'] ?? '');
+
+        if ($email === '') {
+            return null;
+        }
+
+        return Customer::query()->where('email', $email)->first();
+    }
+
+    private function writableCustomer(): Customer|RedirectResponse
+    {
+        if ($this->authenticatedCustomer() === null) {
+            return redirect()->route('login');
+        }
+
+        $customer = $this->customerRecord();
+
+        if ($customer === null) {
+            return redirect()->route('account.addresses');
+        }
+
+        return $customer;
+    }
+
+    private function ownedAddress(Customer $customer, CustomerAddress $address): CustomerAddress
+    {
+        abort_unless($address->customer_id === $customer->id, 404);
+
+        return $address;
+    }
+
+    /**
+     * @return array{addresses: Collection<int, CustomerAddress>, editing: CustomerAddress|null}
+     */
+    private function addressViewData(?CustomerAddress $editing = null): array
+    {
+        $customer = $this->customerRecord();
+
+        return [
+            'addresses' => $customer === null
+                ? collect()
+                : $customer->addresses()->orderByDesc('is_default')->orderBy('created_at')->orderBy('id')->get(),
+            'editing' => $editing,
+        ];
+    }
+
+    /**
+     * @return array{title: string, first_name: string, last_name: string, phone: string|null, city: string, district: string, address_line: string, postal_code: string|null, is_default: bool}
+     */
+    private function validatedAddress(Request $request): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:100'],
+            'first_name' => ['required', 'string', 'max:80'],
+            'last_name' => ['required', 'string', 'max:80'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'city' => ['required', 'string', 'max:100'],
+            'district' => ['required', 'string', 'max:100'],
+            'address_line' => ['required', 'string', 'max:500'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $data['is_default'] = $request->boolean('is_default');
+
+        return $data;
+    }
+
+    /**
+     * @return list<array{id: string, date: string, total: float, currency: string, status: string, status_key: string}>
+     */
+    private function accountOrders(): array
+    {
+        $customer = $this->customerRecord();
+
+        if ($customer === null) {
+            return [];
+        }
+
+        return $customer->orders()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (Order $order): array => [
+                'id' => $order->order_number,
+                'date' => $order->created_at?->translatedFormat('d M Y') ?? '',
+                'total' => (float) $order->total_amount,
+                'currency' => filled($order->currency) ? $order->currency : 'EUR',
+                'status' => $this->orderStatusLabel($order->status),
+                'status_key' => $this->orderStatusKey($order->status),
+            ])
+            ->all();
+    }
+
+    private function orderStatusKey(string $status): string
+    {
+        return match ($status) {
+            'completed', 'delivered' => 'delivered',
+            'in_transit' => 'in_transit',
+            default => $status,
+        };
+    }
+
+    private function orderStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'delivered' => __('storefront.account.status_delivered'),
+            'in_transit' => __('storefront.account.status_in_transit'),
+            'completed' => __('storefront.account.status_completed'),
+            'cancelled' => __('storefront.account.status_cancelled'),
+            'returned' => __('storefront.account.status_returned'),
+            'partially_returned' => __('storefront.account.status_partially_returned'),
+            default => __('storefront.account.status_pending'),
+        };
     }
 }

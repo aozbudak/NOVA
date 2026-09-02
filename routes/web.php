@@ -74,7 +74,14 @@ Route::post('/register', [AuthController::class, 'register'])->name('register.st
 Route::get('/account', [AccountController::class, 'show'])->name('account.show');
 Route::get('/account/orders', [AccountController::class, 'orders'])->name('account.orders');
 Route::get('/account/profile', [AccountController::class, 'profile'])->name('account.profile');
+Route::put('/account/profile', [AccountController::class, 'update'])->name('account.profile.update');
+Route::put('/account/password', [AccountController::class, 'password'])->name('account.password');
 Route::get('/account/addresses', [AccountController::class, 'addresses'])->name('account.addresses');
+Route::post('/account/addresses', [AccountController::class, 'storeAddress'])->name('account.addresses.store');
+Route::get('/account/addresses/{address}/edit', [AccountController::class, 'editAddress'])->name('account.addresses.edit');
+Route::put('/account/addresses/{address}', [AccountController::class, 'updateAddress'])->name('account.addresses.update');
+Route::delete('/account/addresses/{address}', [AccountController::class, 'destroyAddress'])->name('account.addresses.destroy');
+Route::put('/account/addresses/{address}/default', [AccountController::class, 'defaultAddress'])->name('account.addresses.default');
 Route::get('/account/settings', [AccountController::class, 'settings'])->name('account.settings');
 Route::post('/account/logout', [AccountController::class, 'logout'])->name('account.logout');
 

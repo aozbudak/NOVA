@@ -59,6 +59,7 @@ class AuthController extends Controller
                 'first_name' => $customer?->first_name ?? $validated['first_name'],
                 'last_name' => $customer?->last_name ?? $validated['last_name'],
                 'email' => $customer?->email ?? $validated['email'],
+                'phone' => (string) ($customer?->phone ?? ''),
             ],
         ]);
 
@@ -73,6 +74,7 @@ class AuthController extends Controller
                     'first_name' => $customer->first_name,
                     'last_name' => $customer->last_name,
                     'email' => (string) $customer->email,
+                    'phone' => (string) ($customer->phone ?? ''),
                 ],
             ]);
 
@@ -86,6 +88,7 @@ class AuthController extends Controller
                 'first_name' => ucfirst($name),
                 'last_name' => '',
                 'email' => $email,
+                'phone' => '',
             ],
         ]);
     }

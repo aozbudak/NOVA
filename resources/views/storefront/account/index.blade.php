@@ -19,7 +19,7 @@
                 <x-account.stat :label="__('storefront.account.last_order')" :value="$orders[0]['date'] ?? '—'" />
                 <x-account.stat
                     :label="__('storefront.account.total_spent')"
-                    :value="Number::currency(collect($orders)->sum('total'), in: 'EUR')"
+                    :value="Number::currency(collect($orders)->sum('total'), in: $orders[0]['currency'] ?? 'EUR')"
                 />
             </div>
         </x-account.card>
