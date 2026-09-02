@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\LogoutController;
+use App\Http\Controllers\Admin\PanelPageController;
 use App\Http\Controllers\Storefront\AccountController;
 use App\Http\Controllers\Storefront\AuthController;
 use App\Http\Controllers\Storefront\CartController;
@@ -11,6 +14,7 @@ use App\Http\Controllers\Storefront\PageController;
 use App\Http\Controllers\Storefront\ProductController;
 use App\Http\Controllers\Storefront\SearchController;
 use App\Http\Controllers\Storefront\WishlistController;
+use App\Http\Middleware\EnsureAdminPageAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -51,3 +55,34 @@ Route::get('/account/settings', [AccountController::class, 'settings'])->name('a
 Route::post('/account/logout', [AccountController::class, 'logout'])->name('account.logout');
 
 Route::get('/pages/{page}', PageController::class)->name('pages.show');
+
+Route::prefix('admin')->name('admin.')->group(function (): void {
+    Route::get('/', DashboardController::class)->name('dashboard');
+    Route::post('/logout', LogoutController::class)->name('logout');
+
+    Route::middleware(EnsureAdminPageAccess::class)->group(function (): void {
+        Route::get('/products', PanelPageController::class)->name('products.index');
+        Route::get('/categories', PanelPageController::class)->name('categories.index');
+        Route::get('/brands', PanelPageController::class)->name('brands.index');
+        Route::get('/variants', PanelPageController::class)->name('variants.index');
+        Route::get('/inventory', PanelPageController::class)->name('inventory.index');
+        Route::get('/barcode', PanelPageController::class)->name('barcode.index');
+        Route::get('/pos', PanelPageController::class)->name('pos.index');
+        Route::get('/sales', PanelPageController::class)->name('sales.index');
+        Route::get('/returns', PanelPageController::class)->name('returns.index');
+        Route::get('/exchanges', PanelPageController::class)->name('exchanges.index');
+        Route::get('/customers', PanelPageController::class)->name('customers.index');
+        Route::get('/suppliers', PanelPageController::class)->name('suppliers.index');
+        Route::get('/cash', PanelPageController::class)->name('cash.index');
+        Route::get('/income-expense', PanelPageController::class)->name('income-expense.index');
+        Route::get('/payments', PanelPageController::class)->name('payments.index');
+        Route::get('/reports/sales', PanelPageController::class)->name('reports.sales');
+        Route::get('/reports/inventory', PanelPageController::class)->name('reports.inventory');
+        Route::get('/reports/cash', PanelPageController::class)->name('reports.cash');
+        Route::get('/users', PanelPageController::class)->name('users.index');
+        Route::get('/roles', PanelPageController::class)->name('roles.index');
+        Route::get('/audit', PanelPageController::class)->name('audit.index');
+        Route::get('/settings', PanelPageController::class)->name('settings.index');
+        Route::get('/profile', PanelPageController::class)->name('profile.show');
+    });
+});
