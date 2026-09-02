@@ -3,6 +3,12 @@
 return [
     'brand' => 'NOVA',
     'brand_sub' => 'Admin',
+    'auth' => [
+        'title' => 'Personel girişi',
+        'username' => 'Kullanıcı adı',
+        'password' => 'Şifre',
+        'submit' => 'Giriş yap',
+    ],
     'panel' => [
         'title' => 'Panel',
     ],
@@ -604,6 +610,7 @@ return [
         'add' => 'Kullanıcı ekle',
         'edit' => 'Kullanıcıyı düzenle',
         'user' => 'Kullanıcı',
+        'username' => 'Kullanıcı adı',
         'email' => 'E-posta',
         'phone' => 'Telefon',
         'role' => 'Rol',

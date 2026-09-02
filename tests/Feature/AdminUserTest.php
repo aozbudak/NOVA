@@ -58,6 +58,7 @@ class AdminUserTest extends TestCase
         $response->assertSee('First name');
         $response->assertSee('Last name');
         $response->assertSee('Email');
+        $response->assertSee('Username');
         $response->assertSee('Phone');
         $response->assertSee('Role');
         $response->assertSee('Pick a prepared role or type a new name.');
@@ -81,6 +82,7 @@ class AdminUserTest extends TestCase
         $response->assertSee('Ayşe');
         $response->assertSee('Yılmaz');
         $response->assertSee('ayse.yilmaz@nova.store');
+        $response->assertSee('value="ayse"', false);
         $response->assertSee('type="password"', false);
         $response->assertSee('Leave blank to keep the current password.');
         $response->assertSee('value="Cashier"', false);
@@ -94,7 +96,7 @@ class AdminUserTest extends TestCase
         $this->from(route('admin.users.create'))
             ->post(route('admin.users.store'), [])
             ->assertRedirect(route('admin.users.create'))
-            ->assertSessionHasErrors(['first_name', 'last_name', 'email', 'role', 'status', 'password']);
+            ->assertSessionHasErrors(['first_name', 'last_name', 'email', 'username', 'role', 'status', 'password']);
     }
 
     public function test_valid_create_payload_persists_user_and_assigned_operations(): void
@@ -103,6 +105,7 @@ class AdminUserTest extends TestCase
             'first_name' => 'Lara',
             'last_name' => 'Koç',
             'email' => 'lara.koc@nova.store',
+            'username' => 'larakoc',
             'phone' => '0532 000 00 02',
             'role' => StaffRole::Cashier->value,
             'status' => 'active',
@@ -129,6 +132,7 @@ class AdminUserTest extends TestCase
             'first_name' => 'Ayşe',
             'last_name' => 'Yılmaz',
             'email' => 'ayse.yilmaz@nova.store',
+            'username' => 'ayse',
             'phone' => '0532 441 00 11',
             'role' => StaffRole::Cashier->value,
             'status' => 'active',
@@ -148,6 +152,7 @@ class AdminUserTest extends TestCase
                 'first_name' => 'Lara',
                 'last_name' => 'Koç',
                 'email' => 'lara.koc@nova.store',
+                'username' => 'larakoc',
                 'role' => StaffRole::Cashier->value,
                 'status' => 'active',
                 'password' => 'secret123',
@@ -163,6 +168,7 @@ class AdminUserTest extends TestCase
             'first_name' => 'Ayşe',
             'last_name' => 'Yılmaz',
             'email' => 'ayse.yilmaz@nova.store',
+            'username' => 'ayse',
             'phone' => '0532 441 00 11',
             'role' => StaffRole::Cashier->value,
             'status' => 'active',

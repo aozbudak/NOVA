@@ -6,8 +6,10 @@ use App\Enums\StaffRole;
 use App\Http\Controllers\Controller;
 use App\Support\AdminList;
 use App\Support\AdminStore;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -25,7 +27,7 @@ class UserController extends Controller
         });
 
         return view('admin.users.index', [
-            'users' => AdminList::apply($users, ['name', 'email', 'status', 'last_login', 'created_at']),
+            'users' => AdminList::apply($users, ['name', 'email', 'username', 'status', 'last_login', 'created_at']),
         ]);
     }
 
@@ -40,6 +42,7 @@ class UserController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
+            'username' => $this->usernameRules($store),
             'phone' => ['nullable', 'string', 'max:255'],
             'role' => ['required', 'string', 'max:255'],
             'status' => ['required', 'in:active,inactive'],
@@ -54,6 +57,7 @@ class UserController extends Controller
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'email' => $data['email'],
+            'username' => $data['username'],
             'phone' => $data['phone'] ?? '',
             'role' => $role['id'],
             'status' => $data['status'],
@@ -83,6 +87,7 @@ class UserController extends Controller
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
+            'username' => $this->usernameRules($store, $user),
             'phone' => ['nullable', 'string', 'max:255'],
             'role' => ['required', 'string', 'max:255'],
             'status' => ['required', 'in:active,inactive'],
@@ -97,6 +102,7 @@ class UserController extends Controller
             'first_name' => $data['first_name'],
             'last_name' => $data['last_name'],
             'email' => $data['email'],
+            'username' => $data['username'],
             'phone' => $data['phone'] ?? '',
             'role' => $role['id'],
             'status' => $data['status'],
@@ -131,6 +137,30 @@ class UserController extends Controller
             'roleAbilities' => $roles
                 ->mapWithKeys(fn (array $role): array => [$role['name'] => $role['abilities']])
                 ->all(),
+        ];
+    }
+
+    /**
+     * @return list<mixed>
+     */
+    private function usernameRules(AdminStore $store, ?string $ignoreId = null): array
+    {
+        return [
+            'required',
+            'string',
+            'alpha_dash',
+            'max:50',
+            function (string $attribute, mixed $value, Closure $fail) use ($store, $ignoreId): void {
+                $needle = Str::lower(trim((string) $value));
+                $taken = $store->users()->contains(function (array $user) use ($needle, $ignoreId): bool {
+                    return Str::lower((string) ($user['username'] ?? '')) === $needle
+                        && $user['id'] !== $ignoreId;
+                });
+
+                if ($taken) {
+                    $fail(__('validation.unique', ['attribute' => __('admin.users.username')]));
+                }
+            },
         ];
     }
 }

@@ -27,6 +27,9 @@
                 <x-admin.field :label="__('admin.users.email')" name="email" required>
                     <x-admin.input name="email" type="email" value="{{ old('email', $user['email'] ?? '') }}" required />
                 </x-admin.field>
+                <x-admin.field :label="__('admin.users.username')" name="username" required>
+                    <x-admin.input name="username" value="{{ old('username', $user['username'] ?? '') }}" autocomplete="off" required />
+                </x-admin.field>
                 <x-admin.field :label="__('admin.users.phone')" name="phone">
                     <x-admin.input name="phone" value="{{ old('phone', $user['phone'] ?? '') }}" />
                 </x-admin.field>

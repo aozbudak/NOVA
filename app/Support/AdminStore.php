@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -838,6 +839,56 @@ final class AdminStore
     public function user(string $id): ?array
     {
         return $this->users()->firstWhere('id', $id);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function staffByUsername(string $username): ?array
+    {
+        $needle = Str::lower(trim($username));
+
+        return $this->users()->first(
+            fn (array $user): bool => Str::lower((string) ($user['username'] ?? '')) === $needle
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $staff
+     */
+    public function passwordMatches(array $staff, string $password): bool
+    {
+        if (filled($staff['password_hash'] ?? null) && Hash::check($password, $staff['password_hash'])) {
+            return true;
+        }
+
+        if (! Schema::hasTable('users')) {
+            return false;
+        }
+
+        $query = User::query();
+
+        if (Schema::hasColumn('users', 'username') && filled($staff['username'] ?? null)) {
+            $query->where('username', $staff['username']);
+        } else {
+            $query->where('email', $staff['email']);
+        }
+
+        $user = $query->first() ?? User::query()->where('email', $staff['email'])->first();
+
+        return $user !== null && Hash::check($password, $user->password);
+    }
+
+    public function touchLastLogin(string $id): void
+    {
+        $existing = $this->user($id);
+
+        if ($existing === null) {
+            return;
+        }
+
+        $existing['last_login'] = now()->format('Y-m-d H:i');
+        $this->writeStaff($id, $existing);
     }
 
     /**
@@ -1757,10 +1808,14 @@ final class AdminStore
             'last_name' => $data['last_name'],
             'name' => trim($data['first_name'].' '.$data['last_name']),
             'email' => $data['email'],
+            'username' => Str::lower(trim((string) ($data['username'] ?? $existing['username'] ?? ''))),
             'phone' => (string) ($data['phone'] ?? ''),
             'role' => $role['id'],
             'abilities' => $abilities,
             'status' => $data['status'],
+            'password_hash' => filled($data['password'] ?? null)
+                ? Hash::make((string) $data['password'])
+                : ($existing['password_hash'] ?? null),
             'last_login' => $existing['last_login'] ?? '—',
             'created_at' => $existing['created_at'] ?? now()->toDateString(),
         ];
@@ -1916,6 +1971,7 @@ final class AdminStore
                     'last_name' => $parts[1] ?? '',
                     'name' => $user->name,
                     'email' => $user->email,
+                    'username' => (string) $user->username,
                     'phone' => (string) $user->phone,
                     'role' => $role?->slug ?? StaffRole::Cashier->value,
                     'abilities' => [],
@@ -1940,6 +1996,7 @@ final class AdminStore
                 'last_name' => 'Yılmaz',
                 'name' => 'Ayşe Yılmaz',
                 'email' => 'ayse.yilmaz@nova.store',
+                'username' => 'ayse',
                 'phone' => '0532 441 00 11',
                 'role' => StaffRole::Cashier->value,
                 'abilities' => StaffRole::Cashier->assignedOperations(),
@@ -1953,6 +2010,7 @@ final class AdminStore
                 'last_name' => 'Kaya',
                 'name' => 'Mert Kaya',
                 'email' => 'mert.kaya@nova.store',
+                'username' => 'mert',
                 'phone' => '0533 220 44 18',
                 'role' => StaffRole::Cashier->value,
                 'abilities' => StaffRole::Cashier->assignedOperations(),
@@ -1966,6 +2024,7 @@ final class AdminStore
                 'last_name' => 'Aksoy',
                 'name' => 'Deniz Aksoy',
                 'email' => 'deniz.aksoy@nova.store',
+                'username' => 'deniz',
                 'phone' => '0536 118 90 22',
                 'role' => StaffRole::StoreManager->value,
                 'abilities' => StaffRole::StoreManager->assignedOperations(),
@@ -1979,6 +2038,7 @@ final class AdminStore
                 'last_name' => 'Yılmaz',
                 'name' => 'Ece Yılmaz',
                 'email' => 'ece.yilmaz@nova.store',
+                'username' => 'ece',
                 'phone' => '0542 667 31 09',
                 'role' => StaffRole::WarehouseStaff->value,
                 'abilities' => StaffRole::WarehouseStaff->assignedOperations(),
@@ -1992,6 +2052,7 @@ final class AdminStore
                 'last_name' => 'Admin',
                 'name' => 'NOVA Admin',
                 'email' => 'admin@nova.store',
+                'username' => 'novaadmin',
                 'phone' => '0212 000 00 01',
                 'role' => StaffRole::SuperAdmin->value,
                 'abilities' => StaffRole::SuperAdmin->assignedOperations(),

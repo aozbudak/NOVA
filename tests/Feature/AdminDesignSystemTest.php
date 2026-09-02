@@ -41,7 +41,7 @@ class AdminDesignSystemTest extends TestCase
         $this->from(route('admin.users.create'))
             ->post(route('admin.users.store'), [])
             ->assertRedirect(route('admin.users.create'))
-            ->assertSessionHasErrors(['first_name', 'last_name', 'email', 'role', 'status', 'password']);
+            ->assertSessionHasErrors(['first_name', 'last_name', 'email', 'username', 'role', 'status', 'password']);
 
         $response = $this->from(route('admin.users.create'))
             ->followingRedirects()

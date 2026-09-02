@@ -10,8 +10,16 @@ class LogoutController extends Controller
 {
     public function __invoke(Request $request): RedirectResponse
     {
-        $request->session()->forget(['admin.role', 'admin.name', 'admin.email']);
+        $request->session()->forget([
+            'admin.authenticated',
+            'admin.role',
+            'admin.name',
+            'admin.email',
+            'admin.phone',
+            'admin.user_id',
+            'admin.username',
+        ]);
 
-        return redirect()->route('home');
+        return redirect()->route('admin.login');
     }
 }

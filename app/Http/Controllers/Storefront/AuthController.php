@@ -25,8 +25,12 @@ class AuthController extends Controller
 
         $customer = $records->authenticateCustomer($validated['email'], $validated['password']);
 
-        if ($customer === false) {
+        if ($customer === false || $customer === null) {
             return back()->withErrors(['email' => __('auth.failed')]);
+        }
+
+        if ($customer->is_active === false || $customer->user?->is_active === false) {
+            return back()->withErrors(['email' => __('auth.inactive')]);
         }
 
         $this->storeCustomerSession($customer, $validated['email']);

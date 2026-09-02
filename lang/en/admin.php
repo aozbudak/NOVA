@@ -3,6 +3,12 @@
 return [
     'brand' => 'NOVA',
     'brand_sub' => 'Admin',
+    'auth' => [
+        'title' => 'Staff login',
+        'username' => 'Username',
+        'password' => 'Password',
+        'submit' => 'Sign in',
+    ],
     'panel' => [
         'title' => 'Panel',
     ],
@@ -604,6 +610,7 @@ return [
         'add' => 'Add user',
         'edit' => 'Edit user',
         'user' => 'User',
+        'username' => 'Username',
         'email' => 'Email',
         'phone' => 'Phone',
         'role' => 'Role',

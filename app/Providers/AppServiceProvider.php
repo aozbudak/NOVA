@@ -42,6 +42,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer(['layouts.admin', 'admin.*', 'components.admin.*'], function ($view): void {
+            if (request()->routeIs('admin.login', 'admin.login.store')) {
+                return;
+            }
+
             $navigation = app(AdminNavigation::class);
             $staff = $navigation->staff();
 

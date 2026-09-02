@@ -27,6 +27,7 @@
                     <x-admin.table>
                         <x-slot:head>
                             <x-admin.th>{{ __('admin.users.user') }}</x-admin.th>
+                            <x-admin.th>{{ __('admin.users.username') }}</x-admin.th>
                             <x-admin.th>{{ __('admin.users.email') }}</x-admin.th>
                             <x-admin.th>{{ __('admin.users.status') }}</x-admin.th>
                             <x-admin.th>{{ __('admin.users.last_login') }}</x-admin.th>
@@ -37,6 +38,7 @@
                             @foreach ($role['users'] as $user)
                                 <tr class="border-b border-border last:border-b-0">
                                     <x-admin.td :label="__('admin.users.user')">{{ $user['name'] }}</x-admin.td>
+                                    <x-admin.td :label="__('admin.users.username')" tone="muted">{{ $user['username'] ?? '' }}</x-admin.td>
                                     <x-admin.td :label="__('admin.users.email')" tone="muted">{{ $user['email'] }}</x-admin.td>
                                     <x-admin.td :label="__('admin.users.status')"><x-admin.badge group="status" :status="$user['status']" /></x-admin.td>
                                     <x-admin.td :label="__('admin.users.last_login')" tone="muted">{{ $user['last_login'] }}</x-admin.td>

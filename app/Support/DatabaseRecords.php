@@ -174,6 +174,10 @@ final class DatabaseRecords
             'is_active' => ($record['status'] ?? 'active') === 'active',
         ];
 
+        if (Schema::hasColumn('users', 'username') && filled($record['username'] ?? null)) {
+            $payload['username'] = $record['username'];
+        }
+
         if (filled($password)) {
             $payload['password'] = $password;
         } elseif ($user === null) {
@@ -348,7 +352,7 @@ final class DatabaseRecords
         $user = User::query()->where('email', $email)->first();
 
         if ($user === null) {
-            return null;
+            return false;
         }
 
         if (! Hash::check($password, $user->password)) {
@@ -356,11 +360,19 @@ final class DatabaseRecords
         }
 
         if (! Schema::hasTable('customers')) {
-            return null;
+            return false;
         }
 
-        return Customer::query()->where('user_id', $user->id)->first()
+        $customer = Customer::query()->where('user_id', $user->id)->first()
             ?? Customer::query()->where('email', $email)->first();
+
+        if ($customer === null) {
+            return false;
+        }
+
+        $customer->setRelation('user', $user);
+
+        return $customer;
     }
 
     /**
