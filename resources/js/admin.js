@@ -84,7 +84,7 @@ function initSearch() {
     const groups = document.querySelector('[data-admin-search-groups]');
     const items = [...document.querySelectorAll('[data-search-item]')];
     const labels = JSON.parse(overlay?.dataset.searchGroups ?? '{}');
-    const url = overlay?.dataset.searchUrl ?? '';
+    const url = overlay?.dataset.searchUrl || window.NOVA?.api?.search || '';
     let timer = 0;
 
     if (! overlay || ! input) {
@@ -485,7 +485,7 @@ function initPos() {
     }
 
     const search = root.querySelector('[data-pos-search]');
-    const items = [...root.querySelectorAll('[data-pos-item]')];
+    const resultsList = root.querySelector('[data-pos-results]');
     const empty = root.querySelector('[data-pos-empty]');
     const body = root.querySelector('[data-pos-cart-body]');
     const table = root.querySelector('[data-pos-cart-table]');
@@ -493,8 +493,77 @@ function initPos() {
     const subtotalEl = root.querySelector('[data-pos-subtotal]');
     const discountEl = root.querySelector('[data-pos-discount]');
     const totalEl = root.querySelector('[data-pos-total]');
+    /** @type {HTMLElement[]} */
+    let items = [...root.querySelectorAll('[data-pos-item]')];
     /** @type {Map<string, {sku: string, name: string, variant: string, price: number, qty: number, discount: number}>} */
     const cart = new Map();
+
+    const refreshItemNodes = () => {
+        items = [...root.querySelectorAll('[data-pos-item]')];
+    };
+
+    const renderItems = (rows) => {
+        if (! resultsList || ! Array.isArray(rows)) {
+            return;
+        }
+
+        const stockLabel = resultsList.dataset.stockLabel ?? '';
+
+        resultsList.innerHTML = rows.map((item) => `
+            <li>
+                <button
+                    type="button"
+                    data-pos-item
+                    data-sku="${escapeHtml(item.sku)}"
+                    data-barcode="${escapeHtml(item.barcode)}"
+                    data-name="${escapeHtml(item.name)}"
+                    data-variant="${escapeHtml(item.variant)}"
+                    data-price="${escapeHtml(item.price)}"
+                    data-stock="${escapeHtml(item.stock)}"
+                    class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-accent"
+                >
+                    <img src="${escapeHtml(item.image)}" alt="" width="36" height="44" class="h-11 w-9 object-cover">
+                    <span class="min-w-0 flex-1">
+                        <span class="block truncate text-[13px] text-foreground">${escapeHtml(item.name)}</span>
+                        <span class="block truncate text-[12px] text-muted-foreground">${escapeHtml(item.variant)} · ${escapeHtml(item.barcode)}</span>
+                    </span>
+                    <span class="shrink-0 text-right">
+                        <span class="block text-[13px] text-foreground">${money(item.price)}</span>
+                        <span class="block text-[11px] text-muted-foreground">${escapeHtml(stockLabel)} ${escapeHtml(item.stock)}</span>
+                    </span>
+                </button>
+            </li>
+        `).join('');
+
+        refreshItemNodes();
+
+        if (search?.value) {
+            filter(search.value);
+        }
+    };
+
+    const loadItems = async () => {
+        const url = window.NOVA?.api?.posItems;
+
+        if (! url) {
+            return;
+        }
+
+        try {
+            const response = await fetch(url, {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+
+            if (! response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            renderItems(payload.data ?? []);
+        } catch {
+            return;
+        }
+    };
 
     const payload = (button) => ({
         sku: button.dataset.sku,
@@ -587,6 +656,7 @@ function initPos() {
         const data = await response.json();
         cart.clear();
         renderCart();
+        await loadItems();
         showAdminToast(data.message ?? data.data?.number ?? 'OK');
     };
 
@@ -677,4 +747,5 @@ function initPos() {
     });
 
     search?.focus();
+    loadItems();
 }

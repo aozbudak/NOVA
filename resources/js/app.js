@@ -1,5 +1,7 @@
 const nova = () => window.NOVA ?? {};
 
+const fillRoute = (template, token, value) => String(template ?? '').replace(token, encodeURIComponent(value));
+
 const t = (key, fallback) => nova().i18n?.[key] ?? fallback;
 
 const escapeHtml = (value) => String(value)
@@ -155,39 +157,104 @@ async function toggleWishlist(button) {
     });
 }
 
-function renderSearchResults(query) {
+let searchTimer = 0;
+let searchAbort = null;
+
+function localSearchMatches(needle) {
+    const catalog = nova().catalog ?? [];
+    const query = needle.toLowerCase();
+
+    return catalog
+        .filter((item) => `${item.name} ${item.category ?? ''}`.toLowerCase().includes(query))
+        .slice(0, 8);
+}
+
+function paintSearchResults(matches) {
     const results = document.querySelector('[data-search-results]');
     const trending = document.querySelector('[data-search-trending]');
-    const catalog = nova().catalog ?? [];
-    const needle = query.trim().toLowerCase();
 
     if (! results || ! trending) {
         return;
     }
 
-    if (needle.length < 2) {
-        results.classList.add('hidden');
-        trending.classList.remove('hidden');
+    trending.classList.add('hidden');
+    results.classList.remove('hidden');
+
+    if (matches.length === 0) {
+        results.innerHTML = `<p class="text-sm text-muted-foreground">${escapeHtml(t('noResults', 'No results'))}</p>`;
         return;
     }
 
-    const matches = catalog.filter((item) => item.name.toLowerCase().includes(needle) || item.category.toLowerCase().includes(needle)).slice(0, 8);
-    const formatter = new Intl.NumberFormat(nova().locale ?? 'en', { style: 'currency', currency: 'EUR' });
+    results.innerHTML = `<ul class="flex flex-col gap-4">${matches.map((item) => {
+        const formatter = new Intl.NumberFormat(nova().locale ?? 'en', {
+            style: 'currency',
+            currency: item.currency ?? 'EUR',
+        });
 
-    trending.classList.add('hidden');
-    results.classList.remove('hidden');
-    results.innerHTML = matches.length === 0
-        ? `<p class="text-sm text-muted-foreground">${escapeHtml(t('noResults', 'No results'))}</p>`
-        : `<ul class="flex flex-col gap-4">${matches.map((item) => `
+        return `
             <li>
-                <a href="${nova().routes.product}/${item.slug}" class="flex items-center gap-4">
+                <a href="${fillRoute(nova().routes.product, '__SLUG__', item.slug)}" class="flex items-center gap-4">
                     <img src="${item.image}" alt="${escapeHtml(item.name)}" width="56" height="70" class="h-[70px] w-14 object-cover" loading="lazy">
                     <span>
                         <span class="block text-sm">${escapeHtml(item.name)}</span>
                         <span class="block text-xs text-muted-foreground">${formatter.format(item.price)}</span>
                     </span>
                 </a>
-            </li>`).join('')}</ul>`;
+            </li>`;
+    }).join('')}</ul>`;
+}
+
+function renderSearchResults(query) {
+    const results = document.querySelector('[data-search-results]');
+    const trending = document.querySelector('[data-search-trending]');
+    const needle = query.trim();
+
+    if (! results || ! trending) {
+        return;
+    }
+
+    if (needle.length < 2) {
+        searchAbort?.abort();
+        results.classList.add('hidden');
+        trending.classList.remove('hidden');
+        return;
+    }
+
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => querySearch(needle), 180);
+}
+
+async function querySearch(needle) {
+    const url = nova().routes.search;
+
+    if (! url) {
+        paintSearchResults(localSearchMatches(needle));
+        return;
+    }
+
+    searchAbort?.abort();
+    searchAbort = new AbortController();
+
+    try {
+        const response = await fetch(`${url}?q=${encodeURIComponent(needle)}`, {
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            signal: searchAbort.signal,
+        });
+
+        if (! response.ok) {
+            throw new Error('search');
+        }
+
+        const payload = await response.json();
+        const matches = Array.isArray(payload) ? payload : (payload.data ?? []);
+        paintSearchResults(matches);
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return;
+        }
+
+        paintSearchResults(localSearchMatches(needle));
+    }
 }
 
 function initTheme() {
@@ -387,7 +454,7 @@ document.addEventListener('click', async (event) => {
     const qty = event.target.closest('[data-cart-qty]');
     if (qty) {
         const quantity = Number(qty.dataset.qty);
-        await fetch(`${nova().routes.cartUpdate}/${encodeURIComponent(qty.dataset.cartQty)}`, {
+        await fetch(fillRoute(nova().routes.cartUpdate, '__KEY__', qty.dataset.cartQty), {
             method: 'PATCH',
             headers: headers(),
             body: JSON.stringify({ quantity }),
@@ -405,7 +472,7 @@ document.addEventListener('click', async (event) => {
 
     const remove = event.target.closest('[data-cart-remove]');
     if (remove) {
-        await fetch(`${nova().routes.cartUpdate}/${encodeURIComponent(remove.dataset.cartRemove)}`, {
+        await fetch(fillRoute(nova().routes.cartDestroy ?? nova().routes.cartUpdate, '__KEY__', remove.dataset.cartRemove), {
             method: 'DELETE',
             headers: headers(),
         }).then(async (response) => {
@@ -437,6 +504,36 @@ document.addEventListener('click', async (event) => {
 });
 
 document.addEventListener('submit', async (event) => {
+    const checkout = event.target.closest('[data-checkout]');
+
+    if (checkout && nova().routes.checkout && checkout.dataset.native !== 'true') {
+        event.preventDefault();
+
+        const payload = Object.fromEntries(new FormData(checkout).entries());
+        delete payload._token;
+
+        const response = await fetch(nova().routes.checkout, {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify(payload),
+        });
+
+        if (response.status === 422) {
+            checkout.dataset.native = 'true';
+            checkout.submit();
+            return;
+        }
+
+        if (! response.ok) {
+            toast(t('error', 'Something went wrong. Please try again.'));
+            return;
+        }
+
+        const data = await response.json();
+        window.location.href = data.confirmation_url ?? nova().routes.checkoutConfirmation;
+        return;
+    }
+
     const form = event.target.closest('[data-add-to-cart]');
 
     if (! form) {

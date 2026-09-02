@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="mx-auto grid max-w-[1100px] gap-12 px-4 py-12 lg:grid-cols-[minmax(0,1fr)_20rem] lg:px-8">
-        <form method="post" action="{{ route('checkout.store') }}" class="flex flex-col gap-12">
+        <form method="post" action="{{ route('checkout.store') }}" data-checkout class="flex flex-col gap-12">
             @csrf
             <section class="flex flex-col gap-6">
                 <h2 class="text-[11px] tracking-nav uppercase">{{ __('storefront.checkout.contact') }}</h2>

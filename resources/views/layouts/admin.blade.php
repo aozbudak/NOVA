@@ -27,7 +27,7 @@
                 api: {
                     search: @json(route('api.admin.search')),
                     sales: @json(route('api.sales.store')),
-                    products: @json(url('/api/products')),
+                    products: @json(route('api.products.index')),
                     inventoryAdjust: @json(route('api.inventory.adjust')),
                     cashClose: @json(route('api.cash.close')),
                     returns: @json(route('api.returns.store')),

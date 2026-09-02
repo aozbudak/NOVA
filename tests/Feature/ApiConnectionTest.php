@@ -18,7 +18,9 @@ class ApiConnectionTest extends TestCase
 
         $this->getJson(route('api.search', ['q' => 'blazer']))
             ->assertOk()
-            ->assertJsonFragment(['name' => 'Tailored Crepe Blazer']);
+            ->assertJsonFragment(['name' => 'Tailored Crepe Blazer'])
+            ->assertJsonPath('0.slug', 'tailored-crepe-blazer')
+            ->assertJsonStructure([['id', 'name', 'slug', 'price', 'currency', 'image']]);
 
         $this->postJson(route('api.cart.store'), [
             'product_id' => 1,
@@ -96,6 +98,63 @@ class ApiConnectionTest extends TestCase
         $this->getJson(route('api.suppliers.show', 'atelier-mills'))
             ->assertOk()
             ->assertJsonPath('data.name', 'Atelier Mills');
+    }
+
+    public function test_storefront_layout_exposes_search_cart_and_checkout_api_routes(): void
+    {
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee(json_encode(route('api.search')), false)
+            ->assertSee(json_encode(route('api.cart.store')), false)
+            ->assertSee(json_encode(route('api.wishlist.store')), false)
+            ->assertSee(json_encode(route('api.checkout.store')), false)
+            ->assertSee(json_encode(route('checkout.confirmation')), false);
+    }
+
+    public function test_checkout_page_exposes_the_api_checkout_hook(): void
+    {
+        $this->post(route('cart.store'), [
+            'product_id' => 1,
+            'size' => 'M',
+            'quantity' => 1,
+        ]);
+
+        $this->get(route('checkout.show'))
+            ->assertOk()
+            ->assertSee('data-checkout', false)
+            ->assertSee(json_encode(route('api.checkout.store')), false);
+    }
+
+    public function test_admin_layout_exposes_pos_sale_and_search_api_routes(): void
+    {
+        $this->get(route('admin.pos.index'))
+            ->assertOk()
+            ->assertSee(json_encode(route('api.pos.items')), false)
+            ->assertSee(json_encode(route('api.sales.store')), false)
+            ->assertSee(json_encode(route('api.admin.search')), false);
+    }
+
+    public function test_storefront_checkout_api_returns_the_confirmation_url(): void
+    {
+        $this->postJson(route('api.cart.store'), [
+            'product_id' => 1,
+            'size' => 'M',
+            'quantity' => 1,
+        ])->assertOk();
+
+        $this->postJson(route('api.checkout.store'), [
+            'email' => 'client@nova.example',
+            'first_name' => 'Ada',
+            'last_name' => 'Lovelace',
+            'address' => '12 Atelier Street',
+            'city' => 'Berlin',
+            'postal_code' => '10115',
+            'country' => 'Germany',
+            'delivery' => 'standard',
+            'payment' => 'card',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('confirmation_url', route('checkout.confirmation'));
     }
 
     public function test_unknown_api_product_returns_404(): void

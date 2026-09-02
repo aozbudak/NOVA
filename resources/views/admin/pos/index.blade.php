@@ -22,7 +22,7 @@
             </div>
             <div class="min-h-0 flex-1 overflow-y-auto">
                 <p class="px-4 py-2 text-[11px] tracking-wide text-muted-foreground uppercase">{{ __('admin.pos.results') }}</p>
-                <ul data-pos-results class="flex flex-col">
+                <ul data-pos-results data-stock-label="{{ __('admin.pos.stock') }}" class="flex flex-col">
                     @foreach ($items as $item)
                         <li>
                             <button
