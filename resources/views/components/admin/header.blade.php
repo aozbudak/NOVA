@@ -1,10 +1,9 @@
 @props([
-    'staff',
     'breadcrumbs' => [],
     'notifications' => [],
 ])
 
-<header class="sticky top-0 z-20 flex h-[var(--header-height)] items-center gap-3 border-b border-border bg-background px-3 md:px-4">
+<header class="sticky top-0 z-20 flex h-[var(--header-height)] items-center gap-3 border-b border-glass-border px-3 glass md:px-4">
     <button
         type="button"
         data-sidebar-toggle
@@ -27,7 +26,7 @@
         <button
             type="button"
             data-open-search
-            class="flex w-full items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-left text-sm text-muted-foreground hover:border-input"
+            class="flex w-full items-center gap-2 rounded-lg border border-glass-border bg-card/70 px-3 py-1.5 text-left text-sm text-muted-foreground hover:border-input"
         >
             <x-icon name="search" size="size-4" />
             <span class="flex-1 truncate">{{ __('admin.search.placeholder') }}</span>
@@ -60,7 +59,5 @@
                 <x-icon name="sun" size="size-4" />
             </span>
         </button>
-
-        <x-admin.user-menu :staff="$staff" />
     </div>
 </header>

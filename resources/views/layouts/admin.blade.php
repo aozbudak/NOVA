@@ -24,6 +24,7 @@
         <script>
             window.NOVA = {
                 csrf: @json(csrf_token()),
+                locale: @json(app()->getLocale()),
                 api: {
                     search: @json(route('api.admin.search')),
                     sales: @json(route('api.sales.store')),
@@ -42,7 +43,7 @@
         <x-admin.sidebar :sections="$navSections" :home-route="$homeRoute" :staff="$staff" />
 
         <div class="min-h-screen lg:pl-[var(--sidebar-width)]">
-            <x-admin.header :staff="$staff" :breadcrumbs="$breadcrumbs" :notifications="$notifications" />
+            <x-admin.header :breadcrumbs="$breadcrumbs" :notifications="$notifications" />
 
             <main id="main" @class([
                 'min-h-[calc(100vh-var(--header-height))]',

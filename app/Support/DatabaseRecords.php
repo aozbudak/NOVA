@@ -28,6 +28,25 @@ use Illuminate\Support\Str;
 
 final class DatabaseRecords
 {
+    /**
+     * @param  array{id: string, name: string, status?: string|null}  $record
+     */
+    public function saveCategory(array $record): ?Category
+    {
+        if (! Schema::hasTable('categories')) {
+            return null;
+        }
+
+        $slug = $this->uniqueValue('categories', 'slug', 'admin-'.(Str::slug($record['name']) ?: 'category'));
+
+        return Category::query()->create([
+            'name' => $record['name'],
+            'slug' => $slug,
+            'is_active' => ($record['status'] ?? 'active') !== 'inactive',
+            'sort_order' => 0,
+        ]);
+    }
+
     public function saveProduct(array $data, ?string $slug = null): ?Product
     {
         $name = trim((string) ($data['name'] ?? ''));

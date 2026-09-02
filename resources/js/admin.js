@@ -1,7 +1,55 @@
+function initNavGroups() {
+    const storageKey = 'nova.admin.nav-groups';
+    let saved = {};
+
+    try {
+        saved = JSON.parse(localStorage.getItem(storageKey) ?? '{}') || {};
+    } catch {
+        saved = {};
+    }
+
+    const persist = () => {
+        localStorage.setItem(storageKey, JSON.stringify(saved));
+    };
+
+    document.querySelectorAll('[data-nav-group]').forEach((group) => {
+        const key = group.dataset.navGroup;
+        const toggle = group.querySelector('[data-nav-group-toggle]');
+
+        if (! toggle || ! key) {
+            return;
+        }
+
+        const items = group.querySelector('[data-nav-group-items]');
+
+        const setOpen = (open) => {
+            group.toggleAttribute('data-open', open);
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            items?.classList.toggle('hidden', ! open);
+            items?.classList.toggle('flex', open);
+        };
+
+        if (group.hasAttribute('data-active-group')) {
+            setOpen(true);
+        } else if (Object.hasOwn(saved, key)) {
+            setOpen(Boolean(saved[key]));
+        }
+
+        toggle.addEventListener('click', () => {
+            const open = ! group.hasAttribute('data-open');
+            setOpen(open);
+            saved[key] = open;
+            persist();
+        });
+    });
+}
+
 function initSidebar() {
     const root = document.documentElement;
     const toggle = document.querySelector('[data-sidebar-toggle]');
     const backdrop = document.querySelector('[data-sidebar-backdrop]');
+
+    initNavGroups();
 
     if (! toggle) {
         return;
@@ -126,9 +174,9 @@ function initSearch() {
         empty?.setAttribute('hidden', '');
         groups?.removeAttribute('hidden');
         groups.innerHTML = sections.map(([key, rows]) => `
-            <p class="px-3 pt-2 pb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">${escapeHtml(labels[key] ?? key)}</p>
+            <p class="px-2.5 pt-2 pb-1 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">${escapeHtml(labels[key] ?? key)}</p>
             ${rows.map((row) => `
-                <a href="${escapeHtml(row.url)}" class="flex flex-col px-3 py-2 hover:bg-accent">
+                <a href="${escapeHtml(row.url)}" class="flex flex-col rounded-lg px-2.5 py-2 hover:bg-accent">
                     <span class="text-[13px] text-foreground">${escapeHtml(row.label)}</span>
                     <span class="text-[11px] text-muted-foreground">${escapeHtml(row.meta)}</span>
                 </a>

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\StaffRole;
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Supplier;
@@ -30,7 +31,11 @@ final class AdminStore
      */
     public function categories(): array
     {
-        return ['Shirts', 'Outerwear', 'Knitwear', 'Trousers', 'Dresses', 'Accessories'];
+        return collect(['Shirts', 'Outerwear', 'Knitwear', 'Trousers', 'Dresses', 'Accessories'])
+            ->merge(collect(session('admin.categories', []))->pluck('name'))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
@@ -167,24 +172,58 @@ final class AdminStore
     public function categoryRecords(): Collection
     {
         $products = $this->products();
+        $created = collect(session('admin.categories', []));
         $names = collect($this->categories())
             ->merge($products->pluck('category')->filter())
             ->unique()
             ->values();
 
-        return $names->map(function (string $name) use ($products): array {
+        return $names->map(function (string $name) use ($products, $created): array {
             $rows = $products->where('category', $name);
+            $saved = $created->first(fn (array $row): bool => strcasecmp($row['name'], $name) === 0);
 
             return [
-                'id' => Str::slug($name),
+                'id' => $saved['id'] ?? Str::slug($name),
                 'name' => $name,
                 'products' => $rows->count(),
                 'stock' => (int) $rows->sum('stock'),
-                'status' => $rows->contains('status', 'inactive') && $rows->doesntContain('status', 'active')
+                'status' => $saved['status'] ?? ($rows->contains('status', 'inactive') && $rows->doesntContain('status', 'active')
                     ? 'inactive'
-                    : 'active',
+                    : 'active'),
             ];
         });
+    }
+
+    /**
+     * @param  array{name: string, status?: string|null}  $data
+     * @return array{id: string, name: string, products: int, stock: int, status: string}
+     */
+    public function createCategory(array $data): array
+    {
+        $base = Str::slug($data['name']);
+        $id = $base === '' ? 'category' : $base;
+        $suffix = 2;
+
+        while ($this->categoryRecords()->firstWhere('id', $id) !== null) {
+            $id = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        $record = [
+            'id' => $id,
+            'name' => $data['name'],
+            'products' => 0,
+            'stock' => 0,
+            'status' => ($data['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active',
+        ];
+
+        $categories = session('admin.categories', []);
+        $categories[$id] = $record;
+        session(['admin.categories' => $categories]);
+
+        (new DatabaseRecords)->saveCategory($record);
+
+        return $record;
     }
 
     /**

@@ -95,7 +95,8 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
             Route::post('/products/{product}/deactivate', [AdminProductController::class, 'deactivate'])->name('products.deactivate');
             Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
-            Route::get('/categories', CategoryController::class)->name('categories.index');
+            Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+            Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
             Route::get('/brands', BrandController::class)->name('brands.index');
             Route::get('/variants', VariantController::class)->name('variants.index');
             Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');

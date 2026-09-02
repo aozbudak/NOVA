@@ -43,4 +43,32 @@ class LocaleSwitchTest extends TestCase
     {
         $this->get('/locale/xx')->assertNotFound();
     }
+
+    public function test_admin_panel_follows_the_selected_locale(): void
+    {
+        $this->withSession(['locale' => 'tr'])
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('html lang="tr"', false)
+            ->assertSee('Ürünler')
+            ->assertSee('Mağaza')
+            ->assertSee('Çıkış');
+    }
+
+    public function test_admin_panel_follows_german_and_french_locales(): void
+    {
+        $this->withSession(['locale' => 'de'])
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('html lang="de"', false)
+            ->assertSee('Produkte')
+            ->assertSee('Abmelden');
+
+        $this->withSession(['locale' => 'fr'])
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('html lang="fr"', false)
+            ->assertSee('Produits')
+            ->assertSee('Se déconnecter');
+    }
 }

@@ -18,8 +18,13 @@
         @fonts
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="min-h-screen bg-background font-sans text-foreground antialiased">
-        <main class="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-16">
+    <body class="login-atmosphere relative min-h-screen overflow-hidden font-sans text-foreground antialiased">
+        <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+            <div class="absolute -top-24 -left-16 size-[28rem] rounded-full bg-sidebar-glow/25 blur-3xl"></div>
+            <div class="absolute right-[-8%] bottom-[-10%] size-[32rem] rounded-full bg-primary/20 blur-3xl"></div>
+            <div class="login-grid absolute inset-0 opacity-40"></div>
+        </div>
+        <main class="relative mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-16">
             @yield('content')
         </main>
     </body>

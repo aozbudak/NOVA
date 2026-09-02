@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CashRegister;
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
@@ -43,6 +44,13 @@ class BackendPersistenceTest extends TestCase
         ])->assertRedirect(route('admin.customers.index'));
 
         $this->assertTrue(Customer::query()->where('slug', 'ada-lovelace')->exists());
+
+        $this->post(route('admin.categories.store'), [
+            'name' => 'Jackets',
+            'status' => 'active',
+        ])->assertRedirect(route('admin.categories.index'));
+
+        $this->assertTrue(Category::query()->where('name', 'Jackets')->exists());
 
         $this->post(route('admin.suppliers.store'), [
             'name' => 'Harbor Mills',

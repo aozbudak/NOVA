@@ -28,6 +28,7 @@
     --color-sidebar-accent: var(--sidebar-accent);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-muted: var(--sidebar-muted);
+    --color-sidebar-glow: var(--sidebar-glow);
     --color-success: var(--success);
     --color-warning: var(--warning);
     --color-glass: var(--glass);
@@ -67,6 +68,7 @@
         --sidebar-muted: oklch(0.48 0.014 55);
         --success: oklch(0.48 0.11 155);
         --warning: oklch(0.62 0.13 75);
+        --sidebar-glow: oklch(0.62 0.13 75);
         --chrome-height: 5.25rem;
     }
 
@@ -94,6 +96,7 @@
         --sidebar-accent: oklch(0.22 0.008 50);
         --sidebar-border: oklch(0.28 0.01 50);
         --sidebar-muted: oklch(0.7 0.012 80);
+        --sidebar-glow: oklch(0.78 0.12 75);
         --success: oklch(0.72 0.12 155);
         --warning: oklch(0.78 0.12 75);
     }
@@ -113,15 +116,20 @@
         --accent-foreground: oklch(0.22 0.02 255);
         --destructive: oklch(0.55 0.18 25);
         --ring: oklch(0.3 0.045 255);
-        --sidebar: oklch(0.99 0.004 250);
-        --sidebar-foreground: oklch(0.22 0.02 255);
-        --sidebar-accent: oklch(0.945 0.01 250);
-        --sidebar-border: oklch(0.9 0.01 250);
-        --sidebar-muted: oklch(0.5 0.02 255);
+        --glass: color-mix(in oklab, oklch(0.995 0.004 250) 46%, transparent);
+        --glass-strong: color-mix(in oklab, oklch(0.995 0.004 250) 78%, transparent);
+        --glass-border: color-mix(in oklab, oklch(0.9 0.01 250) 55%, transparent);
+        --overlay: oklch(0.985 0.004 250);
+        --sidebar: oklch(0.2 0.038 265);
+        --sidebar-foreground: oklch(0.97 0.008 250);
+        --sidebar-accent: oklch(0.29 0.042 265);
+        --sidebar-border: color-mix(in oklab, oklch(0.97 0.008 250) 12%, transparent);
+        --sidebar-muted: oklch(0.74 0.02 250);
+        --sidebar-glow: oklch(0.78 0.1 230);
         --success: oklch(0.48 0.11 155);
         --warning: oklch(0.62 0.13 75);
-        --sidebar-width: 15.5rem;
-        --header-height: 3.5rem;
+        --sidebar-width: 16rem;
+        --header-height: 3.75rem;
     }
 
     [data-panel].dark {
@@ -139,17 +147,22 @@
         --accent-foreground: oklch(0.93 0.01 250);
         --destructive: oklch(0.68 0.16 25);
         --ring: oklch(0.82 0.03 250);
-        --sidebar: oklch(0.145 0.016 255);
-        --sidebar-foreground: oklch(0.93 0.01 250);
-        --sidebar-accent: oklch(0.22 0.016 255);
-        --sidebar-border: oklch(0.28 0.016 255);
-        --sidebar-muted: oklch(0.65 0.015 250);
+        --glass: color-mix(in oklab, oklch(0.2 0.016 255) 42%, transparent);
+        --glass-strong: color-mix(in oklab, oklch(0.2 0.016 255) 76%, transparent);
+        --glass-border: color-mix(in oklab, oklch(0.93 0.01 250) 14%, transparent);
+        --overlay: oklch(0.985 0.004 250);
+        --sidebar: oklch(0.14 0.032 265);
+        --sidebar-foreground: oklch(0.96 0.01 250);
+        --sidebar-accent: oklch(0.24 0.038 265);
+        --sidebar-border: color-mix(in oklab, oklch(0.96 0.01 250) 12%, transparent);
+        --sidebar-muted: oklch(0.7 0.018 250);
+        --sidebar-glow: oklch(0.8 0.1 230);
         --success: oklch(0.72 0.12 155);
         --warning: oklch(0.78 0.12 75);
     }
 
     [data-panel].sidebar-collapsed {
-        --sidebar-width: 4.5rem;
+        --sidebar-width: 4.75rem;
     }
 
     @media (max-width: 1023px) {
@@ -183,6 +196,7 @@
             --sidebar-accent: oklch(0.22 0.008 50);
             --sidebar-border: oklch(0.28 0.01 50);
             --sidebar-muted: oklch(0.7 0.012 80);
+            --sidebar-glow: oklch(0.78 0.12 75);
             --success: oklch(0.72 0.12 155);
             --warning: oklch(0.78 0.12 75);
         }
@@ -202,11 +216,16 @@
             --accent-foreground: oklch(0.93 0.01 250);
             --destructive: oklch(0.68 0.16 25);
             --ring: oklch(0.82 0.03 250);
-            --sidebar: oklch(0.145 0.016 255);
-            --sidebar-foreground: oklch(0.93 0.01 250);
-            --sidebar-accent: oklch(0.22 0.016 255);
-            --sidebar-border: oklch(0.28 0.016 255);
-            --sidebar-muted: oklch(0.65 0.015 250);
+            --glass: color-mix(in oklab, oklch(0.2 0.016 255) 42%, transparent);
+            --glass-strong: color-mix(in oklab, oklch(0.2 0.016 255) 76%, transparent);
+            --glass-border: color-mix(in oklab, oklch(0.93 0.01 250) 14%, transparent);
+            --overlay: oklch(0.985 0.004 250);
+            --sidebar: oklch(0.14 0.032 265);
+            --sidebar-foreground: oklch(0.96 0.01 250);
+            --sidebar-accent: oklch(0.24 0.038 265);
+            --sidebar-border: color-mix(in oklab, oklch(0.96 0.01 250) 12%, transparent);
+            --sidebar-muted: oklch(0.7 0.018 250);
+            --sidebar-glow: oklch(0.8 0.1 230);
             --success: oklch(0.72 0.12 155);
             --warning: oklch(0.78 0.12 75);
         }
@@ -268,6 +287,79 @@
             inset 0 -1px 0 color-mix(in oklab, var(--foreground) 4%, transparent);
     }
 
+    .login-atmosphere {
+        background-color: var(--background);
+        background-image:
+            radial-gradient(ellipse 80% 55% at 12% 18%, color-mix(in oklab, oklch(0.58 0.14 250) 38%, transparent), transparent 62%),
+            radial-gradient(ellipse 70% 50% at 88% 82%, color-mix(in oklab, oklch(0.52 0.13 300) 32%, transparent), transparent 58%),
+            radial-gradient(ellipse 45% 35% at 50% 45%, color-mix(in oklab, var(--foreground) 7%, transparent), transparent 70%);
+    }
+
+    .login-grid {
+        background-image:
+            linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
+            linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px);
+        background-size: 4rem 4rem;
+        mask-image: radial-gradient(ellipse at center, black 18%, transparent 72%);
+    }
+
+    .login-glass {
+        background-color: color-mix(in oklab, var(--card) 38%, transparent);
+        border-color: color-mix(in oklab, white 42%, var(--glass-border));
+        backdrop-filter: blur(36px) saturate(1.7);
+        -webkit-backdrop-filter: blur(36px) saturate(1.7);
+        box-shadow:
+            0 28px 90px -24px color-mix(in oklab, oklch(0.22 0.05 265) 48%, transparent),
+            inset 0 1px 0 color-mix(in oklab, white 58%, transparent),
+            inset 0 -1px 0 color-mix(in oklab, var(--foreground) 6%, transparent);
+    }
+
+    .dark .login-atmosphere {
+        background-image:
+            radial-gradient(ellipse 80% 55% at 12% 18%, color-mix(in oklab, oklch(0.62 0.16 250) 42%, transparent), transparent 62%),
+            radial-gradient(ellipse 70% 50% at 88% 82%, color-mix(in oklab, oklch(0.55 0.14 300) 34%, transparent), transparent 58%),
+            radial-gradient(ellipse 45% 35% at 50% 45%, color-mix(in oklab, white 6%, transparent), transparent 70%);
+    }
+
+    .dark .login-glass {
+        background-color: color-mix(in oklab, var(--card) 34%, transparent);
+        border-color: color-mix(in oklab, white 16%, transparent);
+        box-shadow:
+            0 28px 90px -20px color-mix(in oklab, black 58%, transparent),
+            inset 0 1px 0 color-mix(in oklab, white 16%, transparent);
+    }
+
+    .login-shine {
+        background-image: linear-gradient(to bottom right, color-mix(in oklab, white 35%, transparent), transparent);
+    }
+
+    .dark .login-shine {
+        background-image: linear-gradient(to bottom right, color-mix(in oklab, white 10%, transparent), transparent);
+    }
+
+    .admin-popover {
+        background-color: color-mix(in oklab, var(--card) 78%, transparent);
+        border-color: var(--glass-border);
+        backdrop-filter: blur(28px) saturate(1.5);
+        -webkit-backdrop-filter: blur(28px) saturate(1.5);
+        box-shadow:
+            0 24px 60px -28px color-mix(in oklab, oklch(0.2 0.05 265) 55%, transparent),
+            inset 0 1px 0 color-mix(in oklab, white 45%, transparent);
+    }
+
+    .dark .admin-popover {
+        background-color: color-mix(in oklab, var(--card) 70%, transparent);
+        box-shadow:
+            0 24px 60px -24px color-mix(in oklab, black 58%, transparent),
+            inset 0 1px 0 color-mix(in oklab, white 10%, transparent);
+    }
+
+    .admin-layer-backdrop {
+        background-color: color-mix(in oklab, oklch(0.18 0.04 265) 40%, transparent);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
     .pt-chrome {
         padding-top: var(--chrome-height);
     }
@@ -283,9 +375,63 @@
 }
 
 @layer components {
+    [data-panel] body {
+        background-image: radial-gradient(ellipse 80% 45% at 100% 0%, color-mix(in oklab, oklch(0.55 0.08 250) 10%, transparent), transparent 55%);
+    }
+
+    [data-admin-sidebar] {
+        background-color: var(--sidebar);
+        background-image:
+            radial-gradient(ellipse 140% 55% at 0% -8%, color-mix(in oklab, var(--sidebar-glow) 34%, transparent), transparent 58%),
+            linear-gradient(180deg, color-mix(in oklab, white 4%, transparent), transparent 28%);
+        box-shadow:
+            8px 0 32px color-mix(in oklab, oklch(0.18 0.04 265) 18%, transparent),
+            inset -1px 0 0 color-mix(in oklab, white 6%, transparent);
+    }
+
+    [data-admin-sidebar] nav {
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in oklab, var(--sidebar-foreground) 18%, transparent) transparent;
+    }
+
+    .sidebar-link {
+        position: relative;
+    }
+
+    .sidebar-link:hover {
+        background-color: color-mix(in oklab, var(--sidebar-accent) 88%, white 8%);
+    }
+
+    .sidebar-link:hover .sidebar-icon {
+        color: var(--sidebar-foreground);
+    }
+
+    .sidebar-link[data-active='true'] {
+        background-color: color-mix(in oklab, var(--sidebar-accent) 82%, white 10%);
+        box-shadow: inset 2px 0 0 var(--sidebar-glow);
+    }
+
+    .sidebar-link[data-active='true'] .sidebar-icon {
+        color: var(--sidebar-glow);
+        background-color: color-mix(in oklab, var(--sidebar-glow) 16%, transparent);
+    }
+
+    [data-nav-group][data-open] .sidebar-group-chevron {
+        transform: rotate(180deg);
+    }
+
     [data-panel].sidebar-collapsed .sidebar-label,
-    [data-panel].sidebar-collapsed .sidebar-section {
+    [data-panel].sidebar-collapsed .sidebar-section,
+    [data-panel].sidebar-collapsed .sidebar-brand-text,
+    [data-panel].sidebar-collapsed .sidebar-footer-meta {
         display: none;
+    }
+
+    [data-panel].sidebar-collapsed .sidebar-brand,
+    [data-panel].sidebar-collapsed .sidebar-footer {
+        justify-content: center;
+        padding-inline: 0.5rem;
+        gap: 0;
     }
 
     [data-panel].sidebar-collapsed .sidebar-link {
@@ -295,6 +441,60 @@
 
     [data-panel].sidebar-collapsed [data-sidebar-chevron] {
         transform: rotate(180deg);
+    }
+
+    [data-panel].sidebar-collapsed [data-admin-sidebar] [data-dropdown="user"] [data-dropdown-panel] {
+        right: auto;
+        left: calc(100% + 0.5rem);
+        bottom: 0.5rem;
+        margin-bottom: 0;
+        width: 15rem;
+    }
+
+    [data-panel] [data-dropdown-panel]:not([hidden]),
+    [data-panel] [data-admin-search]:not([hidden]) [data-search-panel] {
+        animation: admin-pop 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-panel] [data-admin-layer]:not([hidden]) [data-layer-dialog] {
+        animation: admin-pop 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    [data-panel] [data-admin-layer]:not([hidden]) [data-drawer-panel] {
+        animation: admin-drawer 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes admin-pop {
+        from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.98);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @keyframes admin-drawer {
+        from {
+            opacity: 0;
+            transform: translateX(1.25rem);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        [data-panel] [data-dropdown-panel]:not([hidden]),
+        [data-panel] [data-admin-search]:not([hidden]) [data-search-panel],
+        [data-panel] [data-admin-layer]:not([hidden]) [data-layer-dialog],
+        [data-panel] [data-admin-layer]:not([hidden]) [data-drawer-panel] {
+            animation: none;
+        }
     }
 
     [data-admin-table] td::before {
@@ -340,13 +540,28 @@
             display: inline;
         }
 
-        [data-panel].sidebar-open .sidebar-section {
+        [data-panel].sidebar-open .sidebar-section,
+        [data-panel].sidebar-open .sidebar-brand-text,
+        [data-panel].sidebar-open .sidebar-footer-meta {
             display: block;
+        }
+
+        [data-panel].sidebar-open .sidebar-brand,
+        [data-panel].sidebar-open .sidebar-footer {
+            justify-content: flex-start;
+            padding-inline: 1rem;
+            gap: 0.75rem;
         }
 
         [data-panel].sidebar-open .sidebar-link {
             justify-content: flex-start;
             padding-inline: 0.625rem;
         }
+    }
+}
+
+@media (min-width: 1024px) {
+    [data-panel].sidebar-collapsed [data-nav-group-items] {
+        display: flex;
     }
 }

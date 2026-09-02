@@ -16,6 +16,7 @@ final class AdminNavigation
         'admin.products.deactivate' => 'products',
         'admin.products.update' => 'products',
         'admin.categories.index' => 'categories',
+        'admin.categories.store' => 'categories',
         'admin.brands.index' => 'brands',
         'admin.variants.index' => 'variants',
         'admin.inventory.index' => 'inventory',
@@ -78,18 +79,20 @@ final class AdminNavigation
     }
 
     /**
-     * @return list<array{label: string, items: list<array{key: string, label: string, icon: string, route: string, permission: string}>}>
+     * @return list<array{key: string, label: string, items: list<array{key: string, label: string, icon: string, route: string, permission: string}>}>
      */
     public function sections(): array
     {
         $sections = [
             [
+                'key' => 'general',
                 'label' => __('admin.nav.general'),
                 'items' => [
                     $this->item('dashboard', 'dashboard', 'admin.dashboard', 'dashboard'),
                 ],
             ],
             [
+                'key' => 'store',
                 'label' => __('admin.nav.store'),
                 'items' => [
                     $this->item('products', 'products', 'admin.products.index', 'products'),
@@ -102,6 +105,7 @@ final class AdminNavigation
                 ],
             ],
             [
+                'key' => 'sales',
                 'label' => __('admin.nav.sales_group'),
                 'items' => [
                     $this->item('pos', 'pos', 'admin.pos.index', 'pos'),
@@ -111,6 +115,7 @@ final class AdminNavigation
                 ],
             ],
             [
+                'key' => 'people',
                 'label' => __('admin.nav.people'),
                 'items' => [
                     $this->item('customers', 'customers', 'admin.customers.index', 'customers'),
@@ -118,6 +123,7 @@ final class AdminNavigation
                 ],
             ],
             [
+                'key' => 'finance',
                 'label' => __('admin.nav.finance'),
                 'items' => [
                     $this->item('cash', 'cash', 'admin.cash.index', 'cash'),
@@ -127,6 +133,7 @@ final class AdminNavigation
                 ],
             ],
             [
+                'key' => 'reporting',
                 'label' => __('admin.nav.reporting'),
                 'items' => [
                     $this->item('report_sales', 'reports', 'admin.reports.show', 'reports', ['sales']),
@@ -138,6 +145,7 @@ final class AdminNavigation
                 ],
             ],
             [
+                'key' => 'management',
                 'label' => __('admin.nav.management'),
                 'items' => [
                     $this->item('users', 'users', 'admin.users.index', 'users'),
@@ -146,6 +154,7 @@ final class AdminNavigation
                 ],
             ],
             [
+                'key' => 'system',
                 'label' => __('admin.nav.system'),
                 'items' => [
                     $this->item('notifications', 'bell', 'admin.notifications.index', 'profile'),
@@ -174,6 +183,7 @@ final class AdminNavigation
             }
 
             $visible[] = [
+                'key' => $section['key'],
                 'label' => $section['label'],
                 'items' => $items,
             ];

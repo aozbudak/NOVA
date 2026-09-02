@@ -71,6 +71,27 @@ class AdminDesignSystemTest extends TestCase
         $response->assertSee('Notifications');
         $response->assertSee('Profile');
         $response->assertSee('Settings');
+        $response->assertSee('data-admin-sidebar', false);
+        $response->assertSee('data-nav-group="general"', false);
+        $response->assertSee('data-nav-group="store"', false);
+        $response->assertSee('data-nav-group-toggle', false);
+        $response->assertSee('data-active-group="true"', false);
+        $response->assertSee('data-active="true"', false);
+        $response->assertSee('data-dropdown="user"', false);
+        $response->assertSee('Log out');
+        $response->assertSee('hreflang="tr"', false);
+        $response->assertSee('hreflang="de"', false);
+        $response->assertSee('hreflang="fr"', false);
+    }
+
+    public function test_sidebar_opens_the_active_module_group(): void
+    {
+        $response = $this->get(route('admin.products.index'));
+
+        $response->assertOk();
+        $response->assertSee('data-nav-group="store"', false);
+        $response->assertSee('data-active-group="true"', false);
+        $response->assertSee('data-active="true"', false);
     }
 
     public function test_notifications_page_lists_items(): void

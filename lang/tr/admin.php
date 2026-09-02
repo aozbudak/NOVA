@@ -257,6 +257,7 @@ return [
     ],
     'categories' => [
         'title' => 'Kategoriler',
+        'add' => 'Kategori ekle',
         'name' => 'Kategori',
         'products' => 'Ürünler',
         'stock' => 'Stok',
@@ -705,6 +706,7 @@ return [
         'return_completed' => 'Return completed successfully.',
         'supplier_created' => 'Supplier created successfully.',
         'customer_created' => 'Customer created successfully.',
+        'category_created' => 'Kategori oluşturuldu.',
         'user_created' => 'User created successfully.',
         'user_updated' => 'User updated successfully.',
         'settings_saved' => 'Settings saved successfully.',

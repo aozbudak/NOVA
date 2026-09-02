@@ -257,6 +257,7 @@ return [
     ],
     'categories' => [
         'title' => 'Categories',
+        'add' => 'Add category',
         'name' => 'Category',
         'products' => 'Products',
         'stock' => 'Stock',
@@ -705,6 +706,7 @@ return [
         'return_completed' => 'Return completed successfully.',
         'supplier_created' => 'Supplier created successfully.',
         'customer_created' => 'Customer created successfully.',
+        'category_created' => 'Category created successfully.',
         'user_created' => 'User created successfully.',
         'user_updated' => 'User updated successfully.',
         'settings_saved' => 'Settings saved successfully.',

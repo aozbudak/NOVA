@@ -10,7 +10,7 @@
         data-dropdown-panel
         hidden
         @class([
-            'absolute z-30 mt-1 min-w-36 rounded-md border border-border bg-card py-1 shadow-sm',
+            'admin-popover absolute z-30 mt-2 min-w-44 overflow-hidden rounded-xl border py-1.5',
             'right-0' => $align === 'right',
             'left-0' => $align === 'left',
         ])

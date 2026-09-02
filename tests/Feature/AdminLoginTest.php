@@ -16,8 +16,11 @@ class AdminLoginTest extends TestCase
             ->assertSee('Staff login')
             ->assertSee('Username')
             ->assertSee('Password')
+            ->assertSee('login-glass', false)
             ->assertDontSee('Welcome back')
-            ->assertDontSee('Create account');
+            ->assertDontSee('Create account')
+            ->assertSee('hreflang="tr"', false)
+            ->assertSee('hreflang="de"', false);
     }
 
     public function test_guest_is_sent_to_admin_login(): void
