@@ -14,6 +14,10 @@ class EnsureAdminAuthenticated
     public function handle(Request $request, Closure $next): Response
     {
         if (! $request->session()->get('admin.authenticated')) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                abort(401);
+            }
+
             return redirect()->guest(route('admin.login'));
         }
 

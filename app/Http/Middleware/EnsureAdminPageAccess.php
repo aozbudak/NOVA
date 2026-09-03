@@ -22,7 +22,7 @@ class EnsureAdminPageAccess
             return $next($request);
         }
 
-        if ($this->navigation->staff()->role->can($permission)) {
+        if ($this->navigation->staff()->can($permission)) {
             return $next($request);
         }
 
