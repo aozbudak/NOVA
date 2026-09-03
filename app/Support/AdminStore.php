@@ -59,13 +59,19 @@ final class AdminStore
      */
     private function resolveProducts(): Collection
     {
-        $fromDatabase = $this->databaseProducts();
-
-        if ($fromDatabase->isNotEmpty()) {
-            return $fromDatabase;
+        if (Schema::hasTable('products') && Schema::hasColumn('products', 'catalog_code')) {
+            return $this->databaseProducts();
         }
 
         return collect($this->catalog());
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function sourceCatalog(): array
+    {
+        return $this->catalog();
     }
 
     /**
