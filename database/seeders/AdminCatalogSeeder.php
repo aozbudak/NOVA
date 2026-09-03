@@ -19,7 +19,7 @@ class AdminCatalogSeeder extends Seeder
 
         $store = new AdminStore;
 
-        foreach ($store->products() as $item) {
+        foreach ($store->sourceCatalog() as $item) {
             $category = Category::query()->firstOrCreate(
                 ['slug' => 'admin-'.Str::slug($item['category'])],
                 [

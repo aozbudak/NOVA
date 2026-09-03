@@ -35,4 +35,12 @@ class DatabaseCatalogTest extends TestCase
         $this->assertNotNull((new AdminStore)->product('basic-shirt'));
         $this->assertSame('NOVA01', (new AdminStore)->product('basic-shirt')['sku']);
     }
+
+    public function test_empty_database_does_not_show_fixture_products(): void
+    {
+        $this->assertCount(0, (new AdminStore)->products());
+        $this->assertCount(0, (new Catalog)->all());
+        $this->assertNull((new AdminStore)->product('basic-shirt'));
+        $this->assertNull((new Catalog)->find(1));
+    }
 }

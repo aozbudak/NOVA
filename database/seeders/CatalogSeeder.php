@@ -19,7 +19,7 @@ class CatalogSeeder extends Seeder
             return;
         }
 
-        foreach ((new Catalog)->all() as $item) {
+        foreach ((new Catalog)->sourceItems() as $item) {
             $department = Category::query()->firstOrCreate(
                 ['slug' => $item['category']],
                 [

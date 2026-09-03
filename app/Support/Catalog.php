@@ -35,12 +35,18 @@ class Catalog
      */
     private function resolve(): Collection
     {
-        $fromDatabase = $this->databaseProducts();
-
-        if ($fromDatabase->isNotEmpty()) {
-            return $fromDatabase;
+        if (Schema::hasTable('products') && Schema::hasColumn('products', 'catalog_code')) {
+            return $this->databaseProducts();
         }
 
+        return collect($this->products());
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function sourceItems(): Collection
+    {
         return collect($this->products());
     }
 
