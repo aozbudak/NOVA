@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Http\Controllers\Storefront;
+
+use App\Http\Controllers\Controller;
+use App\Support\Catalog;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\View\View;
+
+class BrandController extends Controller
+{
+    public function show(Request $request, Catalog $catalog, string $brand): View
+    {
+        $record = $catalog->findBrand($brand);
+
+        abort_if($record === null, 404);
+
+        $filters = [
+            'department' => 'collections',
+            'brand' => $record->slug,
+            'category' => $request->string('category')->toString() ?: null,
+            'size' => $request->string('size')->toString() ?: null,
+            'color' => $request->string('color')->toString() ?: null,
+            'collection' => $request->string('collection')->toString() ?: null,
+            'availability' => $request->string('availability')->toString() ?: null,
+            'price' => $request->string('price')->toString() ?: null,
+            'sort' => $request->string('sort')->toString() ?: 'recommended',
+        ];
+
+        $products = $catalog->browseBrand($record, $filters);
+        $page = max(1, $request->integer('page'));
+        $perPage = 12;
+        $paginated = new LengthAwarePaginator(
+            $products->forPage($page, $perPage)->values(),
+            $products->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()],
+        );
+
+        return view('storefront.brand', [
+            'brand' => $record,
+            'products' => $paginated,
+            'department' => 'brands',
+            'category' => $filters['category'],
+            'filters' => $filters,
+            'meta' => [
+                'title' => $record->name,
+                'label' => $record->name,
+                'breadcrumb' => $record->name,
+            ],
+            'categories' => $catalog->categoriesFor('women') + $catalog->categoriesFor('men'),
+        ]);
+    }
+}

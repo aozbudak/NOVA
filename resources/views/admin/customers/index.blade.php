@@ -65,6 +65,9 @@
             <x-admin.field :label="__('admin.customers.phone')" name="phone">
                 <x-admin.input name="phone" />
             </x-admin.field>
+            <x-admin.field :label="__('admin.customers.password')" name="password" required>
+                <x-admin.input name="password" type="password" required minlength="8" />
+            </x-admin.field>
             <x-admin.button type="submit" data-busy-label="{{ __('admin.common.saving') }}">{{ __('admin.common.save') }}</x-admin.button>
         </form>
     </x-admin.drawer>

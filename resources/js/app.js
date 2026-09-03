@@ -111,11 +111,17 @@ function closeAllLayers() {
     });
 }
 
-async function addToCart(productId, size, quantity = 1) {
+async function addToCart(productId, size, quantity = 1, color = null) {
+    const payload = { product_id: Number(productId), size, quantity };
+
+    if (color) {
+        payload.color = color;
+    }
+
     const response = await fetch(nova().routes.cart, {
         method: 'POST',
         headers: headers(),
-        body: JSON.stringify({ product_id: Number(productId), size, quantity }),
+        body: JSON.stringify(payload),
     });
 
     if (! response.ok) {
@@ -542,7 +548,7 @@ document.addEventListener('submit', async (event) => {
 
     event.preventDefault();
     const data = new FormData(form);
-    await addToCart(data.get('product_id'), data.get('size'), Number(data.get('quantity') ?? 1));
+    await addToCart(data.get('product_id'), data.get('size'), Number(data.get('quantity') ?? 1), data.get('color'));
     openLayer('cart');
 });
 

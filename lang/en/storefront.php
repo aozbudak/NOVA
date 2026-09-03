@@ -9,6 +9,7 @@ return [
         'new-in' => 'New In',
         'collections' => 'Collections',
         'sale' => 'Sale',
+        'brands' => 'Brands',
         'shop' => 'Shop',
         'clothing' => 'Clothing',
         'accessories' => 'Accessories',

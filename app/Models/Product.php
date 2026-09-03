@@ -12,12 +12,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'category_id',
+    'brand_id',
     'name',
     'slug',
     'description',
     'brand',
     'base_price',
     'sale_price',
+    'vat_rate',
     'currency',
     'is_new',
     'is_featured',
@@ -38,6 +40,7 @@ class Product extends Model
         return [
             'base_price' => 'decimal:2',
             'sale_price' => 'decimal:2',
+            'vat_rate' => 'decimal:2',
             'is_new' => 'boolean',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
@@ -52,6 +55,14 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * @return BelongsTo<Brand, $this>
+     */
+    public function brandRecord(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
     }
 
     /**

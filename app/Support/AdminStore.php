@@ -3,9 +3,11 @@
 namespace App\Support;
 
 use App\Enums\StaffRole;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -31,6 +33,16 @@ final class AdminStore
      */
     public function categories(): array
     {
+        if (Schema::hasTable('categories') && Category::query()->exists()) {
+            return Category::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->pluck('name')
+                ->unique()
+                ->values()
+                ->all();
+        }
+
         return collect(['Shirts', 'Outerwear', 'Knitwear', 'Trousers', 'Dresses', 'Accessories'])
             ->merge(collect(session('admin.categories', []))->pluck('name'))
             ->unique()
@@ -39,11 +51,81 @@ final class AdminStore
     }
 
     /**
+     * @return Collection<int, array{id: string, name: string, slug: string, parent_id: string|null, parent: string|null, status: string}>
+     */
+    public function categoryOptions(): Collection
+    {
+        if (Schema::hasTable('categories') && Category::query()->exists()) {
+            $categories = Category::query()
+                ->with('parent')
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get();
+
+            return $categories->map(fn (Category $category): array => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+                'parent_id' => $category->parent_id,
+                'parent' => $category->parent?->name,
+                'label' => $category->parent
+                    ? $category->parent->name.' / '.$category->name
+                    : $category->name,
+                'status' => $category->is_active ? 'active' : 'inactive',
+            ]);
+        }
+
+        return collect($this->categories())->map(fn (string $name): array => [
+            'id' => Str::slug($name),
+            'name' => $name,
+            'slug' => Str::slug($name),
+            'parent_id' => null,
+            'parent' => null,
+            'label' => $name,
+            'status' => 'active',
+        ]);
+    }
+
+    /**
      * @return list<string>
      */
     public function brands(): array
     {
+        if (Schema::hasTable('brands') && Brand::query()->exists()) {
+            return Brand::query()
+                ->orderBy('name')
+                ->pluck('name')
+                ->unique()
+                ->values()
+                ->all();
+        }
+
         return ['NOVA', 'Atelier', 'Studio'];
+    }
+
+    /**
+     * @return Collection<int, array{id: string, name: string, slug: string, status: string}>
+     */
+    public function brandOptions(): Collection
+    {
+        if (Schema::hasTable('brands') && Brand::query()->exists()) {
+            return Brand::query()
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Brand $brand): array => [
+                    'id' => $brand->id,
+                    'name' => $brand->name,
+                    'slug' => $brand->slug,
+                    'status' => $brand->is_active ? 'active' : 'inactive',
+                ]);
+        }
+
+        return collect($this->brands())->map(fn (string $name): array => [
+            'id' => Str::slug($name),
+            'name' => $name,
+            'slug' => Str::slug($name),
+            'status' => 'active',
+        ]);
     }
 
     /**
@@ -84,8 +166,7 @@ final class AdminStore
         }
 
         return Product::query()
-            ->with(['category', 'images', 'variants.stock'])
-            ->whereNull('catalog_code')
+            ->with(['category', 'brandRecord', 'images', 'variants.stock'])
             ->orderBy('name')
             ->get()
             ->map(fn (Product $product): array => $this->mapFromDatabase($product))
@@ -98,20 +179,27 @@ final class AdminStore
     private function mapFromDatabase(Product $product): array
     {
         $attributes = $product->attributes ?? [];
-        $variants = $product->variants->map(function ($variant): array {
+        $pricing = Price::breakdown(
+            $product->base_price,
+            $product->vat_rate ?? $attributes['vat'] ?? 20,
+        );
+        $variants = $product->variants->map(function ($variant) use ($product): array {
             return [
+                'id' => $variant->id,
                 'sku' => $variant->sku,
                 'barcode' => $variant->barcode,
                 'size' => $variant->size,
                 'color' => $variant->color,
                 'stock' => (int) ($variant->stock?->quantity ?? 0),
-                'price' => (int) ($variant->price ?? $product->base_price),
+                'price' => (float) ($variant->price ?? $product->base_price),
+                'is_active' => (bool) $variant->is_active,
             ];
         })->values()->all();
 
         $stock = (int) collect($variants)->sum('stock');
         $minStock = (int) ($product->variants->first()?->stock?->minimum_quantity ?? $attributes['min_stock'] ?? 0);
         $primaryImage = $product->images->first();
+        $brandName = $product->brandRecord?->name ?? (string) $product->brand;
 
         return [
             'id' => $attributes['legacy_id'] ?? $product->id,
@@ -120,10 +208,14 @@ final class AdminStore
             'sku' => $attributes['sku'] ?? $product->variants->first()?->sku ?? '',
             'barcode' => $attributes['barcode'] ?? $product->variants->first()?->barcode ?? '',
             'category' => $product->category?->name ?? '',
-            'brand' => (string) $product->brand,
-            'price' => (int) $product->base_price,
-            'purchase_price' => (int) ($attributes['purchase_price'] ?? 0),
-            'vat' => (int) ($attributes['vat'] ?? 20),
+            'category_id' => $product->category_id,
+            'brand' => $brandName,
+            'brand_id' => $product->brand_id,
+            'price' => (float) $pricing['gross'],
+            'price_net' => (float) $pricing['net'],
+            'price_vat' => (float) $pricing['vat'],
+            'purchase_price' => (float) ($attributes['purchase_price'] ?? 0),
+            'vat' => (int) $pricing['rate'],
             'stock' => $stock,
             'min_stock' => $minStock,
             'status' => $product->is_active ? 'active' : 'inactive',
@@ -157,12 +249,22 @@ final class AdminStore
             });
         }
 
-        foreach (['category', 'brand', 'status'] as $key) {
+        foreach (['category', 'status'] as $key) {
             $value = $filters[$key] ?? null;
 
             if (filled($value)) {
                 $products = $products->where($key, $value);
             }
+        }
+
+        if (filled($filters['brand'] ?? null)) {
+            $needle = (string) $filters['brand'];
+            $slug = Str::slug($needle);
+            $products = $products->filter(function (array $product) use ($needle, $slug): bool {
+                return strcasecmp((string) $product['brand'], $needle) === 0
+                    || Str::slug((string) $product['brand']) === $slug
+                    || (string) ($product['brand_id'] ?? '') === $needle;
+            });
         }
 
         if (filled($filters['stock'] ?? null)) {
@@ -177,6 +279,30 @@ final class AdminStore
      */
     public function categoryRecords(): Collection
     {
+        if (Schema::hasTable('categories') && Category::query()->exists()) {
+            $products = $this->products();
+
+            return Category::query()
+                ->with('parent')
+                ->withCount('products')
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get()
+                ->map(function (Category $category) use ($products): array {
+                    $rows = $products->where('category', $category->name);
+
+                    return [
+                        'id' => $category->id,
+                        'name' => $category->name,
+                        'parent_id' => $category->parent_id,
+                        'parent' => $category->parent?->name,
+                        'products' => (int) $category->products_count,
+                        'stock' => (int) $rows->sum('stock'),
+                        'status' => $category->is_active ? 'active' : 'inactive',
+                    ];
+                });
+        }
+
         $products = $this->products();
         $created = collect(session('admin.categories', []));
         $names = collect($this->categories())
@@ -191,6 +317,8 @@ final class AdminStore
             return [
                 'id' => $saved['id'] ?? Str::slug($name),
                 'name' => $name,
+                'parent_id' => $saved['parent_id'] ?? null,
+                'parent' => $saved['parent'] ?? null,
                 'products' => $rows->count(),
                 'stock' => (int) $rows->sum('stock'),
                 'status' => $saved['status'] ?? ($rows->contains('status', 'inactive') && $rows->doesntContain('status', 'active')
@@ -201,7 +329,7 @@ final class AdminStore
     }
 
     /**
-     * @param  array{name: string, status?: string|null}  $data
+     * @param  array{name: string, status?: string|null, parent_id?: string|null}  $data
      * @return array{id: string, name: string, products: int, stock: int, status: string}
      */
     public function createCategory(array $data): array
@@ -218,6 +346,7 @@ final class AdminStore
         $record = [
             'id' => $id,
             'name' => $data['name'],
+            'parent_id' => $data['parent_id'] ?? null,
             'products' => 0,
             'stock' => 0,
             'status' => ($data['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active',
@@ -227,7 +356,8 @@ final class AdminStore
         $categories[$id] = $record;
         session(['admin.categories' => $categories]);
 
-        (new DatabaseRecords)->saveCategory($record);
+        $saved = (new DatabaseRecords)->saveCategory($record);
+        $record['id'] = $saved?->id ?? $id;
 
         return $record;
     }
@@ -237,6 +367,32 @@ final class AdminStore
      */
     public function brandRecords(): Collection
     {
+        if (Schema::hasTable('brands') && Brand::query()->exists()) {
+            $products = $this->products();
+
+            return Brand::query()
+                ->withCount('products')
+                ->orderBy('name')
+                ->get()
+                ->map(function (Brand $brand) use ($products): array {
+                    $rows = $products->filter(
+                        fn (array $row): bool => strcasecmp((string) $row['brand'], $brand->name) === 0
+                            || ($row['brand_id'] ?? null) === $brand->id,
+                    );
+
+                    return [
+                        'id' => $brand->id,
+                        'slug' => $brand->slug,
+                        'name' => $brand->name,
+                        'description' => (string) $brand->description,
+                        'logo' => (string) $brand->logo,
+                        'products' => (int) $brand->products_count,
+                        'stock' => (int) $rows->sum('stock'),
+                        'status' => $brand->is_active ? 'active' : 'inactive',
+                    ];
+                });
+        }
+
         $products = $this->products();
         $names = collect($this->brands())
             ->merge($products->pluck('brand')->filter())
@@ -248,7 +404,10 @@ final class AdminStore
 
             return [
                 'id' => Str::slug($name),
+                'slug' => Str::slug($name),
                 'name' => $name,
+                'description' => '',
+                'logo' => '',
                 'products' => $rows->count(),
                 'stock' => (int) $rows->sum('stock'),
                 'status' => $rows->contains('status', 'inactive') && $rows->doesntContain('status', 'active')
@@ -256,6 +415,51 @@ final class AdminStore
                     : 'active',
             ];
         });
+    }
+
+    /**
+     * @param  array{name: string, slug?: string|null, description?: string|null, logo?: string|null, status?: string|null}  $data
+     * @return array<string, mixed>
+     */
+    public function createBrand(array $data): array
+    {
+        $saved = (new DatabaseRecords)->saveBrand($data);
+
+        return [
+            'id' => $saved?->id ?? Str::slug($data['name']),
+            'slug' => $saved?->slug ?? Str::slug($data['name']),
+            'name' => $saved?->name ?? $data['name'],
+            'description' => (string) ($saved?->description ?? $data['description'] ?? ''),
+            'status' => ($saved?->is_active ?? true) ? 'active' : 'inactive',
+            'products' => 0,
+            'stock' => 0,
+        ];
+    }
+
+    /**
+     * @param  array{name?: string, slug?: string|null, description?: string|null, logo?: string|null, status?: string|null}  $data
+     */
+    public function updateBrand(string $id, array $data): ?array
+    {
+        $saved = (new DatabaseRecords)->saveBrand($data, $id);
+
+        if ($saved === null) {
+            return null;
+        }
+
+        return $this->brandRecords()->first(
+            fn (array $row): bool => $row['id'] === $saved->id || $row['slug'] === $saved->slug,
+        );
+    }
+
+    public function toggleBrand(string $id): bool
+    {
+        return (new DatabaseRecords)->toggleBrand($id) !== null;
+    }
+
+    public function deleteBrand(string $id): bool
+    {
+        return (new DatabaseRecords)->deleteBrand($id);
     }
 
     /**
@@ -340,7 +544,12 @@ final class AdminStore
         }
 
         if (filled($filters['brand'] ?? null)) {
-            $rows = $rows->where('brand', $filters['brand']);
+            $needle = (string) $filters['brand'];
+            $slug = Str::slug($needle);
+            $rows = $rows->filter(function (array $row) use ($needle, $slug): bool {
+                return strcasecmp((string) $row['brand'], $needle) === 0
+                    || Str::slug((string) $row['brand']) === $slug;
+            });
         }
 
         if (filled($filters['stock'] ?? null)) {
@@ -355,6 +564,37 @@ final class AdminStore
      */
     public function movements(): array
     {
+        if (Schema::hasTable('stock_movements') && StockMovement::query()->exists()) {
+            return StockMovement::query()
+                ->with(['variant.product', 'variant.stock', 'user'])
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(200)
+                ->get()
+                ->map(function (StockMovement $movement): array {
+                    $type = $this->movementType($movement->movement_type);
+                    $qty = (int) $movement->quantity;
+                    $after = (int) ($movement->variant?->stock?->quantity ?? 0);
+                    $before = $after - $qty;
+
+                    return [
+                        'date' => optional($movement->created_at)->format('Y-m-d H:i') ?? now()->format('Y-m-d H:i'),
+                        'product' => $movement->variant?->product?->name
+                            ?? trim(($movement->variant?->color ?? '').' / '.($movement->variant?->size ?? '')),
+                        'variant' => trim(($movement->variant?->color ?? '').' / '.($movement->variant?->size ?? ''), ' /'),
+                        'type' => $type,
+                        'qty' => $qty,
+                        'before' => max(0, $before),
+                        'after' => max(0, $after),
+                        'user' => $movement->user?->name ?? '—',
+                        'reference' => $movement->reference_type
+                            ? trim($movement->reference_type.($movement->note ? ' — '.$movement->note : ''))
+                            : (string) ($movement->note ?? '—'),
+                    ];
+                })
+                ->all();
+        }
+
         return [
             ['date' => '2026-09-02 09:14', 'product' => 'Basic Shirt', 'type' => 'sale', 'qty' => -1, 'before' => 43, 'after' => 42, 'user' => 'Ayşe Yılmaz', 'reference' => 'NOVA-1024'],
             ['date' => '2026-09-02 09:14', 'product' => 'Tailored Trouser', 'type' => 'sale', 'qty' => -1, 'before' => 23, 'after' => 22, 'user' => 'Ayşe Yılmaz', 'reference' => 'NOVA-1024'],
@@ -366,6 +606,18 @@ final class AdminStore
             ['date' => '2026-08-29 16:12', 'product' => 'Fluid Silk Midi Dress', 'type' => 'manual', 'qty' => -2, 'before' => 2, 'after' => 0, 'user' => 'Deniz Aksoy', 'reference' => 'ADJ-19'],
             ['date' => '2026-08-28 10:02', 'product' => 'Leather Belt', 'type' => 'sale', 'qty' => -2, 'before' => 33, 'after' => 31, 'user' => 'Mert Kaya', 'reference' => 'NV-10390'],
         ];
+    }
+
+    private function movementType(string $type): string
+    {
+        return match ($type) {
+            'in', 'purchase' => 'purchase',
+            'out', 'manual', 'adjustment' => 'manual',
+            'sale' => 'sale',
+            'return' => 'return',
+            'exchange' => 'exchange',
+            default => 'manual',
+        };
     }
 
     /**
@@ -393,7 +645,7 @@ final class AdminStore
     }
 
     /**
-     * @param  array{name: string, email: string, phone?: string|null}  $data
+     * @param  array{name: string, email: string, phone?: string|null, password?: string|null}  $data
      * @return array<string, mixed>
      */
     public function createCustomer(array $data): array
@@ -423,7 +675,10 @@ final class AdminStore
         $customers[$id] = $record;
         session(['admin.customers' => $customers]);
 
-        (new DatabaseRecords)->saveCustomer($record);
+        (new DatabaseRecords)->saveCustomer([
+            ...$record,
+            'password' => $data['password'] ?? null,
+        ]);
 
         return $record;
     }

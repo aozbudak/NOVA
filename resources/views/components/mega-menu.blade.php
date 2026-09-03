@@ -27,7 +27,7 @@
                     @endforeach
                     <div>
                         <p class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.nav.explore') }}</p>
-                        <a href="{{ route('shop.show', $item['department']) }}" class="mt-4 inline-flex items-center gap-2 text-sm">
+                        <a href="{{ $item['href'] ?? route('shop.show', $item['department']) }}" class="mt-4 inline-flex items-center gap-2 text-sm">
                             {{ __('storefront.nav.shop_department', ['department' => $item['label']]) }}
                             <x-icon name="arrow-right" size="size-4" />
                         </a>

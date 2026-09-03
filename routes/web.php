@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VariantController;
 use App\Http\Controllers\Storefront\AccountController;
 use App\Http\Controllers\Storefront\AuthController;
+use App\Http\Controllers\Storefront\BrandController as StorefrontBrandController;
 use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\CheckoutController;
 use App\Http\Controllers\Storefront\CollectionController;
@@ -51,6 +52,7 @@ Route::get('/shop/{department}/{category?}', [CollectionController::class, 'show
     ->name('shop.show');
 
 Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product.show');
+Route::get('/brands/{brand}', [StorefrontBrandController::class, 'show'])->name('brands.show');
 
 Route::get('/search', SearchController::class)->name('search');
 
@@ -104,7 +106,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
             Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
             Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
-            Route::get('/brands', BrandController::class)->name('brands.index');
+            Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
+            Route::post('/brands', [BrandController::class, 'store'])->name('brands.store');
+            Route::put('/brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
+            Route::post('/brands/{brand}/toggle', [BrandController::class, 'toggle'])->name('brands.toggle');
+            Route::delete('/brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
             Route::get('/variants', VariantController::class)->name('variants.index');
             Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
             Route::post('/inventory/adjust', [InventoryController::class, 'adjust'])->name('inventory.adjust');

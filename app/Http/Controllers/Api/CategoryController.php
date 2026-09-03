@@ -1,27 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Support\AdminList;
 use App\Support\AdminStore;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 class CategoryController extends Controller
 {
-    public function index(AdminStore $store): View
+    public function index(AdminStore $store): JsonResponse
     {
-        return view('admin.categories.index', [
-            'categories' => AdminList::apply($store->categoryRecords(), ['name', 'products', 'stock', 'status']),
-            'parents' => $store->categoryOptions()->whereNull('parent_id')->values(),
-        ]);
+        return response()->json(['data' => $store->categoryRecords()->values()]);
     }
 
-    public function store(Request $request, AdminStore $store): RedirectResponse
+    public function store(Request $request, AdminStore $store): JsonResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:150'],
@@ -44,8 +39,9 @@ class CategoryController extends Controller
 
         $store->createCategory($data);
 
-        return redirect()
-            ->route('admin.categories.index')
-            ->with('status', __('admin.toast.category_created'));
+        return response()->json([
+            'status' => 'created',
+            'message' => __('admin.toast.category_created'),
+        ], 201);
     }
 }

@@ -20,7 +20,7 @@
                         <x-icon name="chevron-down" size="size-4" />
                     </summary>
                     <div class="flex flex-col gap-2 pb-4 pl-1">
-                        <a href="{{ route('shop.show', $item['department']) }}" class="py-1 text-sm text-muted-foreground">{{ __('storefront.nav.shop_department', ['department' => $item['label']]) }}</a>
+                        <a href="{{ $item['href'] ?? route('shop.show', $item['department']) }}" class="py-1 text-sm text-muted-foreground">{{ __('storefront.nav.shop_department', ['department' => $item['label']]) }}</a>
                         @foreach ($item['columns'] as $column)
                             <p class="mt-2 text-[10px] tracking-nav uppercase text-muted-foreground">{{ $column['title'] }}</p>
                             @foreach ($column['links'] as $link)

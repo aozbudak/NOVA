@@ -11,7 +11,7 @@ class Cart
     public function __construct(private Catalog $catalog) {}
 
     /**
-     * @return Collection<int, array{key: string, product: array<string, mixed>, size: string, quantity: int, line_total: float}>
+     * @return Collection<int, array{key: string, product: array<string, mixed>, size: string, color: string, quantity: int, line_total: float}>
      */
     public function items(): Collection
     {
@@ -27,6 +27,7 @@ class Cart
                     'key' => $line['key'],
                     'product' => $product,
                     'size' => $line['size'],
+                    'color' => $line['color'] ?? '',
                     'quantity' => (int) $line['quantity'],
                     'line_total' => $product['price'] * (int) $line['quantity'],
                 ];
@@ -45,7 +46,7 @@ class Cart
         return (float) $this->items()->sum('line_total');
     }
 
-    public function add(int $productId, string $size, int $quantity): void
+    public function add(int $productId, string $size, int $quantity, ?string $color = null): void
     {
         $product = $this->catalog->find($productId);
 
@@ -71,7 +72,10 @@ class Cart
         }
 
         $items = collect(session('cart', []));
-        $key = $productId.'-'.Str::upper($size);
+        $color = trim((string) $color);
+        $key = $color === ''
+            ? $productId.'-'.Str::upper($size)
+            : $productId.'-'.Str::upper($size).'-'.Str::upper($color);
         $existing = $items->search(fn (array $line): bool => $line['key'] === $key);
 
         if ($existing !== false) {
@@ -83,6 +87,7 @@ class Cart
                 'key' => $key,
                 'product_id' => $productId,
                 'size' => Str::upper($size),
+                'color' => $color,
                 'quantity' => min(10, $quantity),
             ]);
         }

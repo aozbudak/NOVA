@@ -8,7 +8,7 @@
         <x-product-gallery :images="$product['images']" :name="$product['name']" />
 
         <div class="lg:sticky lg:top-24 lg:self-start lg:py-4">
-            <p class="text-[11px] tracking-nav uppercase text-muted-foreground">NOVA</p>
+            <p class="text-[11px] tracking-nav uppercase text-muted-foreground">{{ $product['brand_name'] ?? 'NOVA' }}</p>
             <h1 class="mt-2 font-serif text-3xl md:text-4xl">{{ $product['name'] }}</h1>
             <p class="mt-4 text-sm">
                 @if ($product['oldPrice'])

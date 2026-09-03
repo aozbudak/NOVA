@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -60,9 +62,11 @@ class Catalog
         }
 
         return Product::query()
-            ->with(['category.parent', 'images', 'variants.stock'])
-            ->whereNotNull('catalog_code')
+            ->with(['category.parent', 'brandRecord', 'images', 'variants.stock'])
+            ->where('is_active', true)
+            ->orderByRaw('catalog_code is null')
             ->orderBy('catalog_code')
+            ->orderBy('name')
             ->get()
             ->map(fn (Product $product): array => $this->mapFromDatabase($product))
             ->values();
@@ -75,21 +79,28 @@ class Catalog
     {
         $attributes = $product->attributes ?? [];
         $onSale = $product->sale_price !== null;
+        $activeVariants = $product->variants->where('is_active', true);
+        $colors = $attributes['colors'] ?? $this->colorsFromVariants($activeVariants);
+        $sizes = $attributes['sizes'] ?? $this->sizesFromVariants($activeVariants);
+        $images = $product->images->pluck('image_url')->values()->all();
+        $brand = $product->brandRecord;
 
         return [
-            'id' => (int) $product->catalog_code,
+            'id' => (int) ($product->catalog_code ?: sprintf('%u', crc32((string) $product->id))),
             'name' => $product->name,
             'slug' => $product->slug,
             'price' => (float) ($onSale ? $product->sale_price : $product->base_price),
             'oldPrice' => $onSale ? (float) $product->base_price : null,
             'currency' => $product->currency,
-            'images' => $product->images->pluck('image_url')->values()->all(),
-            'colors' => $attributes['colors'] ?? [],
-            'sizes' => $attributes['sizes'] ?? [],
+            'images' => $images !== [] ? $images : ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1400&q=80'],
+            'colors' => $colors,
+            'sizes' => $sizes,
             'category' => $attributes['department'] ?? $product->category?->parent?->slug ?? $product->category?->slug,
-            'type' => $attributes['type'] ?? $product->category?->slug,
+            'type' => $attributes['type'] ?? $this->leafType($product),
+            'brand' => $brand?->slug ?? Str::slug((string) $product->brand),
+            'brand_name' => $brand?->name ?? (string) $product->brand,
             'collection' => $attributes['collection'] ?? '',
-            'stock' => (int) ($attributes['stock'] ?? $product->variants->sum(fn ($variant): int => (int) ($variant->stock?->quantity ?? 0))),
+            'stock' => (int) ($attributes['stock'] ?? $activeVariants->sum(fn ($variant): int => (int) ($variant->stock?->quantity ?? 0))),
             'description' => (string) $product->description,
             'featured' => $product->is_featured,
             'isNew' => $product->is_new,
@@ -131,6 +142,8 @@ class Catalog
                     $product['category'],
                     $product['collection'],
                     $product['description'],
+                    $product['brand_name'] ?? '',
+                    $product['brand'] ?? '',
                 ]));
 
                 return Str::contains($haystack, $needle);
@@ -232,6 +245,7 @@ class Catalog
      * @param  array{
      *     department: string,
      *     category?: string|null,
+     *     brand?: string|null,
      *     size?: string|null,
      *     color?: string|null,
      *     collection?: string|null,
@@ -256,6 +270,14 @@ class Catalog
 
         if (is_string($category) && $category !== '') {
             $products = $products->where('type', $category);
+        }
+
+        if (filled($filters['brand'] ?? null)) {
+            $brand = Str::lower((string) $filters['brand']);
+            $products = $products->filter(function (array $product) use ($brand): bool {
+                return Str::lower((string) ($product['brand'] ?? '')) === $brand
+                    || Str::slug((string) ($product['brand_name'] ?? '')) === $brand;
+            });
         }
 
         if (filled($filters['size'] ?? null)) {
@@ -334,7 +356,7 @@ class Catalog
      */
     public function navigation(): array
     {
-        return [
+        $items = [
             $this->navItem($this->t('nav.women'), 'women', [
                 ['title' => $this->t('nav.clothing'), 'categories' => [
                     'dresses' => $this->t('nav.dresses'),
@@ -405,6 +427,8 @@ class Catalog
                 ]],
             ], $this->t('featured.selected_pieces'), 'photo-1487222477894-8943e31ef7b2'),
         ];
+
+        return $this->mergeDatabaseNavigation($items);
     }
 
     /**
@@ -429,6 +453,229 @@ class Catalog
         }
 
         return $categories;
+    }
+
+    /**
+     * @return Collection<int, Brand>
+     */
+    public function brands(): Collection
+    {
+        if (! Schema::hasTable('brands')) {
+            return collect();
+        }
+
+        return Brand::query()
+            ->active()
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function findBrand(string $slug): ?Brand
+    {
+        return $this->brands()->first(
+            fn (Brand $brand): bool => $brand->slug === $slug || Str::slug($brand->name) === $slug,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function browseBrand(Brand $brand, array $filters = []): Collection
+    {
+        return $this->browse([
+            ...$filters,
+            'department' => 'collections',
+            'brand' => $brand->slug,
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, mixed>  $variants
+     * @return list<array{name: string, hex: string}>
+     */
+    private function colorsFromVariants(Collection $variants): array
+    {
+        return $variants
+            ->pluck('color')
+            ->filter()
+            ->unique()
+            ->map(fn (string $name): array => [
+                'name' => $name,
+                'hex' => $this->colorHex($name),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int, mixed>  $variants
+     * @return list<array{code: string, in_stock: bool}>
+     */
+    private function sizesFromVariants(Collection $variants): array
+    {
+        return $variants
+            ->filter(fn ($variant): bool => filled($variant->size))
+            ->unique('size')
+            ->map(fn ($variant): array => [
+                'code' => (string) $variant->size,
+                'in_stock' => (int) ($variant->stock?->quantity ?? 0) > 0,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function colorHex(string $name): string
+    {
+        $map = [
+            'black' => '#1a1a1a',
+            'siyah' => '#1a1a1a',
+            'white' => '#f5f5f5',
+            'beyaz' => '#f5f5f5',
+            'navy' => '#1c2430',
+            'lacivert' => '#1c2430',
+            'grey' => '#6e6e6e',
+            'gray' => '#6e6e6e',
+            'ivory' => '#f3efe6',
+            'camel' => '#c4a574',
+        ];
+
+        return $map[Str::lower($name)] ?? '#8a8a8a';
+    }
+
+    private function leafType(Product $product): string
+    {
+        $slug = $product->category?->slug ?? '';
+
+        foreach (['women-', 'men-', 'kids-', 'sport-', 'admin-'] as $prefix) {
+            if (str_starts_with($slug, $prefix)) {
+                return substr($slug, strlen($prefix));
+            }
+        }
+
+        return $slug;
+    }
+
+    /**
+     * @param  list<array{label: string, department: string, columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>, featured: array{title: string, image: string, href: string}}>  $items
+     * @return list<array{label: string, department: string, columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>, featured: array{title: string, image: string, href: string}}>
+     */
+    private function mergeDatabaseNavigation(array $items): array
+    {
+        $items = $this->mergeDatabaseCategories($items);
+        $brands = $this->brandNavItem();
+
+        if ($brands !== null) {
+            $items[] = $brands;
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param  list<array{label: string, department: string, columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>, featured: array{title: string, image: string, href: string}}>  $items
+     * @return list<array{label: string, department: string, columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>, featured: array{title: string, image: string, href: string}}>
+     */
+    private function mergeDatabaseCategories(array $items): array
+    {
+        if (! Schema::hasTable('categories')) {
+            return $items;
+        }
+
+        $tree = Category::query()
+            ->active()
+            ->with(['children' => fn ($query) => $query->active()->orderBy('sort_order')->orderBy('name')])
+            ->whereNull('parent_id')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        foreach ($items as $index => $item) {
+            $department = $item['department'];
+            $root = $tree->first(function (Category $category) use ($department): bool {
+                $slug = Str::lower($category->slug);
+                $name = Str::lower($category->name);
+
+                return $slug === $department
+                    || str_contains($slug, $department)
+                    || ($department === 'women' && (str_contains($name, 'kadın') || str_contains($name, 'kadin') || str_contains($name, 'women')))
+                    || ($department === 'men' && (str_contains($name, 'erkek') || str_contains($name, 'men')))
+                    || ($department === 'kids' && (str_contains($name, 'çocuk') || str_contains($name, 'cocuk') || str_contains($name, 'kids')))
+                    || ($department === 'sport' && (str_contains($name, 'spor') || str_contains($name, 'sport')));
+            });
+
+            if ($root === null || $root->children->isEmpty()) {
+                continue;
+            }
+
+            $existing = collect($item['columns'])->flatMap(fn (array $column) => collect($column['links'])->pluck('category'))->filter()->all();
+            $extra = $root->children
+                ->reject(fn (Category $child): bool => in_array($child->slug, $existing, true) || in_array($this->leafSlug($child->slug), $existing, true))
+                ->map(fn (Category $child): array => [
+                    'label' => $child->name,
+                    'category' => $this->leafSlug($child->slug),
+                    'href' => route('shop.show', ['department' => $department, 'category' => $this->leafSlug($child->slug)]),
+                ])
+                ->values()
+                ->all();
+
+            if ($extra === []) {
+                continue;
+            }
+
+            $items[$index]['columns'][] = [
+                'title' => $this->t('nav.shop'),
+                'links' => $extra,
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return array{label: string, department: string, columns: list<array{title: string, links: list<array{label: string, href: string}>}>, featured: array{title: string, image: string, href: string}}|null
+     */
+    private function brandNavItem(): ?array
+    {
+        $brands = $this->brands();
+
+        if ($brands->isEmpty()) {
+            return null;
+        }
+
+        $chunks = $brands->chunk(8)->values();
+        $columns = $chunks->map(function (Collection $chunk, int $index): array {
+            return [
+                'title' => $index === 0 ? $this->t('nav.brands') : ' ',
+                'links' => $chunk->map(fn (Brand $brand): array => [
+                    'label' => $brand->name,
+                    'href' => route('brands.show', $brand->slug),
+                ])->values()->all(),
+            ];
+        })->all();
+
+        return [
+            'label' => $this->t('nav.brands'),
+            'department' => 'brands',
+            'href' => route('brands.show', $brands->first()->slug),
+            'columns' => $columns,
+            'featured' => [
+                'title' => $this->t('nav.brands'),
+                'image' => $this->image('photo-1441986300917-64674bd600d8', 900),
+                'href' => route('brands.show', $brands->first()->slug),
+            ],
+        ];
+    }
+
+    private function leafSlug(string $slug): string
+    {
+        foreach (['women-', 'men-', 'kids-', 'sport-', 'admin-'] as $prefix) {
+            if (str_starts_with($slug, $prefix)) {
+                return substr($slug, strlen($prefix));
+            }
+        }
+
+        return $slug;
     }
 
     /**

@@ -27,17 +27,25 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:180'],
+            'brand' => ['nullable', 'string', 'max:180'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
-            'vat' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'vat' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'initial_stock' => ['nullable', 'integer', 'min:0'],
-            'min_stock' => ['nullable', 'integer', 'min:0'],
             'status' => ['nullable', 'in:active,inactive'],
+            'variants.sku.*' => ['nullable', 'string', 'max:100'],
+            'variants.barcode.*' => ['nullable', 'string', 'max:100'],
+            'variants.color.*' => ['nullable', 'string', 'max:100'],
+            'variants.size.*' => ['nullable', 'string', 'max:50'],
+            'variants.price.*' => ['nullable', 'numeric', 'min:0'],
+            'variants.stock.*' => ['nullable', 'integer', 'min:0'],
+            'variants.is_active.*' => ['nullable', 'in:0,1'],
         ]);
 
         $records->saveProduct($request->only([
             'name', 'description', 'category', 'brand', 'status',
-            'purchase_price', 'price', 'vat', 'variants', 'initial_stock', 'min_stock',
+            'purchase_price', 'price', 'vat', 'variants', 'initial_stock',
         ]));
 
         return response()->json([
@@ -61,17 +69,25 @@ class ProductController extends Controller
 
         $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:180'],
+            'brand' => ['nullable', 'string', 'max:180'],
             'price' => ['nullable', 'numeric', 'min:0'],
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
-            'vat' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'vat' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'initial_stock' => ['nullable', 'integer', 'min:0'],
-            'min_stock' => ['nullable', 'integer', 'min:0'],
             'status' => ['nullable', 'in:active,inactive'],
+            'variants.sku.*' => ['nullable', 'string', 'max:100'],
+            'variants.barcode.*' => ['nullable', 'string', 'max:100'],
+            'variants.color.*' => ['nullable', 'string', 'max:100'],
+            'variants.size.*' => ['nullable', 'string', 'max:50'],
+            'variants.price.*' => ['nullable', 'numeric', 'min:0'],
+            'variants.stock.*' => ['nullable', 'integer', 'min:0'],
+            'variants.is_active.*' => ['nullable', 'in:0,1'],
         ]);
 
         $records->saveProduct($request->only([
             'name', 'description', 'category', 'brand', 'status',
-            'purchase_price', 'price', 'vat', 'variants', 'initial_stock', 'min_stock',
+            'purchase_price', 'price', 'vat', 'variants', 'initial_stock',
         ]), $product);
 
         return response()->json([

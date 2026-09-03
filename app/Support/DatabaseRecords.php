@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\StaffRole;
 use App\Models\AuditLog;
+use App\Models\Brand;
 use App\Models\CashRegister;
 use App\Models\CashTransaction;
 use App\Models\Category;
@@ -32,22 +33,105 @@ use Illuminate\Validation\ValidationException;
 final class DatabaseRecords
 {
     /**
-     * @param  array{id: string, name: string, status?: string|null}  $record
+     * @param  array{id?: string, name: string, parent_id?: string|null, status?: string|null}  $record
      */
-    public function saveCategory(array $record): ?Category
+    public function saveCategory(array $record, ?string $id = null): ?Category
     {
         if (! Schema::hasTable('categories')) {
             return null;
         }
 
-        $slug = $this->uniqueValue('categories', 'slug', 'admin-'.(Str::slug($record['name']) ?: 'category'));
+        $parentId = filled($record['parent_id'] ?? null) ? (string) $record['parent_id'] : null;
+        $existing = $id !== null
+            ? Category::query()->where('id', $id)->orWhere('slug', $id)->first()
+            : null;
 
-        return Category::query()->create([
+        $slug = $existing?->slug ?? $this->uniqueValue(
+            'categories',
+            'slug',
+            Str::slug($record['name']) ?: 'category',
+        );
+
+        $payload = [
+            'parent_id' => $parentId,
             'name' => $record['name'],
             'slug' => $slug,
             'is_active' => ($record['status'] ?? 'active') !== 'inactive',
-            'sort_order' => 0,
-        ]);
+            'sort_order' => $existing?->sort_order ?? 0,
+        ];
+
+        if ($existing !== null) {
+            $existing->update($payload);
+
+            return $existing->fresh() ?? $existing;
+        }
+
+        return Category::query()->create($payload);
+    }
+
+    /**
+     * @param  array{name: string, slug?: string|null, description?: string|null, logo?: string|null, status?: string|null}  $record
+     */
+    public function saveBrand(array $record, ?string $id = null): ?Brand
+    {
+        if (! Schema::hasTable('brands')) {
+            return null;
+        }
+
+        $existing = $id !== null
+            ? Brand::query()->where('id', $id)->orWhere('slug', $id)->first()
+            : null;
+
+        $slug = filled($record['slug'] ?? null)
+            ? Str::slug((string) $record['slug'])
+            : Str::slug($record['name']);
+        $slug = $slug !== '' ? $slug : 'brand';
+
+        if ($existing === null || $existing->slug !== $slug) {
+            $slug = $this->uniqueValue('brands', 'slug', $slug, $existing?->id);
+        }
+
+        $payload = [
+            'name' => $record['name'],
+            'slug' => $slug,
+            'description' => filled($record['description'] ?? null) ? $record['description'] : null,
+            'logo' => filled($record['logo'] ?? null) ? $record['logo'] : null,
+            'is_active' => ($record['status'] ?? 'active') !== 'inactive',
+        ];
+
+        if ($existing !== null) {
+            $existing->update($payload);
+
+            return $existing->fresh() ?? $existing;
+        }
+
+        return Brand::query()->create($payload);
+    }
+
+    public function toggleBrand(string $id): ?Brand
+    {
+        $brand = Brand::query()->where('id', $id)->orWhere('slug', $id)->first();
+
+        if ($brand === null) {
+            return null;
+        }
+
+        $brand->update(['is_active' => ! $brand->is_active]);
+
+        return $brand->fresh() ?? $brand;
+    }
+
+    public function deleteBrand(string $id): bool
+    {
+        $brand = Brand::query()->where('id', $id)->orWhere('slug', $id)->first();
+
+        if ($brand === null) {
+            return false;
+        }
+
+        $brand->delete();
+
+        return true;
     }
 
     public function saveProduct(array $data, ?string $slug = null): ?Product
@@ -59,45 +143,53 @@ final class DatabaseRecords
         }
 
         return DB::transaction(function () use ($data, $name, $slug): Product {
-            $categoryName = trim((string) ($data['category'] ?? 'Shirts')) ?: 'Shirts';
-            $category = Category::query()->firstOrCreate(
-                ['slug' => 'admin-'.Str::slug($categoryName)],
-                [
-                    'name' => $categoryName,
-                    'is_active' => true,
-                    'sort_order' => 0,
-                ],
-            );
-
-            $price = max(0, (float) ($data['price'] ?? 0));
-            $minStock = max(0, (int) ($data['min_stock'] ?? 0));
+            $category = $this->resolveCategory($data['category'] ?? null);
+            $brand = $this->resolveBrand($data['brand'] ?? null);
+            $pricing = Price::breakdown($data['price'] ?? 0, $data['vat'] ?? 20);
+            $price = (float) $pricing['gross'];
+            $vatRate = (float) $pricing['rate'];
             $initialStock = max(0, (int) ($data['initial_stock'] ?? 0));
             $productSlug = $slug ?? $this->uniqueValue('products', 'slug', Str::slug($name) ?: 'product');
             $sku = trim((string) ($data['sku'] ?? ''));
+            $department = $this->departmentSlug($category);
+            $type = $this->typeSlug($category);
 
             $attributes = [
                 'channel' => 'admin',
                 'sku' => $sku !== '' ? $sku : Str::upper(Str::slug($name, '')),
-                'purchase_price' => (float) ($data['purchase_price'] ?? 0),
-                'vat' => (int) ($data['vat'] ?? 20),
-                'min_stock' => $minStock,
+                'purchase_price' => (float) Price::money($data['purchase_price'] ?? 0),
+                'vat' => (int) $vatRate,
+                'price_net' => $pricing['net'],
+                'price_vat' => $pricing['vat'],
+                'department' => $department,
+                'type' => $type,
+                'min_stock' => 0,
             ];
+
+            $existing = $slug === null ? null : Product::query()->where('slug', $slug)->first();
 
             $values = [
                 'category_id' => $category->id,
                 'name' => $name,
                 'slug' => $productSlug,
                 'description' => $data['description'] ?? null,
-                'brand' => filled($data['brand'] ?? null) ? $data['brand'] : 'NOVA',
+                'brand' => $brand?->name,
                 'base_price' => $price,
                 'sale_price' => null,
                 'currency' => 'TRY',
                 'is_active' => ($data['status'] ?? 'active') !== 'inactive',
-                'catalog_code' => null,
+                'catalog_code' => $existing?->catalog_code ?? $this->nextCatalogCode(),
                 'attributes' => $attributes,
             ];
 
-            $existing = $slug === null ? null : Product::query()->where('slug', $slug)->first();
+            if (Schema::hasColumn('products', 'brand_id')) {
+                $values['brand_id'] = $brand?->id;
+            }
+
+            if (Schema::hasColumn('products', 'vat_rate')) {
+                $values['vat_rate'] = $vatRate;
+            }
+
             $oldPrice = $existing?->base_price;
             $product = $existing ?? Product::query()->create($values);
 
@@ -105,7 +197,7 @@ final class DatabaseRecords
                 $product->update($values);
             }
 
-            $this->syncVariants($product, $data, $price, $initialStock, $minStock);
+            $this->syncVariants($product, $data, $price, $initialStock, 0);
             $this->recordAudit(
                 $slug === null ? 'product.created' : 'product.updated',
                 $product,
@@ -136,7 +228,7 @@ final class DatabaseRecords
     }
 
     /**
-     * @param  array{id: string, name: string, email: string, phone?: string|null}  $record
+     * @param  array{id: string, name: string, email: string, phone?: string|null, password?: string|null}  $record
      */
     public function saveCustomer(array $record): ?Customer
     {
@@ -146,16 +238,40 @@ final class DatabaseRecords
 
         [$firstName, $lastName] = $this->splitName($record['name']);
 
-        return Customer::query()->updateOrCreate(
-            ['slug' => $record['id']],
-            [
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'email' => $record['email'],
-                'phone' => filled($record['phone'] ?? null) ? $record['phone'] : null,
-                'is_active' => true,
-            ],
-        );
+        return DB::transaction(function () use ($record, $firstName, $lastName): Customer {
+            $user = null;
+
+            if (filled($record['password'] ?? null) && Schema::hasTable('users')) {
+                $userPayload = [
+                    'name' => $record['name'],
+                    'email' => $record['email'],
+                    'password' => $record['password'],
+                    'phone' => filled($record['phone'] ?? null) ? $record['phone'] : null,
+                    'is_active' => true,
+                ];
+
+                if (Schema::hasColumn('users', 'slug')) {
+                    $userPayload['slug'] = $this->uniqueValue('users', 'slug', $record['id']);
+                }
+
+                $user = User::query()->updateOrCreate(
+                    ['email' => $record['email']],
+                    $userPayload,
+                );
+            }
+
+            return Customer::query()->updateOrCreate(
+                ['slug' => $record['id']],
+                [
+                    'user_id' => $user?->id,
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $record['email'],
+                    'phone' => filled($record['phone'] ?? null) ? $record['phone'] : null,
+                    'is_active' => true,
+                ],
+            );
+        });
     }
 
     /**
@@ -231,7 +347,7 @@ final class DatabaseRecords
         return $user;
     }
 
-    public function adjustStock(string $sku, int $quantity, ?string $reason = null): bool
+    public function adjustStock(string $sku, int $quantity, ?string $reason = null, string $type = 'adjustment'): bool
     {
         if (! Schema::hasTable('product_variants') || ! Schema::hasTable('stocks')) {
             return false;
@@ -243,8 +359,19 @@ final class DatabaseRecords
             return false;
         }
 
-        return DB::transaction(function () use ($variant, $quantity, $reason): true {
-            $this->moveStock($variant, $quantity, $quantity >= 0 ? 'in' : 'out', null, 'adjustment', $reason);
+        $delta = $quantity;
+        $movementType = $type;
+
+        if (in_array($type, ['in', 'purchase'], true)) {
+            $delta = abs($quantity);
+            $movementType = 'in';
+        } elseif (in_array($type, ['out', 'sale'], true)) {
+            $delta = -abs($quantity);
+            $movementType = 'out';
+        }
+
+        return DB::transaction(function () use ($variant, $delta, $movementType, $reason): true {
+            $this->moveStock($variant, $delta, $movementType, null, 'adjustment', $reason);
 
             return true;
         });
@@ -451,7 +578,11 @@ final class DatabaseRecords
             ]);
 
             foreach ($items as $line) {
-                $variant = $this->storefrontVariant((int) $line['product']['id'], (string) $line['size']);
+                $variant = $this->storefrontVariant(
+                    (int) $line['product']['id'],
+                    (string) $line['size'],
+                    isset($line['color']) ? (string) $line['color'] : null,
+                );
                 $quantity = (int) $line['quantity'];
                 $unit = (float) $line['product']['price'];
 
@@ -815,18 +946,118 @@ final class DatabaseRecords
         return Schema::hasTable($table) && Schema::hasColumn($table, 'slug');
     }
 
-    private function uniqueValue(string $table, string $column, string $base): string
+    private function uniqueValue(string $table, string $column, string $base, ?string $ignoreId = null): string
     {
         $value = $base === '' ? 'item' : $base;
         $original = $value;
         $suffix = 2;
 
-        while (DB::table($table)->where($column, $value)->exists()) {
+        while (DB::table($table)
+            ->where($column, $value)
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists()) {
             $value = $original.'-'.$suffix;
             $suffix++;
         }
 
         return $value;
+    }
+
+    private function nextCatalogCode(): int
+    {
+        $max = (int) Product::query()->max('catalog_code');
+
+        return max($max, 1000) + 1;
+    }
+
+    private function resolveCategory(mixed $value): Category
+    {
+        $value = is_string($value) || is_int($value) ? trim((string) $value) : '';
+
+        if ($value !== '') {
+            $category = Category::query()
+                ->where('id', $value)
+                ->orWhere('slug', $value)
+                ->orWhere('name', $value)
+                ->first();
+
+            if ($category !== null) {
+                return $category;
+            }
+        }
+
+        $fallback = Category::query()->orderBy('sort_order')->orderBy('name')->first();
+
+        if ($fallback !== null) {
+            return $fallback;
+        }
+
+        return Category::query()->create([
+            'name' => $value !== '' ? $value : 'General',
+            'slug' => $this->uniqueValue('categories', 'slug', Str::slug($value !== '' ? $value : 'general') ?: 'general'),
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+    }
+
+    private function resolveBrand(mixed $value): ?Brand
+    {
+        if (! Schema::hasTable('brands')) {
+            return null;
+        }
+
+        $value = is_string($value) || is_int($value) ? trim((string) $value) : '';
+
+        if ($value === '') {
+            return null;
+        }
+
+        $existing = Brand::query()
+            ->where('id', $value)
+            ->orWhere('slug', $value)
+            ->orWhere('name', $value)
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $slug = Str::slug($value) ?: 'brand';
+
+        return Brand::query()->create([
+            'name' => $value,
+            'slug' => $this->uniqueValue('brands', 'slug', $slug),
+            'is_active' => true,
+        ]);
+    }
+
+    private function departmentSlug(Category $category): string
+    {
+        $category->loadMissing('parent');
+        $root = $category->parent ?? $category;
+        $slug = Str::lower($root->slug);
+        $name = Str::lower($root->name);
+
+        return match (true) {
+            str_contains($slug, 'women') || str_contains($name, 'kadın') || str_contains($name, 'kadin') || str_contains($name, 'women') => 'women',
+            str_contains($slug, 'men') || str_contains($name, 'erkek') || str_contains($name, 'men') => 'men',
+            str_contains($slug, 'kid') || str_contains($name, 'çocuk') || str_contains($name, 'cocuk') || str_contains($name, 'kids') => 'kids',
+            str_contains($slug, 'sport') || str_contains($name, 'spor') => 'sport',
+            default => 'women',
+        };
+    }
+
+    private function typeSlug(Category $category): string
+    {
+        $slug = $category->slug;
+
+        foreach (['women-', 'men-', 'kids-', 'sport-', 'admin-'] as $prefix) {
+            if (str_starts_with($slug, $prefix)) {
+                return substr($slug, strlen($prefix));
+            }
+        }
+
+        return $slug;
     }
 
     /**
@@ -877,6 +1108,8 @@ final class DatabaseRecords
                 ]);
             }
 
+            $active = (bool) ($row['is_active'] ?? true);
+
             if ($variant === null) {
                 $variant = ProductVariant::query()->create([
                     'product_id' => $product->id,
@@ -885,7 +1118,7 @@ final class DatabaseRecords
                     'color' => filled($row['color']) ? $row['color'] : null,
                     'size' => filled($row['size']) ? $row['size'] : null,
                     'price' => $row['price'] ?: $fallbackPrice,
-                    'is_active' => true,
+                    'is_active' => $active,
                 ]);
             } else {
                 $variant->update([
@@ -893,6 +1126,7 @@ final class DatabaseRecords
                     'color' => filled($row['color']) ? $row['color'] : $variant->color,
                     'size' => filled($row['size']) ? $row['size'] : $variant->size,
                     'price' => $row['price'] ?: $variant->price,
+                    'is_active' => $active,
                 ]);
             }
 
@@ -911,22 +1145,14 @@ final class DatabaseRecords
                     $this->writeStockMovement($variant, $quantity, 'in', 'adjustment', null, 'Initial stock');
                 }
             } else {
+                if ((int) $stock->minimum_quantity !== $minStock) {
+                    $stock->update(['minimum_quantity' => $minStock]);
+                }
+
                 $delta = $quantity - (int) $stock->quantity;
 
-                $stock->update([
-                    'quantity' => $quantity,
-                    'minimum_quantity' => $minStock,
-                ]);
-
                 if ($delta !== 0) {
-                    $this->writeStockMovement(
-                        $variant,
-                        $delta,
-                        $delta > 0 ? 'in' : 'out',
-                        'adjustment',
-                        null,
-                        'Variant stock sync',
-                    );
+                    $this->moveStock($variant, $delta, $delta > 0 ? 'in' : 'out', null, 'adjustment', 'Variant stock sync');
                 }
             }
         }
@@ -934,7 +1160,7 @@ final class DatabaseRecords
 
     /**
      * @param  array<string, mixed>  $data
-     * @return list<array{color: string, size: string, sku: string, barcode: string, stock: int, price: float}>
+     * @return list<array{color: string, size: string, sku: string, barcode: string, stock: int, price: float, is_active: bool}>
      */
     private function variantRows(array $data, float $fallbackPrice, int $fallbackStock): array
     {
@@ -950,6 +1176,7 @@ final class DatabaseRecords
                     'barcode' => (string) ($variant['barcode'] ?? ''),
                     'stock' => (int) ($variant['stock'] ?? $fallbackStock),
                     'price' => (float) ($variant['price'] ?? $fallbackPrice),
+                    'is_active' => filter_var($variant['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
                 ];
             }
         } elseif (is_array($variants)) {
@@ -959,7 +1186,8 @@ final class DatabaseRecords
             $barcodes = array_values((array) ($variants['barcode'] ?? []));
             $stocks = array_values((array) ($variants['stock'] ?? []));
             $prices = array_values((array) ($variants['price'] ?? []));
-            $count = max(count($colors), count($sizes), count($skus), count($barcodes), count($stocks), count($prices));
+            $actives = array_values((array) ($variants['is_active'] ?? []));
+            $count = max(count($colors), count($sizes), count($skus), count($barcodes), count($stocks), count($prices), count($actives));
 
             for ($index = 0; $index < $count; $index++) {
                 $rows[] = [
@@ -969,7 +1197,36 @@ final class DatabaseRecords
                     'barcode' => (string) ($barcodes[$index] ?? ''),
                     'stock' => (int) ($stocks[$index] ?? $fallbackStock),
                     'price' => (float) ($prices[$index] ?? $fallbackPrice),
+                    'is_active' => filter_var($actives[$index] ?? true, FILTER_VALIDATE_BOOLEAN),
                 ];
+            }
+        }
+
+        $seenSku = [];
+        $seenBarcode = [];
+
+        foreach ($rows as $index => $row) {
+            $sku = Str::upper(trim($row['sku']));
+            $barcode = trim($row['barcode']);
+
+            if ($sku !== '' && isset($seenSku[$sku])) {
+                throw ValidationException::withMessages([
+                    'variants.sku.'.$index => __('validation.unique', ['attribute' => 'sku']),
+                ]);
+            }
+
+            if ($barcode !== '' && isset($seenBarcode[$barcode])) {
+                throw ValidationException::withMessages([
+                    'variants.barcode.'.$index => __('validation.unique', ['attribute' => 'barcode']),
+                ]);
+            }
+
+            if ($sku !== '') {
+                $seenSku[$sku] = true;
+            }
+
+            if ($barcode !== '') {
+                $seenBarcode[$barcode] = true;
             }
         }
 
@@ -986,6 +1243,7 @@ final class DatabaseRecords
                 'barcode' => '',
                 'stock' => $fallbackStock,
                 'price' => $fallbackPrice,
+                'is_active' => true,
             ];
         }
 
@@ -1105,7 +1363,7 @@ final class DatabaseRecords
         ]);
     }
 
-    private function storefrontVariant(int $catalogCode, string $size): ?ProductVariant
+    private function storefrontVariant(int $catalogCode, string $size, ?string $color = null): ?ProductVariant
     {
         if (! Schema::hasTable('products') || ! Schema::hasColumn('products', 'catalog_code')) {
             return null;
@@ -1118,8 +1376,23 @@ final class DatabaseRecords
         }
 
         $needle = Str::upper($size);
+        $colorNeedle = $color === null || $color === '' ? null : Str::upper($color);
 
-        return $product->variants->first(
+        $match = $product->variants
+            ->filter(fn (ProductVariant $variant): bool => $variant->is_active)
+            ->first(function (ProductVariant $variant) use ($needle, $colorNeedle): bool {
+                if (Str::upper((string) $variant->size) !== $needle) {
+                    return false;
+                }
+
+                if ($colorNeedle === null) {
+                    return true;
+                }
+
+                return Str::upper((string) $variant->color) === $colorNeedle;
+            });
+
+        return $match ?? $product->variants->first(
             fn (ProductVariant $variant): bool => Str::upper((string) $variant->size) === $needle,
         );
     }

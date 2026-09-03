@@ -445,6 +445,8 @@ initDropdowns();
 initSearch();
 initPos();
 initVariantRows();
+initVatCalculator();
+initStockAdjust();
 initFilterForms();
 initUserAbilities();
 initAdminToast();
@@ -503,6 +505,81 @@ function escapeHtml(value) {
 
 function money(value) {
     return '₺' + Math.round(value).toLocaleString('en-US');
+}
+
+function initVatCalculator() {
+    document.querySelectorAll('[data-vat-calculator]').forEach((root) => {
+        const grossInput = root.querySelector('[data-vat-gross]');
+        const rateSelect = root.querySelector('[data-vat-rate]');
+        const netEl = root.querySelector('[data-vat-net]');
+        const vatEl = root.querySelector('[data-vat-amount]');
+        const inclusiveEl = root.querySelector('[data-vat-inclusive]');
+
+        const format = (cents) => {
+            return (cents / 100).toLocaleString('tr-TR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }) + ' TL';
+        };
+
+        const recalc = () => {
+            const cents = Math.round((Number(grossInput?.value) || 0) * 100);
+            const rate = Number(rateSelect?.value) || 0;
+            const netCents = rate === 0 ? cents : Math.round((cents * 100) / (100 + rate));
+            const vatCents = cents - netCents;
+
+            if (netEl) {
+                netEl.textContent = format(netCents);
+            }
+
+            if (vatEl) {
+                vatEl.textContent = format(vatCents);
+            }
+
+            if (inclusiveEl) {
+                inclusiveEl.textContent = format(cents);
+            }
+        };
+
+        grossInput?.addEventListener('input', recalc);
+        rateSelect?.addEventListener('change', recalc);
+        recalc();
+    });
+}
+
+function initStockAdjust() {
+    document.querySelectorAll('[data-stock-form]').forEach((form) => {
+        const product = form.querySelector('[data-stock-product]');
+        const variant = form.querySelector('[data-stock-variant]');
+
+        if (! product || ! variant) {
+            return;
+        }
+
+        const options = [...variant.querySelectorAll('option')];
+
+        const sync = () => {
+            const slug = product.value;
+
+            options.forEach((option) => {
+                if (option.value === '') {
+                    option.hidden = false;
+
+                    return;
+                }
+
+                const match = slug === '' || option.dataset.product === slug;
+                option.hidden = ! match;
+
+                if (! match && option.selected) {
+                    variant.value = '';
+                }
+            });
+        };
+
+        product.addEventListener('change', sync);
+        sync();
+    });
 }
 
 function initFilterForms() {

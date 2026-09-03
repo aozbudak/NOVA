@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AdminSearchController;
+use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CashController;
 use App\Http\Controllers\Api\CatalogController;
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\ExchangeController;
@@ -24,6 +26,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('web')->name('api.')->group(function (): void {
     Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog.index');
     Route::get('/catalog/{product}', [CatalogController::class, 'show'])->name('catalog.show');
+    Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
+    Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::get('/search', SearchController::class)->name('search');
 
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -45,6 +49,10 @@ Route::middleware(['web', EnsureAdminAuthenticated::class, EnsureAdminPageAccess
     Route::post('/products/{product}/deactivate', [ProductController::class, 'deactivate'])->name('products.deactivate');
 
     Route::get('/variants', VariantController::class)->name('variants.index');
+    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::post('/brands', [BrandController::class, 'store'])->name('brands.store');
+    Route::put('/brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
+    Route::delete('/brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
     Route::get('/pos/items', [PosController::class, 'items'])->name('pos.items');
 
     Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');

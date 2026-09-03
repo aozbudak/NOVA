@@ -50,16 +50,37 @@
     </x-admin.table>
 
     <x-admin.drawer name="stock-adjust" :title="__('admin.inventory.adjust')">
-        <form method="POST" action="{{ route('admin.inventory.adjust') }}" class="flex flex-col gap-4">
+        <form method="POST" action="{{ route('admin.inventory.adjust') }}" class="flex flex-col gap-4" data-stock-form>
             @csrf
-            <x-admin.field :label="__('admin.inventory.sku')" name="sku" required>
-                <x-admin.input name="sku" required />
+            <x-admin.field :label="__('admin.inventory.product')" name="product_id">
+                <x-admin.select name="product_id" data-stock-product>
+                    <option value="">{{ __('admin.inventory.product') }}</option>
+                    @foreach ($products ?? [] as $product)
+                        <option value="{{ $product['slug'] }}">{{ $product['name'] }}</option>
+                    @endforeach
+                </x-admin.select>
+            </x-admin.field>
+            <x-admin.field :label="__('admin.inventory.variant')" name="sku" required>
+                <x-admin.select name="sku" required data-stock-variant>
+                    <option value="">{{ __('admin.inventory.variant') }}</option>
+                    @foreach ($products ?? [] as $product)
+                        @foreach ($product['variants'] as $variant)
+                            <option value="{{ $variant['sku'] }}" data-product="{{ $product['slug'] }}">{{ $product['name'] }} — {{ trim(($variant['color'] ?? '').' / '.($variant['size'] ?? ''), ' /') }} ({{ $variant['sku'] }})</option>
+                        @endforeach
+                    @endforeach
+                </x-admin.select>
+            </x-admin.field>
+            <x-admin.field :label="__('admin.inventory.type')" name="type" required>
+                <x-admin.select name="type">
+                    <option value="in">{{ __('admin.inventory.types.purchase') }}</option>
+                    <option value="out">{{ __('admin.inventory.types.manual') }}</option>
+                </x-admin.select>
             </x-admin.field>
             <x-admin.field :label="__('admin.inventory.quantity')" name="quantity" required>
-                <x-admin.input name="quantity" type="number" required />
+                <x-admin.input name="quantity" type="number" min="1" required />
             </x-admin.field>
-            <x-admin.field :label="__('admin.inventory.reason')" name="reason">
-                <x-admin.input name="reason" />
+            <x-admin.field :label="__('admin.inventory.reason')" name="note">
+                <x-admin.input name="note" />
             </x-admin.field>
             <x-admin.button type="submit" data-busy-label="{{ __('admin.common.processing') }}">{{ __('admin.common.save') }}</x-admin.button>
         </form>

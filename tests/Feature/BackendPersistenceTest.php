@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Brand;
 use App\Models\CashRegister;
 use App\Models\Category;
 use App\Models\Customer;
@@ -9,6 +10,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\SaleReturn;
+use App\Models\StockMovement;
 use App\Models\User;
 use Database\Seeders\AdminCatalogSeeder;
 use Database\Seeders\CatalogSeeder;
@@ -25,14 +27,17 @@ class BackendPersistenceTest extends TestCase
             'name' => 'Canvas Tote',
             'category' => 'Accessories',
             'brand' => 'NOVA',
-            'price' => 890,
+            'price' => 1000,
+            'vat' => 20,
             'status' => 'active',
             'initial_stock' => 12,
-            'min_stock' => 2,
         ])->assertRedirect(route('admin.products.index'));
 
-        $this->assertTrue(Product::query()->where('slug', 'canvas-tote')->exists());
-        $this->assertSame(12, (int) Product::query()->where('slug', 'canvas-tote')->first()?->variants()->first()?->stock?->quantity);
+        $product = Product::query()->where('slug', 'canvas-tote')->first();
+        $this->assertNotNull($product);
+        $this->assertEquals(20, (float) $product->vat_rate);
+        $this->assertSame(12, (int) $product->variants()->first()?->stock?->quantity);
+        $this->assertTrue(Brand::query()->where('name', 'NOVA')->exists());
     }
 
     public function test_admin_customer_and_supplier_creates_persist(): void
@@ -41,9 +46,11 @@ class BackendPersistenceTest extends TestCase
             'name' => 'Ada Lovelace',
             'email' => 'ada@nova.example',
             'phone' => '0532 000 00 01',
+            'password' => 'password123',
         ])->assertRedirect(route('admin.customers.index'));
 
         $this->assertTrue(Customer::query()->where('slug', 'ada-lovelace')->exists());
+        $this->assertTrue(User::query()->where('email', 'ada@nova.example')->exists());
 
         $this->post(route('admin.categories.store'), [
             'name' => 'Jackets',
@@ -74,11 +81,13 @@ class BackendPersistenceTest extends TestCase
 
         $this->post(route('admin.inventory.adjust'), [
             'sku' => 'NOVA01-WHI-S',
+            'type' => 'in',
             'quantity' => 3,
-            'reason' => 'count',
+            'note' => 'New delivery',
         ])->assertRedirect(route('admin.inventory.index'));
 
         $this->assertSame($before + 3, (int) $variant->fresh()->stock?->quantity);
+        $this->assertTrue(StockMovement::query()->where('product_variant_id', $variant->id)->where('movement_type', 'in')->exists());
 
         $this->postJson(route('api.sales.store'), [
             'payment' => 'cash',

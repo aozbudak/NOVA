@@ -21,11 +21,13 @@ class ProductFactory extends Factory
 
         return [
             'category_id' => Category::factory(),
+            'brand_id' => null,
             'name' => Str::headline($name),
             'slug' => Str::slug($name).'-'.fake()->unique()->numerify('###'),
             'description' => fake()->sentence(),
             'brand' => 'NOVA',
             'base_price' => fake()->randomFloat(2, 49, 499),
+            'vat_rate' => 20,
             'currency' => 'EUR',
             'is_new' => false,
             'is_featured' => false,

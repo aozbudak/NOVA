@@ -30,7 +30,7 @@
                 @foreach ($navItems as $item)
                     @php $active = $department === $item['department']; @endphp
                     <a
-                        href="{{ route('shop.show', $item['department']) }}"
+                        href="{{ $item['href'] ?? route('shop.show', $item['department']) }}"
                         data-mega-trigger="{{ $item['department'] }}"
                         aria-haspopup="true"
                         aria-expanded="false"

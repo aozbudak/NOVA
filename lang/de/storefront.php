@@ -9,6 +9,7 @@ return [
         'new-in' => 'Neuheiten',
         'collections' => 'Kollektionen',
         'sale' => 'Sale',
+        'brands' => 'Marken',
         'shop' => 'Shop',
         'clothing' => 'Bekleidung',
         'accessories' => 'Accessoires',

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -35,14 +36,24 @@ class AdminCatalogSeeder extends Seeder
                 $slug = Str::slug($item['name'].'-'.$item['sku']);
             }
 
+            $brand = Brand::query()->firstOrCreate(
+                ['slug' => Str::slug($item['brand']) ?: 'brand'],
+                [
+                    'name' => $item['brand'],
+                    'is_active' => true,
+                ],
+            );
+
             $product = Product::query()->create([
                 'category_id' => $category->id,
+                'brand_id' => $brand->id,
                 'name' => $item['name'],
                 'slug' => $slug,
                 'description' => $item['description'],
-                'brand' => $item['brand'],
+                'brand' => $brand->name,
                 'base_price' => $item['price'],
                 'sale_price' => null,
+                'vat_rate' => $item['vat'] ?? 20,
                 'currency' => 'TRY',
                 'is_new' => false,
                 'is_featured' => false,

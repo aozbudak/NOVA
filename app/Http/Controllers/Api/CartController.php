@@ -26,11 +26,17 @@ class CartController extends Controller
 
         $validated = $request->validate([
             'product_id' => ['required', 'integer', Rule::in($productIds)],
-            'size' => ['required', 'string', 'max:8'],
+            'size' => ['required', 'string', 'max:20'],
+            'color' => ['nullable', 'string', 'max:100'],
             'quantity' => ['required', 'integer', 'min:1', 'max:10'],
         ]);
 
-        $cart->add((int) $validated['product_id'], $validated['size'], (int) $validated['quantity']);
+        $cart->add(
+            (int) $validated['product_id'],
+            $validated['size'],
+            (int) $validated['quantity'],
+            $validated['color'] ?? null,
+        );
 
         return response()->json([
             'count' => $cart->count(),

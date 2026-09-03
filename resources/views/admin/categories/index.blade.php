@@ -12,6 +12,7 @@
     <x-admin.table :paginator="$categories">
         <x-slot:head>
             <x-admin.th sort="name">{{ __('admin.categories.name') }}</x-admin.th>
+            <x-admin.th>{{ __('admin.categories.parent') }}</x-admin.th>
             <x-admin.th sort="products" align="end">{{ __('admin.categories.products') }}</x-admin.th>
             <x-admin.th sort="stock" align="end">{{ __('admin.categories.stock') }}</x-admin.th>
             <x-admin.th sort="status">{{ __('admin.categories.status') }}</x-admin.th>
@@ -20,6 +21,7 @@
             @foreach ($categories as $category)
                 <tr class="border-b border-border last:border-b-0">
                     <x-admin.td :label="__('admin.categories.name')">{{ $category['name'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.categories.parent')" tone="muted">{{ $category['parent'] ?? '—' }}</x-admin.td>
                     <x-admin.td :label="__('admin.categories.products')" align="end">{{ $category['products'] }}</x-admin.td>
                     <x-admin.td :label="__('admin.categories.stock')" align="end">{{ $category['stock'] }}</x-admin.td>
                     <x-admin.td :label="__('admin.categories.status')" tone="muted">{{ __('admin.products.status_'.$category['status']) }}</x-admin.td>
@@ -33,6 +35,14 @@
             @csrf
             <x-admin.field :label="__('admin.categories.name')" name="name" required>
                 <x-admin.input name="name" value="{{ old('name') }}" required />
+            </x-admin.field>
+            <x-admin.field :label="__('admin.categories.parent')" name="parent_id">
+                <x-admin.select name="parent_id">
+                    <option value="">{{ __('admin.categories.root') }}</option>
+                    @foreach ($parents as $parent)
+                        <option value="{{ $parent['id'] }}" @selected(old('parent_id') === $parent['id'])>{{ $parent['name'] }}</option>
+                    @endforeach
+                </x-admin.select>
             </x-admin.field>
             <x-admin.field :label="__('admin.categories.status')" name="status" required>
                 <x-admin.select name="status">

@@ -9,6 +9,7 @@ return [
         'new-in' => 'Yeni',
         'collections' => 'Koleksiyonlar',
         'sale' => 'İndirim',
+        'brands' => 'Markalar',
         'shop' => 'Mağaza',
         'clothing' => 'Giyim',
         'accessories' => 'Aksesuar',

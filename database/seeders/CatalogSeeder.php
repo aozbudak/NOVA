@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -39,14 +40,24 @@ class CatalogSeeder extends Seeder
                 ],
             );
 
+            $brand = Brand::query()->firstOrCreate(
+                ['slug' => 'nova'],
+                [
+                    'name' => 'NOVA',
+                    'is_active' => true,
+                ],
+            );
+
             $product = Product::query()->create([
                 'category_id' => $category->id,
+                'brand_id' => $brand->id,
                 'name' => $item['name'],
                 'slug' => $item['slug'],
                 'description' => $item['description'],
-                'brand' => 'NOVA',
+                'brand' => $brand->name,
                 'base_price' => $item['oldPrice'] ?? $item['price'],
                 'sale_price' => $item['oldPrice'] !== null ? $item['price'] : null,
+                'vat_rate' => 20,
                 'currency' => $item['currency'],
                 'is_new' => $item['isNew'],
                 'is_featured' => $item['featured'],
