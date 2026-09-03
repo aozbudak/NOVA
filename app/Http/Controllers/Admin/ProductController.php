@@ -57,6 +57,16 @@ class ProductController extends Controller
 
     public function store(Request $request, DatabaseRecords $records): RedirectResponse
     {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0'],
+            'vat' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'initial_stock' => ['nullable', 'integer', 'min:0'],
+            'min_stock' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', 'in:active,inactive'],
+        ]);
+
         $records->saveProduct($request->only([
             'name', 'description', 'category', 'brand', 'status',
             'purchase_price', 'price', 'vat', 'variants', 'initial_stock', 'min_stock',
@@ -83,6 +93,16 @@ class ProductController extends Controller
     public function update(Request $request, string $product, AdminStore $store, DatabaseRecords $records): RedirectResponse
     {
         abort_if($store->product($product) === null, 404);
+
+        $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0'],
+            'vat' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'initial_stock' => ['nullable', 'integer', 'min:0'],
+            'min_stock' => ['nullable', 'integer', 'min:0'],
+            'status' => ['nullable', 'in:active,inactive'],
+        ]);
 
         $records->saveProduct($request->only([
             'name', 'description', 'category', 'brand', 'status',

@@ -117,6 +117,7 @@ return [
         'added' => 'Added to bag',
         'decrease' => 'Decrease quantity',
         'increase' => 'Increase quantity',
+        'unavailable' => 'This size is not available.',
     ],
     'product' => [
         'add_to_bag' => 'Add to bag',

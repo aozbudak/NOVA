@@ -298,6 +298,7 @@ return [
         'filter_category' => 'Category',
         'filter_stock' => 'Stock status',
         'filter_date' => 'Date',
+        'insufficient' => 'Not enough stock for this quantity.',
         'types' => [
             'purchase' => 'Purchase',
             'sale' => 'Sale',
@@ -464,6 +465,7 @@ return [
         'stock' => 'Stock movement',
         'refund' => 'Refund',
         'cash' => 'Cash movement',
+        'already_returned' => 'This sale has already been returned.',
     ],
     'exchanges' => [
         'title' => 'Exchanges',
@@ -500,6 +502,8 @@ return [
         'balance' => 'Balance',
         'submit_open' => 'Open',
         'submit_close' => 'Close',
+        'already_open' => 'A cash register is already open.',
+        'not_open' => 'No cash register is currently open.',
     ],
     'income_expense' => [
         'title' => 'Income & expenses',

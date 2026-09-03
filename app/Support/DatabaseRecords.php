@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\StaffRole;
+use App\Models\AuditLog;
 use App\Models\CashRegister;
 use App\Models\CashTransaction;
 use App\Models\Category;
@@ -20,11 +21,13 @@ use App\Models\Stock;
 use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 final class DatabaseRecords
 {
@@ -66,9 +69,9 @@ final class DatabaseRecords
                 ],
             );
 
-            $price = (float) ($data['price'] ?? 0);
-            $minStock = (int) ($data['min_stock'] ?? 0);
-            $initialStock = (int) ($data['initial_stock'] ?? 0);
+            $price = max(0, (float) ($data['price'] ?? 0));
+            $minStock = max(0, (int) ($data['min_stock'] ?? 0));
+            $initialStock = max(0, (int) ($data['initial_stock'] ?? 0));
             $productSlug = $slug ?? $this->uniqueValue('products', 'slug', Str::slug($name) ?: 'product');
             $sku = trim((string) ($data['sku'] ?? ''));
 
@@ -94,17 +97,21 @@ final class DatabaseRecords
                 'attributes' => $attributes,
             ];
 
-            $product = $slug === null
-                ? Product::query()->create($values)
-                : Product::query()->where('slug', $slug)->first();
+            $existing = $slug === null ? null : Product::query()->where('slug', $slug)->first();
+            $oldPrice = $existing?->base_price;
+            $product = $existing ?? Product::query()->create($values);
 
-            if ($product === null) {
-                $product = Product::query()->create($values);
-            } else {
+            if ($existing !== null) {
                 $product->update($values);
             }
 
             $this->syncVariants($product, $data, $price, $initialStock, $minStock);
+            $this->recordAudit(
+                $slug === null ? 'product.created' : 'product.updated',
+                $product,
+                $oldPrice === null ? null : ['base_price' => (float) $oldPrice],
+                ['base_price' => $price, 'name' => $name],
+            );
 
             return $product->fresh(['variants.stock']) ?? $product;
         });
@@ -123,6 +130,7 @@ final class DatabaseRecords
         }
 
         $product->update(['is_active' => false]);
+        $this->recordAudit('product.deactivated', $product, ['is_active' => true], ['is_active' => false]);
 
         return true;
     }
@@ -236,28 +244,7 @@ final class DatabaseRecords
         }
 
         return DB::transaction(function () use ($variant, $quantity, $reason): true {
-            $stock = $variant->stock;
-
-            if ($stock === null) {
-                $stock = Stock::query()->create([
-                    'product_variant_id' => $variant->id,
-                    'quantity' => max(0, $quantity),
-                    'reserved_quantity' => 0,
-                    'minimum_quantity' => 5,
-                ]);
-            } else {
-                $stock->update(['quantity' => max(0, (int) $stock->quantity + $quantity)]);
-            }
-
-            if (Schema::hasTable('stock_movements')) {
-                StockMovement::query()->create([
-                    'product_variant_id' => $variant->id,
-                    'movement_type' => $quantity >= 0 ? 'in' : 'out',
-                    'quantity' => $quantity,
-                    'reference_type' => 'adjustment',
-                    'note' => $reason,
-                ]);
-            }
+            $this->moveStock($variant, $quantity, $quantity >= 0 ? 'in' : 'out', null, 'adjustment', $reason);
 
             return true;
         });
@@ -270,6 +257,18 @@ final class DatabaseRecords
         }
 
         return DB::transaction(function () use ($opening): CashRegister {
+            $existing = CashRegister::query()
+                ->where('is_active', true)
+                ->whereNull('closed_at')
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing !== null) {
+                throw ValidationException::withMessages([
+                    'opening' => __('admin.cash.already_open'),
+                ]);
+            }
+
             $register = CashRegister::query()->create([
                 'name' => 'Main',
                 'opening_balance' => $opening,
@@ -279,6 +278,7 @@ final class DatabaseRecords
             ]);
 
             $this->addCashTransaction($register, 'opening', $opening, 'Opening balance');
+            $this->recordAudit('cash.opened', $register, null, ['opening_balance' => $opening]);
 
             return $register;
         });
@@ -293,17 +293,35 @@ final class DatabaseRecords
         $register = $this->activeRegister();
 
         if ($register === null) {
-            return null;
+            throw ValidationException::withMessages([
+                'actual' => __('admin.cash.not_open'),
+            ]);
         }
 
-        $register->update([
-            'is_active' => false,
-            'closed_at' => now(),
-        ]);
+        return DB::transaction(function () use ($register, $actual): CashRegister {
+            $locked = CashRegister::query()->whereKey($register->id)->lockForUpdate()->first();
 
-        $this->addCashTransaction($register, 'closing', $actual ?? (float) $register->opening_balance, 'Closing balance');
+            if ($locked === null || ! $locked->is_active) {
+                throw ValidationException::withMessages([
+                    'actual' => __('admin.cash.not_open'),
+                ]);
+            }
 
-        return $register;
+            $closingAmount = $actual ?? (float) $locked->opening_balance;
+
+            $locked->update([
+                'is_active' => false,
+                'closed_at' => now(),
+            ]);
+
+            $this->addCashTransaction($locked, 'closing', $closingAmount, 'Closing balance');
+            $this->recordAudit('cash.closed', $locked, ['is_active' => true], [
+                'is_active' => false,
+                'actual' => $closingAmount,
+            ]);
+
+            return $locked;
+        });
     }
 
     public function recordIncomeExpense(string $type, string $category, string $description, float $amount): ?CashTransaction
@@ -404,6 +422,7 @@ final class DatabaseRecords
         }
 
         return DB::transaction(function () use ($cart, $checkout, $orderNumber): Order {
+            $orderNumber = $this->uniqueOrderNumber($orderNumber);
             $customer = $this->customerFromCheckout($checkout);
             $items = $cart->items();
             $subtotal = $cart->subtotal();
@@ -454,6 +473,10 @@ final class DatabaseRecords
 
             $this->storeAddress($customer, $checkout);
             $this->recordPayment($order, $checkout['payment'], $subtotal);
+            $this->recordAudit('order.placed', $order, null, [
+                'order_number' => $order->order_number,
+                'total_amount' => $subtotal,
+            ]);
 
             return $order;
         });
@@ -470,6 +493,7 @@ final class DatabaseRecords
         }
 
         return DB::transaction(function () use ($sale, $lines, $number): Order {
+            $number = $this->uniqueOrderNumber($number);
             $customer = $this->customerBySlug((string) ($sale['customer_id'] ?? ''));
             $subtotal = (float) $lines->sum(fn (array $line): float => $line['unit'] * $line['qty']);
             $discount = (float) $lines->sum('discount');
@@ -515,6 +539,12 @@ final class DatabaseRecords
                 $this->addCashTransaction($register, 'sale', $total, $number, 'order', $order->id);
             }
 
+            $this->recordAudit('sale.completed', $order, null, [
+                'order_number' => $order->order_number,
+                'total_amount' => $total,
+                'payment' => $sale['payment'],
+            ]);
+
             return $order;
         });
     }
@@ -529,6 +559,12 @@ final class DatabaseRecords
 
         if ($order === null) {
             return null;
+        }
+
+        if ($order->status === 'returned' || SaleReturn::query()->where('order_id', $order->id)->exists()) {
+            throw ValidationException::withMessages([
+                'sale' => __('admin.returns.already_returned'),
+            ]);
         }
 
         return DB::transaction(function () use ($order, $reason): SaleReturn {
@@ -558,7 +594,42 @@ final class DatabaseRecords
                 }
             }
 
+            $previousStatus = $order->status;
+
             $order->update(['status' => 'returned']);
+
+            if (Schema::hasTable('payments')) {
+                $payment = Payment::query()->where('order_id', $order->id)->latest('id')->first();
+
+                Payment::query()->create([
+                    'order_id' => $order->id,
+                    'payment_method' => $payment?->payment_method ?? 'cash',
+                    'amount' => $order->total_amount,
+                    'status' => 'refunded',
+                    'paid_at' => now(),
+                ]);
+            } else {
+                $payment = null;
+            }
+
+            $register = $this->activeRegister();
+
+            if ($register !== null && ($payment?->payment_method ?? 'cash') === 'cash') {
+                $this->addCashTransaction(
+                    $register,
+                    'refund',
+                    (float) $order->total_amount,
+                    $return->return_number,
+                    'return',
+                    $return->id,
+                );
+            }
+
+            $this->recordAudit('return.completed', $return, ['status' => $previousStatus], [
+                'return_number' => $return->return_number,
+                'order_number' => $order->order_number,
+                'total_amount' => $order->total_amount,
+            ]);
 
             return $return;
         });
@@ -721,13 +792,13 @@ final class DatabaseRecords
     public function updatePassword(string $email, string $current, string $password): bool
     {
         if (! Schema::hasTable('users')) {
-            return true;
+            return false;
         }
 
         $user = User::query()->where('email', $email)->first();
 
         if ($user === null) {
-            return true;
+            return false;
         }
 
         if (! Hash::check($current, $user->password)) {
@@ -775,6 +846,7 @@ final class DatabaseRecords
     {
         foreach ($this->variantRows($data, $fallbackPrice, $fallbackStock) as $row) {
             $sku = trim((string) $row['sku']);
+            $providedSku = $sku !== '';
 
             if ($sku === '') {
                 $sku = $this->uniqueValue(
@@ -787,14 +859,22 @@ final class DatabaseRecords
             $variant = $product->variants()->where('sku', $sku)->first();
 
             if ($variant === null && ProductVariant::query()->where('sku', $sku)->exists()) {
+                if ($providedSku) {
+                    throw ValidationException::withMessages([
+                        'sku' => __('validation.unique', ['attribute' => 'sku']),
+                    ]);
+                }
+
                 $sku = $this->uniqueValue('product_variants', 'sku', $sku);
             }
 
             $barcode = trim((string) $row['barcode']);
             $barcode = $barcode === '' ? null : $barcode;
 
-            if ($barcode !== null) {
-                $barcode = $this->uniqueBarcode($barcode, $variant?->id);
+            if ($barcode !== null && $this->barcodeTaken($barcode, $variant?->id)) {
+                throw ValidationException::withMessages([
+                    'barcode' => __('validation.unique', ['attribute' => 'barcode']),
+                ]);
             }
 
             if ($variant === null) {
@@ -816,7 +896,7 @@ final class DatabaseRecords
                 ]);
             }
 
-            $quantity = (int) $row['stock'];
+            $quantity = max(0, (int) $row['stock']);
             $stock = $variant->stock;
 
             if ($stock === null) {
@@ -826,11 +906,28 @@ final class DatabaseRecords
                     'reserved_quantity' => 0,
                     'minimum_quantity' => $minStock,
                 ]);
+
+                if ($quantity !== 0) {
+                    $this->writeStockMovement($variant, $quantity, 'in', 'adjustment', null, 'Initial stock');
+                }
             } else {
+                $delta = $quantity - (int) $stock->quantity;
+
                 $stock->update([
                     'quantity' => $quantity,
                     'minimum_quantity' => $minStock,
                 ]);
+
+                if ($delta !== 0) {
+                    $this->writeStockMovement(
+                        $variant,
+                        $delta,
+                        $delta > 0 ? 'in' : 'out',
+                        'adjustment',
+                        null,
+                        'Variant stock sync',
+                    );
+                }
             }
         }
     }
@@ -895,18 +992,12 @@ final class DatabaseRecords
         return $rows;
     }
 
-    private function uniqueBarcode(string $barcode, ?string $ignoreId = null): string
+    private function barcodeTaken(string $barcode, ?string $ignoreId = null): bool
     {
-        while (
-            ProductVariant::query()
-                ->where('barcode', $barcode)
-                ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
-                ->exists()
-        ) {
-            $barcode .= '0';
-        }
-
-        return $barcode;
+        return ProductVariant::query()
+            ->where('barcode', $barcode)
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->exists();
     }
 
     private function activeRegister(): ?CashRegister
@@ -982,6 +1073,10 @@ final class DatabaseRecords
             return;
         }
 
+        if ($customer->addresses()->where('is_default', true)->exists()) {
+            $customer->addresses()->update(['is_default' => false]);
+        }
+
         CustomerAddress::query()->create([
             'customer_id' => $customer->id,
             'title' => 'Shipping',
@@ -1038,33 +1133,125 @@ final class DatabaseRecords
         return Customer::query()->where('slug', $slug)->first();
     }
 
-    private function moveStock(ProductVariant $variant, int $delta, string $type, ?string $referenceId = null): void
+    private function moveStock(ProductVariant $variant, int $delta, string $type, ?string $referenceId = null, ?string $referenceType = null, ?string $note = null): void
     {
-        if (! Schema::hasTable('stocks')) {
+        if (! Schema::hasTable('stocks') || $delta === 0) {
             return;
         }
 
-        $stock = $variant->stock;
+        $stock = Stock::query()
+            ->where('product_variant_id', $variant->id)
+            ->lockForUpdate()
+            ->first();
 
         if ($stock === null) {
+            if ($delta < 0 && ! $this->allowsNegativeStock()) {
+                throw ValidationException::withMessages([
+                    'quantity' => __('admin.inventory.insufficient'),
+                ]);
+            }
+
             $stock = Stock::query()->create([
                 'product_variant_id' => $variant->id,
-                'quantity' => max(0, $delta),
+                'quantity' => $delta,
                 'reserved_quantity' => 0,
                 'minimum_quantity' => 5,
             ]);
         } else {
-            $stock->update(['quantity' => max(0, (int) $stock->quantity + $delta)]);
+            $available = (int) $stock->quantity - (int) $stock->reserved_quantity;
+            $next = (int) $stock->quantity + $delta;
+
+            if ($delta < 0 && $available + $delta < 0 && ! $this->allowsNegativeStock()) {
+                throw ValidationException::withMessages([
+                    'quantity' => __('admin.inventory.insufficient'),
+                ]);
+            }
+
+            $stock->update(['quantity' => $this->allowsNegativeStock() ? $next : max(0, $next)]);
         }
 
-        if (Schema::hasTable('stock_movements')) {
-            StockMovement::query()->create([
-                'product_variant_id' => $variant->id,
-                'movement_type' => $type,
-                'quantity' => $delta,
-                'reference_type' => $type,
-                'reference_id' => $referenceId,
-            ]);
+        $this->writeStockMovement($variant, $delta, $type, $referenceType ?? $type, $referenceId, $note);
+    }
+
+    private function writeStockMovement(
+        ProductVariant $variant,
+        int $quantity,
+        string $type,
+        string $referenceType,
+        ?string $referenceId = null,
+        ?string $note = null,
+    ): void {
+        if (! Schema::hasTable('stock_movements')) {
+            return;
         }
+
+        StockMovement::query()->create([
+            'product_variant_id' => $variant->id,
+            'user_id' => $this->actorUserId(),
+            'movement_type' => $type,
+            'quantity' => $quantity,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'note' => $note,
+        ]);
+    }
+
+    private function uniqueOrderNumber(string $number): string
+    {
+        if (! Schema::hasTable('orders')) {
+            return $number;
+        }
+
+        $base = $number;
+        $suffix = 2;
+
+        while (Order::query()->where('order_number', $number)->exists()) {
+            $number = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        return $number;
+    }
+
+    private function allowsNegativeStock(): bool
+    {
+        $settings = session('admin.settings', []);
+
+        return (bool) ($settings['allow_negative_stock'] ?? false);
+    }
+
+    private function actorUserId(): ?string
+    {
+        $email = session('admin.email');
+
+        if (! is_string($email) || $email === '' || ! Schema::hasTable('users')) {
+            return null;
+        }
+
+        $id = User::query()->where('email', $email)->value('id');
+
+        return is_string($id) ? $id : null;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $old
+     * @param  array<string, mixed>|null  $new
+     */
+    private function recordAudit(string $action, ?Model $auditable, ?array $old, ?array $new): void
+    {
+        if (! Schema::hasTable('audit_logs')) {
+            return;
+        }
+
+        AuditLog::query()->create([
+            'user_id' => $this->actorUserId(),
+            'action' => $action,
+            'auditable_type' => $auditable === null ? null : $auditable::class,
+            'auditable_id' => $auditable?->getKey(),
+            'old_values' => $old,
+            'new_values' => $new,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
     }
 }

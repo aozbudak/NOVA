@@ -39,6 +39,31 @@ class ApiConnectionTest extends TestCase
             ->assertJsonPath('added', true);
     }
 
+    public function test_guest_cannot_mutate_admin_apis(): void
+    {
+        $this->authenticateAdmin = false;
+
+        $this->flushSession();
+
+        $this->getJson(route('api.products.index'))->assertUnauthorized();
+        $this->postJson(route('api.sales.store'), [
+            'payment' => 'cash',
+            'items' => [['sku' => 'NOVA01-WHI-S', 'quantity' => 1]],
+        ])->assertUnauthorized();
+        $this->postJson(route('api.inventory.adjust'), [
+            'sku' => 'NOVA01-WHI-S',
+            'quantity' => 1,
+        ])->assertUnauthorized();
+    }
+
+    public function test_storefront_catalog_remains_public(): void
+    {
+        $this->authenticateAdmin = false;
+        $this->flushSession();
+
+        $this->getJson(route('api.catalog.index'))->assertOk();
+    }
+
     public function test_admin_product_sale_return_cash_and_inventory_apis_exist(): void
     {
         $this->getJson(route('api.products.index'))

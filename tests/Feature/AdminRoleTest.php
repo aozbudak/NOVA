@@ -119,4 +119,22 @@ class AdminRoleTest extends TestCase
             ->get(route('admin.roles.index'))
             ->assertForbidden();
     }
+
+    public function test_custom_role_does_not_inherit_super_admin(): void
+    {
+        $this->withSession([
+            'admin.role' => 'night-shift',
+            'admin.abilities' => ['pos', 'sales'],
+        ])->get(route('admin.settings.index'))->assertForbidden();
+
+        $this->withSession([
+            'admin.role' => 'night-shift',
+            'admin.abilities' => ['pos', 'sales'],
+        ])->get(route('admin.users.index'))->assertForbidden();
+
+        $this->withSession([
+            'admin.role' => 'night-shift',
+            'admin.abilities' => ['pos', 'sales'],
+        ])->get(route('admin.pos.index'))->assertOk();
+    }
 }

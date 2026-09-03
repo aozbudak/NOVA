@@ -186,4 +186,20 @@ class AdminUserTest extends TestCase
             ->get(route('admin.users.index'))
             ->assertForbidden();
     }
+
+    public function test_store_manager_cannot_assign_super_admin(): void
+    {
+        $this->withSession(['admin.role' => StaffRole::StoreManager->value])
+            ->post(route('admin.users.store'), [
+                'first_name' => 'Lara',
+                'last_name' => 'Koç',
+                'email' => 'lara.koc@nova.store',
+                'username' => 'larakoc',
+                'role' => StaffRole::SuperAdmin->value,
+                'status' => 'active',
+                'password' => 'secret123',
+                'abilities' => ['settings'],
+            ])
+            ->assertForbidden();
+    }
 }

@@ -69,6 +69,37 @@ final class AdminNavigation
         'admin.profile.show' => 'profile',
         'admin.profile.update' => 'profile',
         'admin.profile.password' => 'profile',
+        'admin.search' => 'profile',
+        'api.products.index' => 'products',
+        'api.products.store' => 'products',
+        'api.products.show' => 'products',
+        'api.products.update' => 'products',
+        'api.products.deactivate' => 'products',
+        'api.variants.index' => 'variants',
+        'api.pos.items' => 'pos',
+        'api.sales.index' => 'sales',
+        'api.sales.store' => 'sales',
+        'api.sales.show' => 'sales',
+        'api.returns.index' => 'returns',
+        'api.returns.store' => 'returns',
+        'api.returns.show' => 'returns',
+        'api.exchanges.index' => 'exchanges',
+        'api.exchanges.show' => 'exchanges',
+        'api.customers.index' => 'customers',
+        'api.customers.store' => 'customers',
+        'api.customers.show' => 'customers',
+        'api.suppliers.index' => 'suppliers',
+        'api.suppliers.store' => 'suppliers',
+        'api.suppliers.show' => 'suppliers',
+        'api.cash.show' => 'cash',
+        'api.cash.movements' => 'cash',
+        'api.cash.open' => 'cash',
+        'api.cash.close' => 'cash',
+        'api.inventory.index' => 'inventory',
+        'api.inventory.movements' => 'inventory',
+        'api.inventory.adjust' => 'inventory',
+        'api.payments.index' => 'payments',
+        'api.admin.search' => 'profile',
     ];
 
     public function __construct(private AdminStaff $staff) {}
@@ -170,7 +201,7 @@ final class AdminNavigation
             $items = [];
 
             foreach ($section['items'] as $item) {
-                if (! $this->staff->role->can($item['permission'])) {
+                if (! $this->staff->can($item['permission'])) {
                     continue;
                 }
 
@@ -239,7 +270,7 @@ final class AdminNavigation
 
                 $crumbs = [];
 
-                if ($this->staff->role->can('dashboard')) {
+                if ($this->staff->can('dashboard')) {
                     $crumbs[] = [
                         'label' => __('admin.nav.dashboard'),
                         'url' => route('admin.dashboard'),
@@ -348,7 +379,7 @@ final class AdminNavigation
 
         $crumbs = [];
 
-        if ($this->staff->role->can('dashboard')) {
+        if ($this->staff->can('dashboard')) {
             $crumbs[] = [
                 'label' => __('admin.nav.dashboard'),
                 'url' => route('admin.dashboard'),

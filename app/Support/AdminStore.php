@@ -1278,12 +1278,12 @@ final class AdminStore
             return $groups;
         }
 
-        if ($staff->role->can('products') || $staff->role->can('sales')) {
+        if ($staff->can('products') || $staff->can('sales')) {
             $matchedSales = $this->sales()->filter(function (array $sale) use ($needle): bool {
                 return Str::contains(Str::lower($sale['number'].' '.$sale['customer'].' '.$sale['items_label']), $needle);
             });
 
-            if ($staff->role->can('sales')) {
+            if ($staff->can('sales')) {
                 foreach ($matchedSales as $sale) {
                     $groups['sales'][] = [
                         'id' => $sale['id'],
@@ -1294,7 +1294,7 @@ final class AdminStore
                 }
             }
 
-            if ($staff->role->can('products')) {
+            if ($staff->can('products')) {
                 $products = $this->products()
                     ->filter(function (array $product) use ($needle): bool {
                         return Str::contains(Str::lower($product['name'].' '.$product['sku'].' '.$product['barcode']), $needle);
@@ -1320,7 +1320,7 @@ final class AdminStore
             }
         }
 
-        if ($staff->role->can('customers')) {
+        if ($staff->can('customers')) {
             $groups['customers'] = $this->customers()
                 ->filter(fn (array $customer): bool => Str::contains(Str::lower($customer['name'].' '.$customer['email'].' '.$customer['phone']), $needle))
                 ->map(fn (array $customer): array => [
@@ -1333,7 +1333,7 @@ final class AdminStore
                 ->all();
         }
 
-        if ($staff->role->can('suppliers')) {
+        if ($staff->can('suppliers')) {
             $groups['suppliers'] = $this->suppliers()
                 ->filter(fn (array $supplier): bool => Str::contains(Str::lower($supplier['name'].' '.$supplier['contact'].' '.$supplier['email']), $needle))
                 ->map(fn (array $supplier): array => [
@@ -1346,7 +1346,7 @@ final class AdminStore
                 ->all();
         }
 
-        if ($staff->role->can('users') || $staff->role->can('roles')) {
+        if ($staff->can('users') || $staff->can('roles')) {
             $groups['users'] = $this->users()
                 ->filter(fn (array $user): bool => Str::contains(Str::lower($user['name'].' '.$user['email']), $needle))
                 ->map(fn (array $user): array => [

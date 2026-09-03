@@ -42,7 +42,7 @@ class CheckoutController extends Controller
             'payment' => ['required', 'in:card,paypal'],
         ]);
 
-        $orderId = 'NOVA-'.now()->format('ymd').'-'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT);
+        $orderId = 'NOVA-'.now()->format('ymdHis').'-'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT);
 
         $records->placeCheckout($cart, $validated, $orderId);
 

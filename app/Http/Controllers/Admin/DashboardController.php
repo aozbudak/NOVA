@@ -13,7 +13,7 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request, AdminNavigation $navigation, AdminStore $store): View|RedirectResponse
     {
-        if (! $navigation->staff()->role->can('dashboard')) {
+        if (! $navigation->staff()->can('dashboard')) {
             return redirect()->route($navigation->homeRoute());
         }
 

@@ -71,9 +71,31 @@ class AdminProductTest extends TestCase
 
     public function test_create_redirects_with_a_success_toast(): void
     {
-        $this->post(route('admin.products.store'))
+        $this->post(route('admin.products.store'), [
+            'name' => 'Canvas Tote',
+            'price' => 890,
+        ])
             ->assertRedirect(route('admin.products.index'))
             ->assertSessionHas('status', 'Product created successfully.');
+    }
+
+    public function test_create_rejects_an_empty_payload(): void
+    {
+        $this->from(route('admin.products.create'))
+            ->post(route('admin.products.store'))
+            ->assertRedirect(route('admin.products.create'))
+            ->assertSessionHasErrors('name');
+    }
+
+    public function test_create_rejects_a_negative_price(): void
+    {
+        $this->from(route('admin.products.create'))
+            ->post(route('admin.products.store'), [
+                'name' => 'Canvas Tote',
+                'price' => -10,
+            ])
+            ->assertRedirect(route('admin.products.create'))
+            ->assertSessionHasErrors('price');
     }
 
     public function test_deactivate_redirects_with_a_toast(): void

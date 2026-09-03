@@ -50,6 +50,7 @@ class AuthController extends Controller
             'admin.phone' => $staff['phone'] ?? '',
             'admin.user_id' => $staff['id'],
             'admin.username' => $staff['username'],
+            'admin.abilities' => $staff['abilities'] ?? [],
         ]);
 
         return redirect()->intended(route('admin.dashboard'));

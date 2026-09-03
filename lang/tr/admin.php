@@ -298,6 +298,7 @@ return [
         'filter_category' => 'Kategori',
         'filter_stock' => 'Stok durumu',
         'filter_date' => 'Tarih',
+        'insufficient' => 'Bu miktar için yeterli stok yok.',
         'types' => [
             'purchase' => 'Alım',
             'sale' => 'Satış',
@@ -464,6 +465,7 @@ return [
         'stock' => 'Stok hareketi',
         'refund' => 'Para iadesi',
         'cash' => 'Kasa hareketi',
+        'already_returned' => 'Bu satış zaten iade edilmiş.',
     ],
     'exchanges' => [
         'title' => 'Değişimler',
@@ -500,6 +502,8 @@ return [
         'balance' => 'Bakiye',
         'submit_open' => 'Aç',
         'submit_close' => 'Kapat',
+        'already_open' => 'Açık bir kasa zaten var.',
+        'not_open' => 'Şu anda açık kasa yok.',
     ],
     'income_expense' => [
         'title' => 'Gelir ve gider',

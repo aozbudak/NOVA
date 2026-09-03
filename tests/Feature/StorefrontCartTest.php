@@ -42,4 +42,14 @@ class StorefrontCartTest extends TestCase
 
         $this->assertSame([], session('cart'));
     }
+
+    public function test_rejects_an_out_of_stock_size(): void
+    {
+        $this->postJson(route('cart.store'), [
+            'product_id' => 2,
+            'size' => 'XL',
+            'quantity' => 1,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('size');
+    }
 }

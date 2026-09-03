@@ -94,4 +94,26 @@ class StorefrontAuthTest extends TestCase
             ->assertRedirect(route('login'))
             ->assertSessionHasErrors(['email' => __('auth.inactive')]);
     }
+
+    public function test_register_rejects_a_duplicate_email(): void
+    {
+        $this->post(route('register.store'), [
+            'first_name' => 'Ada',
+            'last_name' => 'Lovelace',
+            'email' => 'ada@nova.example',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertRedirect(route('account.show'));
+
+        $this->from(route('register'))
+            ->post(route('register.store'), [
+                'first_name' => 'Ada',
+                'last_name' => 'Byron',
+                'email' => 'ada@nova.example',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+            ])
+            ->assertRedirect(route('register'))
+            ->assertSessionHasErrors('email');
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class Cart
 {
@@ -46,6 +47,29 @@ class Cart
 
     public function add(int $productId, string $size, int $quantity): void
     {
+        $product = $this->catalog->find($productId);
+
+        if ($product === null) {
+            throw ValidationException::withMessages([
+                'product_id' => __('validation.exists', ['attribute' => 'product_id']),
+            ]);
+        }
+
+        $size = Str::upper($size);
+        $sizes = collect($product['sizes'] ?? []);
+
+        if ($sizes->isNotEmpty()) {
+            $option = $sizes->first(
+                fn (mixed $row): bool => is_array($row) && Str::upper((string) ($row['code'] ?? '')) === $size,
+            );
+
+            if ($option === null || ($option['in_stock'] ?? true) === false) {
+                throw ValidationException::withMessages([
+                    'size' => __('storefront.cart.unavailable'),
+                ]);
+            }
+        }
+
         $items = collect(session('cart', []));
         $key = $productId.'-'.Str::upper($size);
         $existing = $items->search(fn (array $line): bool => $line['key'] === $key);

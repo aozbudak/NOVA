@@ -35,7 +35,7 @@
                 <x-icon name="user" size="size-4" class="text-muted-foreground" />
                 {{ __('admin.user_menu.profile') }}
             </a>
-            @if ($staff->role->can('settings'))
+            @if ($staff->can('settings'))
                 <a href="{{ route('admin.settings.index') }}" class="flex items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] text-foreground transition-colors hover:bg-muted">
                     <x-icon name="settings" size="size-4" class="text-muted-foreground" />
                     {{ __('admin.user_menu.settings') }}

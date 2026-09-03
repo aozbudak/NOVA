@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\VariantController;
 use App\Http\Controllers\Api\WishlistController;
+use App\Http\Middleware\EnsureAdminAuthenticated;
+use App\Http\Middleware\EnsureAdminPageAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->name('api.')->group(function (): void {
@@ -33,7 +35,9 @@ Route::middleware('web')->name('api.')->group(function (): void {
     Route::post('/wishlist', [WishlistController::class, 'store'])->name('wishlist.store');
 
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+});
 
+Route::middleware(['web', EnsureAdminAuthenticated::class, EnsureAdminPageAccess::class])->name('api.')->group(function (): void {
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');

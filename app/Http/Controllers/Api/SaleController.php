@@ -8,6 +8,7 @@ use App\Support\DatabaseRecords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SaleController extends Controller
 {
@@ -44,6 +45,13 @@ class SaleController extends Controller
             $quantity = (int) $item['quantity'];
             $discount = (float) ($item['discount'] ?? 0);
             $unit = (float) $variant['price'];
+            $lineTotal = ($unit * $quantity) - $discount;
+
+            if ($lineTotal < 0) {
+                throw ValidationException::withMessages([
+                    'items' => __('validation.min.numeric', ['attribute' => 'total', 'min' => 0]),
+                ]);
+            }
 
             return [
                 'product' => $variant['product'],
@@ -52,11 +60,11 @@ class SaleController extends Controller
                 'qty' => $quantity,
                 'unit' => $unit,
                 'discount' => $discount,
-                'total' => ($unit * $quantity) - $discount,
+                'total' => $lineTotal,
             ];
         });
 
-        $number = 'NV-'.now()->format('ymdHis');
+        $number = 'NV-'.now()->format('ymdHis').str_pad((string) random_int(0, 99), 2, '0', STR_PAD_LEFT);
 
         $records->placeSale($validated, $lines, $number);
 

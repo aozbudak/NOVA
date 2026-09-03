@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\StaffRole;
 use App\Http\Controllers\Controller;
 use App\Support\AdminList;
+use App\Support\AdminStaff;
 use App\Support\AdminStore;
 use Closure;
 use Illuminate\Http\RedirectResponse;
@@ -52,6 +53,7 @@ class UserController extends Controller
         ]);
 
         $role = $store->resolveRole($data['role'], $data['abilities'] ?? []);
+        $this->assertAssignableRole($role);
 
         $store->createUser([
             'first_name' => $data['first_name'],
@@ -97,6 +99,7 @@ class UserController extends Controller
         ]);
 
         $role = $store->resolveRole($data['role'], $data['abilities'] ?? []);
+        $this->assertAssignableRole($role);
 
         $store->updateUser($user, [
             'first_name' => $data['first_name'],
@@ -138,6 +141,22 @@ class UserController extends Controller
                 ->mapWithKeys(fn (array $role): array => [$role['name'] => $role['abilities']])
                 ->all(),
         ];
+    }
+
+    /**
+     * @param  array{id: string, name: string, builtin: bool, abilities: list<string>}  $role
+     */
+    private function assertAssignableRole(array $role): void
+    {
+        if ($role['id'] !== StaffRole::SuperAdmin->value) {
+            return;
+        }
+
+        $actor = AdminStaff::fromSession();
+
+        if ($actor->customAbilities !== null || $actor->role !== StaffRole::SuperAdmin) {
+            abort(403);
+        }
     }
 
     /**

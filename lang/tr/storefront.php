@@ -117,6 +117,7 @@ return [
         'added' => 'Çantaya eklendi',
         'decrease' => 'Adedi azalt',
         'increase' => 'Adedi artır',
+        'unavailable' => 'Bu beden stokta yok.',
     ],
     'product' => [
         'add_to_bag' => 'Çantaya ekle',

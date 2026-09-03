@@ -117,6 +117,7 @@ return [
         'added' => 'Zur Tasche hinzugefügt',
         'decrease' => 'Menge verringern',
         'increase' => 'Menge erhöhen',
+        'unavailable' => 'Diese Größe ist nicht verfügbar.',
     ],
     'product' => [
         'add_to_bag' => 'In die Tasche',
