@@ -6,29 +6,35 @@
 @php
     $inWishlist = in_array($product['id'], $wishlistIds, true);
     $quickSize = collect($product['sizes'])->firstWhere('in_stock', true)['code'] ?? 'M';
+    $primaryImage = $product['images'][0] ?? null;
+    $hoverImage = $product['images'][1] ?? null;
 @endphp
 
 <article {{ $attributes->merge(['class' => 'group']) }}>
     <div class="relative">
         <a href="{{ route('product.show', $product['slug']) }}" class="block overflow-hidden bg-muted">
-            <img
-                src="{{ $product['images'][0] }}"
-                alt="{{ $product['name'] }}"
-                width="700"
-                height="875"
-                class="aspect-[4/5] w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
-                loading="lazy"
-                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-            >
-            @if (isset($product['images'][1]))
+            @if ($primaryImage)
                 <img
-                    src="{{ $product['images'][1] }}"
-                    alt=""
+                    src="{{ $primaryImage }}"
+                    alt="{{ $product['name'] }}"
                     width="700"
                     height="875"
-                    class="absolute inset-0 aspect-[4/5] w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    class="aspect-[4/5] w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
                     loading="lazy"
+                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
                 >
+                @if ($hoverImage)
+                    <img
+                        src="{{ $hoverImage }}"
+                        alt=""
+                        width="700"
+                        height="875"
+                        class="absolute inset-0 aspect-[4/5] w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                        loading="lazy"
+                    >
+                @endif
+            @else
+                <div class="aspect-[4/5] w-full bg-muted" aria-hidden="true"></div>
             @endif
         </a>
         <x-wishlist-button :product-id="$product['id']" :active="$inWishlist" class="absolute top-3 right-3" />

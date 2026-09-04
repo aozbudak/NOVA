@@ -23,7 +23,7 @@ class SearchController extends Controller
                     'slug' => $product['slug'],
                     'price' => $product['price'],
                     'currency' => $product['currency'],
-                    'image' => $product['images'][0],
+                    'image' => $product['images'][0] ?? '',
                 ])->values()
             );
         }

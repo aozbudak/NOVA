@@ -54,7 +54,11 @@
             <ul class="mt-6 flex flex-col gap-4">
                 @foreach ($items as $item)
                     <li class="flex gap-3 text-sm">
-                        <img src="{{ $item['product']['images'][0] }}" alt="{{ $item['product']['name'] }}" width="64" height="80" class="h-20 w-16 object-cover" loading="lazy">
+                        @if (($item['product']['images'][0] ?? null))
+                            <img src="{{ $item['product']['images'][0] }}" alt="{{ $item['product']['name'] }}" width="64" height="80" class="h-20 w-16 object-cover" loading="lazy">
+                        @else
+                            <div class="h-20 w-16 shrink-0 bg-muted" aria-hidden="true"></div>
+                        @endif
                         <div class="flex-1">
                             <p>{{ $item['product']['name'] }}</p>
                             <p class="text-xs text-muted-foreground">{{ $item['size'] }} · {{ $item['quantity'] }}</p>

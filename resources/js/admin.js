@@ -647,7 +647,10 @@ function initPos() {
                     data-stock="${escapeHtml(item.stock)}"
                     class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-accent"
                 >
-                    <img src="${escapeHtml(item.image)}" alt="" width="36" height="44" class="h-11 w-9 object-cover">
+                    ${item.image
+                        ? `<img src="${escapeHtml(item.image)}" alt="" width="36" height="44" class="h-11 w-9 object-cover">`
+                        : `<span class="inline-block h-11 w-9 bg-muted"></span>`
+                    }
                     <span class="min-w-0 flex-1">
                         <span class="block truncate text-[13px] text-foreground">${escapeHtml(item.name)}</span>
                         <span class="block truncate text-[12px] text-muted-foreground">${escapeHtml(item.variant)} · ${escapeHtml(item.barcode)}</span>

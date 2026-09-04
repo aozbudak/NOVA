@@ -15,6 +15,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\ReturnItem;
 use App\Models\Role;
@@ -24,10 +25,12 @@ use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -199,6 +202,7 @@ final class DatabaseRecords
             }
 
             $this->syncVariants($product, $data, $price, $initialStock, 0);
+            $this->storeProductImages($product, $data);
             $this->recordAudit(
                 $slug === null ? 'product.created' : 'product.updated',
                 $product,
@@ -943,6 +947,59 @@ final class DatabaseRecords
         $user->update(['password' => $password]);
 
         return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function storeProductImages(Product $product, array $data): void
+    {
+        $files = $this->uploadedImages($data);
+
+        if ($files === [] || ! Schema::hasTable('product_images')) {
+            return;
+        }
+
+        $existing = $product->images()->count();
+        $files = array_slice($files, 0, max(0, 4 - $existing));
+
+        foreach ($files as $index => $file) {
+            $path = $file->store('products/'.$product->id, 'public');
+
+            if (! is_string($path) || $path === '') {
+                continue;
+            }
+
+            ProductImage::query()->create([
+                'product_id' => $product->id,
+                'image_url' => Storage::disk('public')->url($path),
+                'alt_text' => $product->name,
+                'sort_order' => $existing + $index,
+                'is_primary' => $existing === 0 && $index === 0,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return list<UploadedFile>
+     */
+    private function uploadedImages(array $data): array
+    {
+        $images = $data['images'] ?? [];
+
+        if ($images instanceof UploadedFile) {
+            $images = [$images];
+        }
+
+        if (! is_array($images)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $images,
+            fn (mixed $file): bool => $file instanceof UploadedFile && $file->isValid(),
+        ));
     }
 
     private function hasSlug(string $table): bool

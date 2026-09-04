@@ -92,7 +92,7 @@ class Catalog
             'price' => (float) ($onSale ? $product->sale_price : $product->base_price),
             'oldPrice' => $onSale ? (float) $product->base_price : null,
             'currency' => $product->currency,
-            'images' => $images !== [] ? $images : ['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1400&q=80'],
+            'images' => $images,
             'colors' => $colors,
             'sizes' => $sizes,
             'category' => $attributes['department'] ?? $product->category?->parent?->slug ?? $product->category?->slug,
@@ -163,7 +163,7 @@ class Catalog
                 'slug' => $product['slug'],
                 'price' => $product['price'],
                 'currency' => $product['currency'],
-                'image' => $product['images'][0],
+                'image' => $product['images'][0] ?? '',
                 'category' => $product['category'],
             ])
             ->values()

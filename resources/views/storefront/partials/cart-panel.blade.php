@@ -13,14 +13,18 @@
         @foreach ($items as $item)
             <li class="flex gap-4 border-b border-border py-4 first:pt-0">
                 <a href="{{ route('product.show', $item['product']['slug']) }}" class="block w-20 shrink-0">
-                    <img
-                        src="{{ $item['product']['images'][0] }}"
-                        alt="{{ $item['product']['name'] }}"
-                        width="160"
-                        height="200"
-                        class="aspect-[4/5] w-full object-cover"
-                        loading="lazy"
-                    >
+                    @if (($item['product']['images'][0] ?? null))
+                        <img
+                            src="{{ $item['product']['images'][0] }}"
+                            alt="{{ $item['product']['name'] }}"
+                            width="160"
+                            height="200"
+                            class="aspect-[4/5] w-full object-cover"
+                            loading="lazy"
+                        >
+                    @else
+                        <div class="aspect-[4/5] w-full bg-muted" aria-hidden="true"></div>
+                    @endif
                 </a>
                 <div class="flex min-w-0 flex-1 flex-col gap-2">
                     <div class="flex items-start justify-between gap-3">

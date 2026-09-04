@@ -199,7 +199,7 @@ final class AdminStore
 
         $stock = (int) collect($variants)->sum('stock');
         $minStock = (int) ($product->variants->first()?->stock?->minimum_quantity ?? $attributes['min_stock'] ?? 0);
-        $primaryImage = $product->images->first();
+        $images = $product->images->pluck('image_url')->values()->all();
         $brandName = $product->brandRecord?->name ?? (string) $product->brand;
 
         return [
@@ -221,7 +221,8 @@ final class AdminStore
             'min_stock' => $minStock,
             'status' => $product->is_active ? 'active' : 'inactive',
             'stock_status' => $this->stockStatus($stock, $minStock),
-            'image' => $primaryImage?->image_url ?? '',
+            'image' => $images[0] ?? '',
+            'images' => $images,
             'description' => (string) $product->description,
             'variants' => $variants,
         ];

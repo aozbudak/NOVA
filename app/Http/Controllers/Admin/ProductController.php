@@ -75,12 +75,16 @@ class ProductController extends Controller
             'variants.price.*' => ['nullable', 'numeric', 'min:0'],
             'variants.stock.*' => ['nullable', 'integer', 'min:0'],
             'variants.is_active.*' => ['nullable', 'in:0,1'],
+            'images' => ['nullable', 'array', 'max:4'],
+            'images.*' => ['image', 'mimes:jpeg,jpg,webp', 'max:4096'],
         ]);
 
-        $records->saveProduct($request->only([
+        $payload = $request->only([
             'name', 'description', 'category', 'brand', 'status',
             'purchase_price', 'price', 'vat', 'variants', 'initial_stock',
-        ]));
+        ]);
+        $payload['images'] = $request->file('images') ?? [];
+        $records->saveProduct($payload);
 
         return redirect()
             ->route('admin.products.index')
@@ -121,12 +125,16 @@ class ProductController extends Controller
             'variants.price.*' => ['nullable', 'numeric', 'min:0'],
             'variants.stock.*' => ['nullable', 'integer', 'min:0'],
             'variants.is_active.*' => ['nullable', 'in:0,1'],
+            'images' => ['nullable', 'array', 'max:4'],
+            'images.*' => ['image', 'mimes:jpeg,jpg,webp', 'max:4096'],
         ]);
 
-        $records->saveProduct($request->only([
+        $payload = $request->only([
             'name', 'description', 'category', 'brand', 'status',
             'purchase_price', 'price', 'vat', 'variants', 'initial_stock',
-        ]), $product);
+        ]);
+        $payload['images'] = $request->file('images') ?? [];
+        $records->saveProduct($payload, $product);
 
         return redirect()
             ->route('admin.products.index')

@@ -11,9 +11,13 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\SaleReturn;
 use App\Models\User;
+use App\Support\Catalog;
 use Database\Seeders\AdminCatalogSeeder;
 use Database\Seeders\CatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class BackendPersistenceTest extends TestCase
@@ -36,12 +40,46 @@ class BackendPersistenceTest extends TestCase
         $this->assertNotNull($product);
         $this->assertEquals(20, (float) $product->vat_rate);
         $this->assertSame(12, (int) $product->variants()->first()?->stock?->quantity);
+        $this->assertSame(0, $product->images()->count());
+        $this->assertSame([], (new Catalog)->findBySlug('canvas-tote')['images']);
         $this->assertTrue(Brand::query()->where('name', 'NOVA')->exists());
         $this->assertDatabaseHas('stock_movements', [
             'movement_type' => 'adjustment_in',
             'quantity' => 12,
             'note' => 'Initial stock',
         ]);
+
+        $this->get(route('product.show', 'canvas-tote'))
+            ->assertOk()
+            ->assertDontSee('photo-1521572163474', false);
+    }
+
+    public function test_admin_product_create_stores_uploaded_images(): void
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->image('tote.jpg', 80, 100);
+
+        $this->post(route('admin.products.store'), [
+            'name' => 'Canvas Tote',
+            'category' => 'Accessories',
+            'brand' => 'NOVA',
+            'price' => 1000,
+            'images' => [$file],
+        ])->assertRedirect(route('admin.products.index'));
+
+        $product = Product::query()->where('slug', 'canvas-tote')->first();
+        $this->assertNotNull($product);
+        $this->assertSame(1, $product->images()->count());
+
+        $url = (string) $product->images()->first()?->image_url;
+        $this->assertStringContainsString('/storage/products/', $url);
+        $this->assertStringNotContainsString('unsplash.com', $url);
+        Storage::disk('public')->assertExists(Str::after($url, '/storage/'));
+
+        $this->get(route('product.show', 'canvas-tote'))
+            ->assertOk()
+            ->assertSee($url, false);
     }
 
     public function test_admin_customer_and_supplier_creates_persist(): void

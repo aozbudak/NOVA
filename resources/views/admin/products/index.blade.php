@@ -62,7 +62,11 @@
                 @foreach ($products as $product)
                     <tr class="border-b border-border last:border-b-0">
                         <x-admin.td :label="__('admin.products.image')">
-                            <img src="{{ $product['image'] }}" alt="" width="36" height="44" class="h-11 w-9 object-cover">
+                            @if (($product['image'] ?? '') !== '')
+                                <img src="{{ $product['image'] }}" alt="" width="36" height="44" class="h-11 w-9 object-cover">
+                            @else
+                                <span class="inline-block h-11 w-9 bg-muted"></span>
+                            @endif
                         </x-admin.td>
                         <x-admin.td :label="__('admin.products.product')">{{ $product['name'] }}</x-admin.td>
                         <x-admin.td :label="__('admin.products.sku')" tone="muted">{{ $product['sku'] }}</x-admin.td>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class AdminProductTest extends TestCase
@@ -96,6 +97,17 @@ class AdminProductTest extends TestCase
             ])
             ->assertRedirect(route('admin.products.create'))
             ->assertSessionHasErrors('price');
+    }
+
+    public function test_create_rejects_a_non_image_upload(): void
+    {
+        $this->from(route('admin.products.create'))
+            ->post(route('admin.products.store'), [
+                'name' => 'Canvas Tote',
+                'images' => [UploadedFile::fake()->create('notes.pdf', 20, 'application/pdf')],
+            ])
+            ->assertRedirect(route('admin.products.create'))
+            ->assertSessionHasErrors('images.0');
     }
 
     public function test_deactivate_redirects_with_a_toast(): void

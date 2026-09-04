@@ -5,7 +5,7 @@
 @section('content')
     <x-admin.page-header :title="$product ? __('admin.products.edit') : __('admin.products.add')" />
 
-    <form method="POST" action="{{ $product ? route('admin.products.update', $product['slug']) : route('admin.products.store') }}" class="flex max-w-4xl flex-col gap-6">
+    <form method="POST" action="{{ $product ? route('admin.products.update', $product['slug']) : route('admin.products.store') }}" enctype="multipart/form-data" class="flex max-w-4xl flex-col gap-6">
         @csrf
         @if ($product)
             @method('PUT')
@@ -148,6 +148,13 @@
         <section class="admin-card rounded-2xl border p-4">
             <h2 class="mb-4 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.products.images') }}</h2>
             <x-admin.field :label="__('admin.products.product_images')" name="images" :help="__('admin.products.upload_hint')">
+                @if (($product['images'] ?? []) !== [])
+                    <div class="mb-3 flex flex-wrap gap-2">
+                        @foreach ($product['images'] as $image)
+                            <img src="{{ $image }}" alt="" width="72" height="90" class="h-[90px] w-[72px] object-cover">
+                        @endforeach
+                    </div>
+                @endif
                 <x-admin.input type="file" name="images[]" multiple accept="image/jpeg,image/webp" />
             </x-admin.field>
         </section>

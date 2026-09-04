@@ -200,7 +200,10 @@ function paintSearchResults(matches) {
         return `
             <li>
                 <a href="${fillRoute(nova().routes.product, '__SLUG__', item.slug)}" class="flex items-center gap-4">
-                    <img src="${item.image}" alt="${escapeHtml(item.name)}" width="56" height="70" class="h-[70px] w-14 object-cover" loading="lazy">
+                    ${item.image
+                        ? `<img src="${item.image}" alt="${escapeHtml(item.name)}" width="56" height="70" class="h-[70px] w-14 object-cover" loading="lazy">`
+                        : `<span class="inline-block h-[70px] w-14 bg-muted"></span>`
+                    }
                     <span>
                         <span class="block text-sm">${escapeHtml(item.name)}</span>
                         <span class="block text-xs text-muted-foreground">${formatter.format(item.price)}</span>
