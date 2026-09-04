@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['parent_id', 'name', 'slug', 'description', 'image', 'is_active', 'sort_order'])]
+#[Fillable(['parent_id', 'name', 'slug', 'description', 'image', 'is_active', 'sort_order', 'show_in_header'])]
 class Category extends Model
 {
     /** @use HasFactory<CategoryFactory> */
@@ -25,6 +25,7 @@ class Category extends Model
     {
         return [
             'is_active' => 'boolean',
+            'show_in_header' => 'boolean',
             'sort_order' => 'integer',
         ];
     }
@@ -63,5 +64,11 @@ class Category extends Model
     protected function roots(Builder $query): Builder
     {
         return $query->whereNull('parent_id');
+    }
+
+    #[Scope]
+    protected function inHeader(Builder $query): Builder
+    {
+        return $query->where('show_in_header', true);
     }
 }

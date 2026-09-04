@@ -13,9 +13,11 @@ use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 final class AdminStore
 {
@@ -277,12 +279,13 @@ final class AdminStore
     }
 
     /**
-     * @return Collection<int, array{id: string, name: string, products: int, stock: int, status: string}>
+     * @return Collection<int, array{id: string, name: string, parent_id: string|null, parent: string|null, products: int, stock: int, status: string, show_in_header: bool}>
      */
     public function categoryRecords(): Collection
     {
         if (Schema::hasTable('categories') && Category::query()->exists()) {
             $products = $this->products();
+            $tracksHeader = Schema::hasColumn('categories', 'show_in_header');
 
             return Category::query()
                 ->with('parent')
@@ -290,7 +293,7 @@ final class AdminStore
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get()
-                ->map(function (Category $category) use ($products): array {
+                ->map(function (Category $category) use ($products, $tracksHeader): array {
                     $rows = $products->where('category', $category->name);
 
                     return [
@@ -301,6 +304,7 @@ final class AdminStore
                         'products' => (int) $category->products_count,
                         'stock' => (int) $rows->sum('stock'),
                         'status' => $category->is_active ? 'active' : 'inactive',
+                        'show_in_header' => $tracksHeader && $category->show_in_header,
                     ];
                 });
         }
@@ -326,15 +330,178 @@ final class AdminStore
                 'status' => $saved['status'] ?? ($rows->contains('status', 'inactive') && $rows->doesntContain('status', 'active')
                     ? 'inactive'
                     : 'active'),
+                'show_in_header' => (bool) ($saved['show_in_header'] ?? false),
             ];
         });
     }
 
     /**
-     * @param  array{name: string, status?: string|null, parent_id?: string|null}  $data
-     * @return array{id: string, name: string, products: int, stock: int, status: string}
+     * @param  array{name: string, status?: string|null, parent_id?: string|null, parent_ids?: list<string>|null}  $data
+     * @return array{id: string, name: string, parent_id: string|null, products: int, stock: int, status: string}
      */
     public function createCategory(array $data): array
+    {
+        $parentIds = $this->normalizeCategoryParentIds($data);
+        $persist = function () use ($data, $parentIds): array {
+            $record = null;
+
+            foreach ($parentIds as $parentId) {
+                if ($this->categoryNameExists($data['name'], $parentId)) {
+                    throw ValidationException::withMessages([
+                        'name' => __('validation.unique', ['attribute' => __('admin.categories.name')]),
+                    ]);
+                }
+
+                $record = $this->storeCategoryRecord([
+                    'name' => $data['name'],
+                    'status' => $data['status'] ?? 'active',
+                    'parent_id' => $parentId,
+                ]);
+            }
+
+            return $record;
+        };
+
+        if (Schema::hasTable('categories')) {
+            return DB::transaction($persist);
+        }
+
+        return $persist();
+    }
+
+    /**
+     * @param  array{name: string, status?: string|null, parent_id?: string|null}  $data
+     * @return array{id: string, name: string, parent_id: string|null, parent?: string|null, products: int, stock: int, status: string}|null
+     */
+    public function updateCategory(string $id, array $data): ?array
+    {
+        $existing = $this->categoryRecords()->firstWhere('id', $id);
+
+        if ($existing === null) {
+            return null;
+        }
+
+        $parentId = array_key_exists('parent_id', $data)
+            ? (filled($data['parent_id'] ?? null) ? (string) $data['parent_id'] : null)
+            : ($existing['parent_id'] ?? null);
+
+        if ($parentId !== null && $parentId === $id) {
+            throw ValidationException::withMessages([
+                'parent_id' => __('validation.different', ['attribute' => __('admin.categories.parent'), 'other' => __('admin.categories.name')]),
+            ]);
+        }
+
+        $name = $data['name'] ?? $existing['name'];
+
+        if ($this->categoryNameExists($name, $parentId, $id)) {
+            throw ValidationException::withMessages([
+                'name' => __('validation.unique', ['attribute' => __('admin.categories.name')]),
+            ]);
+        }
+
+        $status = ($data['status'] ?? $existing['status']) === 'inactive' ? 'inactive' : 'active';
+        $parentName = $parentId !== null
+            ? ($this->categoryRecords()->firstWhere('id', $parentId)['name'] ?? null)
+            : null;
+
+        $saved = (new DatabaseRecords)->saveCategory([
+            'name' => $name,
+            'parent_id' => $parentId,
+            'status' => $status,
+        ], $id);
+
+        if ($saved !== null) {
+            return $this->categoryRecords()->firstWhere('id', $saved->id);
+        }
+
+        $record = [
+            'id' => $id,
+            'name' => $name,
+            'parent_id' => $parentId,
+            'parent' => $parentName,
+            'products' => $existing['products'],
+            'stock' => $existing['stock'],
+            'status' => $status,
+            'show_in_header' => (bool) ($existing['show_in_header'] ?? false),
+        ];
+
+        $categories = session('admin.categories', []);
+        $sessionKey = collect($categories)->search(
+            fn (array $row, mixed $key): bool => (string) ($row['id'] ?? $key) === $id,
+        );
+
+        $categories[$sessionKey === false ? $id : $sessionKey] = $record;
+        session(['admin.categories' => $categories]);
+
+        return $this->categoryRecords()->firstWhere('id', $id) ?? $record;
+    }
+
+    public function deleteCategory(string $id): bool
+    {
+        $existing = $this->categoryRecords()->firstWhere('id', $id);
+
+        if ($existing === null) {
+            return false;
+        }
+
+        if ((int) ($existing['products'] ?? 0) > 0) {
+            return false;
+        }
+
+        if (Schema::hasTable('categories') && Category::query()->where('id', $id)->orWhere('slug', $id)->exists()) {
+            return (new DatabaseRecords)->deleteCategory($id);
+        }
+
+        $categories = collect(session('admin.categories', []))
+            ->reject(fn (array $row, mixed $key): bool => (string) ($row['id'] ?? $key) === $id)
+            ->all();
+
+        session(['admin.categories' => $categories]);
+
+        return true;
+    }
+
+    /**
+     * @return array{id: string, name: string, parent_id: string|null, parent: string|null, products: int, stock: int, status: string, show_in_header: bool}|null
+     */
+    public function setCategoryHeader(string $id, bool $inHeader): ?array
+    {
+        $existing = $this->categoryRecords()->firstWhere('id', $id);
+
+        if ($existing === null) {
+            return null;
+        }
+
+        if (Schema::hasTable('categories') && Schema::hasColumn('categories', 'show_in_header')) {
+            $saved = (new DatabaseRecords)->setCategoryHeader($id, $inHeader);
+
+            if ($saved !== null) {
+                return $this->categoryRecords()->firstWhere('id', $saved->id);
+            }
+        }
+
+        $categories = session('admin.categories', []);
+        $sessionKey = collect($categories)->search(
+            fn (array $row, mixed $key): bool => (string) ($row['id'] ?? $key) === $id,
+        );
+
+        $record = [
+            ...($sessionKey === false ? $existing : $categories[$sessionKey]),
+            'id' => $id,
+            'show_in_header' => $inHeader,
+        ];
+
+        $categories[$sessionKey === false ? $id : $sessionKey] = $record;
+        session(['admin.categories' => $categories]);
+
+        return $this->categoryRecords()->firstWhere('id', $id) ?? $record;
+    }
+
+    /**
+     * @param  array{name: string, status?: string|null, parent_id?: string|null}  $data
+     * @return array{id: string, name: string, parent_id: string|null, products: int, stock: int, status: string}
+     */
+    private function storeCategoryRecord(array $data): array
     {
         $base = Str::slug($data['name']);
         $id = $base === '' ? 'category' : $base;
@@ -345,13 +512,20 @@ final class AdminStore
             $suffix++;
         }
 
+        $parentId = filled($data['parent_id'] ?? null) ? (string) $data['parent_id'] : null;
+        $parentName = $parentId !== null
+            ? ($this->categoryRecords()->firstWhere('id', $parentId)['name'] ?? null)
+            : null;
+
         $record = [
             'id' => $id,
             'name' => $data['name'],
-            'parent_id' => $data['parent_id'] ?? null,
+            'parent_id' => $parentId,
+            'parent' => $parentName,
             'products' => 0,
             'stock' => 0,
             'status' => ($data['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active',
+            'show_in_header' => false,
         ];
 
         $categories = session('admin.categories', []);
@@ -362,6 +536,37 @@ final class AdminStore
         $record['id'] = $saved?->id ?? $id;
 
         return $record;
+    }
+
+    /**
+     * @param  array{parent_id?: string|null, parent_ids?: list<string>|null}  $data
+     * @return list<string|null>
+     */
+    private function normalizeCategoryParentIds(array $data): array
+    {
+        $ids = collect($data['parent_ids'] ?? [])
+            ->when(filled($data['parent_id'] ?? null), fn (Collection $ids): Collection => $ids->push($data['parent_id']))
+            ->map(fn (mixed $id): string => trim((string) $id))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return $ids === [] ? [null] : $ids;
+    }
+
+    private function categoryNameExists(string $name, ?string $parentId, ?string $ignoreId = null): bool
+    {
+        return $this->categoryRecords()->contains(function (array $row) use ($name, $parentId, $ignoreId): bool {
+            if ($ignoreId !== null && (string) $row['id'] === $ignoreId) {
+                return false;
+            }
+
+            $rowParent = filled($row['parent_id'] ?? null) ? (string) $row['parent_id'] : null;
+            $compareParent = filled($parentId) ? (string) $parentId : null;
+
+            return strcasecmp($row['name'], $name) === 0 && $rowParent === $compareParent;
+        });
     }
 
     /**

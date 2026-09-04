@@ -107,6 +107,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
             Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
             Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+            Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+            Route::post('/categories/header', [CategoryController::class, 'attachHeader'])->name('categories.header.store');
+            Route::delete('/categories/{category}/header', [CategoryController::class, 'detachHeader'])->name('categories.header.destroy');
+            Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
             Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
             Route::post('/brands', [BrandController::class, 'store'])->name('brands.store');
             Route::put('/brands/{brand}', [BrandController::class, 'update'])->name('brands.update');

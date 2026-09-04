@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -228,10 +229,13 @@ class Catalog
             'collections' => ['title' => $this->t('nav.collections'), 'label' => $this->t('nav.collections')],
         ];
 
-        $meta = $departments[$department] ?? ['title' => $this->t('nav.shop'), 'label' => $this->t('nav.shop')];
+        $fromDatabase = $this->databaseCategoryName($department);
+        $meta = filled($fromDatabase)
+            ? ['title' => $fromDatabase, 'label' => $fromDatabase]
+            : ($departments[$department] ?? ['title' => $this->t('nav.shop'), 'label' => $this->t('nav.shop')]);
 
         if ($category !== null && $category !== '') {
-            $categoryLabel = $this->t('nav.'.$category);
+            $categoryLabel = $this->categoryLabel($category);
             $meta['title'] = $categoryLabel;
             $meta['breadcrumb'] = $meta['label'].' / '.$categoryLabel;
         } else {
@@ -265,7 +269,14 @@ class Catalog
             'women', 'men', 'kids', 'sport' => $products->where('category', $department),
             'new-in' => $products->where('isNew', true),
             'sale' => $products->filter(fn (array $product): bool => $product['oldPrice'] !== null),
-            default => $products,
+            'collections' => $products,
+            default => $products->filter(function (array $product) use ($department): bool {
+                $leaf = $this->leafSlug($department);
+
+                return ($product['category'] ?? '') === $department
+                    || ($product['type'] ?? '') === $department
+                    || ($product['type'] ?? '') === $leaf;
+            }),
         };
 
         if (is_string($category) && $category !== '') {
@@ -343,19 +354,47 @@ class Catalog
      */
     public function departments(): array
     {
-        return ['women', 'men', 'kids', 'sport', 'new-in', 'collections', 'sale'];
+        $departments = ['women', 'men', 'kids', 'sport', 'new-in', 'collections', 'sale'];
+
+        if (! Schema::hasTable('categories')) {
+            return $departments;
+        }
+
+        foreach (Category::query()->active()->orderBy('slug')->pluck('slug') as $slug) {
+            $departments[] = $slug;
+            $leaf = $this->leafSlug($slug);
+
+            if ($leaf !== $slug) {
+                $departments[] = $leaf;
+            }
+        }
+
+        return array_values(array_unique($departments));
     }
 
     /**
      * @return list<array{
      *     label: string,
      *     department: string,
+     *     href?: string,
      *     columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>,
      *     featured: array{title: string, image: string, href: string}
      * }>
      */
     public function navigation(): array
     {
+        $header = $this->headerNavigation();
+
+        if ($header !== []) {
+            $brands = $this->brandNavItem();
+
+            if ($brands !== null) {
+                $header[] = $brands;
+            }
+
+            return $header;
+        }
+
         $items = [
             $this->navItem($this->t('nav.women'), 'women', [
                 ['title' => $this->t('nav.clothing'), 'categories' => [
@@ -429,6 +468,87 @@ class Catalog
         ];
 
         return $this->mergeDatabaseNavigation($items);
+    }
+
+    /**
+     * @return list<array{
+     *     label: string,
+     *     department: string,
+     *     href: string,
+     *     columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>,
+     *     featured: array{title: string, image: string, href: string}
+     * }>
+     */
+    private function headerNavigation(): array
+    {
+        if (! Schema::hasTable('categories') || ! Schema::hasColumn('categories', 'show_in_header')) {
+            return [];
+        }
+
+        $categories = Category::query()
+            ->active()
+            ->inHeader()
+            ->with([
+                'parent',
+                'children' => fn ($query) => $query->active()->orderBy('sort_order')->orderBy('name'),
+            ])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        if ($categories->isEmpty()) {
+            return [];
+        }
+
+        return $categories
+            ->map(fn (Category $category): array => $this->categoryNavItem($category))
+            ->all();
+    }
+
+    /**
+     * @return array{
+     *     label: string,
+     *     department: string,
+     *     href: string,
+     *     columns: list<array{title: string, links: list<array{label: string, category?: string, href: string}>}>,
+     *     featured: array{title: string, image: string, href: string}
+     * }
+     */
+    private function categoryNavItem(Category $category): array
+    {
+        $department = $category->slug;
+        $parentSlug = $category->parent?->slug;
+        $href = $parentSlug !== null
+            ? route('shop.show', ['department' => $parentSlug, 'category' => $this->leafSlug($category->slug)])
+            : route('shop.show', $department);
+
+        $columns = [];
+
+        if ($category->children->isNotEmpty()) {
+            $columns[] = [
+                'title' => $this->t('nav.shop'),
+                'links' => $category->children
+                    ->map(fn (Category $child): array => [
+                        'label' => $child->name,
+                        'category' => $this->leafSlug($child->slug),
+                        'href' => route('shop.show', ['department' => $department, 'category' => $this->leafSlug($child->slug)]),
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+        }
+
+        return [
+            'label' => $category->name,
+            'department' => $department,
+            'href' => $href,
+            'columns' => $columns,
+            'featured' => [
+                'title' => $category->name,
+                'image' => filled($category->image) ? $category->image : $this->image('photo-1469334031218-e382a71b716b', 900),
+                'href' => $href,
+            ],
+        ];
     }
 
     /**
@@ -1117,6 +1237,47 @@ class Catalog
             'isNew' => $isNew,
             'material' => $this->t('product.material_see_details'),
         ];
+    }
+
+    private function categoryLabel(string $category): string
+    {
+        $name = $this->databaseCategoryName($category);
+
+        if (filled($name)) {
+            return $name;
+        }
+
+        $key = 'nav.'.$category;
+
+        if (trans()->has('storefront.'.$key)) {
+            return $this->t($key);
+        }
+
+        return Str::headline(str_replace('-', ' ', $category));
+    }
+
+    private function databaseCategoryName(string $slug): ?string
+    {
+        if (! Schema::hasTable('categories')) {
+            return null;
+        }
+
+        $categories = Category::query()
+            ->where(function (Builder $query) use ($slug): void {
+                $query->where('slug', $slug)
+                    ->orWhere('slug', 'like', '%-'.$slug);
+            })
+            ->get(['slug', 'name']);
+
+        $exact = $categories->firstWhere('slug', $slug);
+
+        if ($exact !== null) {
+            return $exact->name;
+        }
+
+        return $categories
+            ->first(fn (Category $category): bool => $this->leafSlug($category->slug) === $slug)
+            ?->name;
     }
 
     /**

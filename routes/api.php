@@ -50,6 +50,10 @@ Route::middleware(['web', EnsureAdminAuthenticated::class, EnsureAdminPageAccess
 
     Route::get('/variants', VariantController::class)->name('variants.index');
     Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::post('/categories/header', [CategoryController::class, 'attachHeader'])->name('categories.header.store');
+    Route::delete('/categories/{category}/header', [CategoryController::class, 'detachHeader'])->name('categories.header.destroy');
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
     Route::post('/brands', [BrandController::class, 'store'])->name('brands.store');
     Route::put('/brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
     Route::delete('/brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');

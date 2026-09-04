@@ -50,11 +50,17 @@ final class DatabaseRecords
             ? Category::query()->where('id', $id)->orWhere('slug', $id)->first()
             : null;
 
-        $slug = $existing?->slug ?? $this->uniqueValue(
-            'categories',
-            'slug',
-            Str::slug($record['name']) ?: 'category',
-        );
+        $slugBase = Str::slug($record['name']) ?: 'category';
+
+        if ($existing === null && $parentId !== null) {
+            $parentSlug = Category::query()->where('id', $parentId)->value('slug');
+
+            if (is_string($parentSlug) && $parentSlug !== '') {
+                $slugBase = $parentSlug.'-'.$slugBase;
+            }
+        }
+
+        $slug = $existing?->slug ?? $this->uniqueValue('categories', 'slug', $slugBase);
 
         $payload = [
             'parent_id' => $parentId,
@@ -71,6 +77,40 @@ final class DatabaseRecords
         }
 
         return Category::query()->create($payload);
+    }
+
+    public function deleteCategory(string $id): bool
+    {
+        if (! Schema::hasTable('categories')) {
+            return false;
+        }
+
+        $category = Category::query()->where('id', $id)->orWhere('slug', $id)->first();
+
+        if ($category === null || $category->products()->exists()) {
+            return false;
+        }
+
+        $category->delete();
+
+        return true;
+    }
+
+    public function setCategoryHeader(string $id, bool $inHeader): ?Category
+    {
+        if (! Schema::hasTable('categories') || ! Schema::hasColumn('categories', 'show_in_header')) {
+            return null;
+        }
+
+        $category = Category::query()->where('id', $id)->orWhere('slug', $id)->first();
+
+        if ($category === null) {
+            return null;
+        }
+
+        $category->update(['show_in_header' => $inHeader]);
+
+        return $category->fresh() ?? $category;
     }
 
     /**

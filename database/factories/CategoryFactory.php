@@ -22,6 +22,7 @@ class CategoryFactory extends Factory
             'name' => Str::headline($name),
             'slug' => Str::slug($name).'-'.fake()->unique()->numerify('###'),
             'is_active' => true,
+            'show_in_header' => false,
             'sort_order' => 0,
         ];
     }
