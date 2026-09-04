@@ -1,3 +1,11 @@
+@props([
+    'sections' => null,
+])
+
+@php
+    $sections ??= app(\App\Support\SiteContent::class)->footer();
+@endphp
+
 <footer class="relative mt-24 overflow-hidden border-t border-glass-border">
     <div class="pointer-events-none absolute inset-0" aria-hidden="true">
         <div class="absolute -top-20 left-[15%] size-72 rounded-full bg-foreground/7 blur-3xl"></div>
@@ -35,26 +43,24 @@
             </ul>
         </div>
         <div>
-            <p class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.footer.help') }}</p>
+            <p class="text-[11px] font-medium tracking-nav uppercase">{{ $sections['help']['heading'] }}</p>
             <ul class="mt-5 flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <li><a href="{{ route('pages.show', 'contact') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.contact') }}</a></li>
-                <li><a href="{{ route('pages.show', 'shipping') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.shipping') }}</a></li>
-                <li><a href="{{ route('pages.show', 'returns') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.returns') }}</a></li>
-                <li><a href="{{ route('pages.show', 'faq') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.faq') }}</a></li>
-                <li><a href="{{ route('pages.show', 'size-guide') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.size_guide') }}</a></li>
+                @foreach ($sections['help']['links'] as $link)
+                    <li><a href="{{ route('pages.show', $link['slug']) }}" class="transition-colors hover:text-foreground">{{ $link['label'] }}</a></li>
+                @endforeach
             </ul>
         </div>
         <div>
-            <p class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.footer.about') }}</p>
+            <p class="text-[11px] font-medium tracking-nav uppercase">{{ $sections['about']['heading'] }}</p>
             <ul class="mt-5 flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <li><a href="{{ route('pages.show', 'about') }}" class="transition-colors hover:text-foreground">{{ __('storefront.pages.about.title') }}</a></li>
-                <li><a href="{{ route('pages.show', 'careers') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.careers') }}</a></li>
-                <li><a href="{{ route('pages.show', 'sustainability') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.sustainability') }}</a></li>
+                @foreach ($sections['about']['links'] as $link)
+                    <li><a href="{{ route('pages.show', $link['slug']) }}" class="transition-colors hover:text-foreground">{{ $link['label'] }}</a></li>
+                @endforeach
             </ul>
         </div>
         <div>
-            <p class="text-[11px] font-medium tracking-nav uppercase">{{ __('storefront.footer.journal') }}</p>
-            <p class="mt-5 text-sm leading-relaxed text-muted-foreground">{{ __('storefront.footer.journal_text') }}</p>
+            <p class="text-[11px] font-medium tracking-nav uppercase">{{ $sections['journal']['heading'] }}</p>
+            <p class="mt-5 text-sm leading-relaxed text-muted-foreground">{{ $sections['journal']['text'] }}</p>
             <form action="{{ route('pages.show', 'contact') }}" method="get" class="mt-5 flex items-end gap-3 border-b border-glass-border pb-2">
                 <label class="sr-only" for="footer-email">{{ __('storefront.footer.email') }}</label>
                 <input
@@ -68,9 +74,9 @@
                 <button type="submit" class="shrink-0 pb-1 text-[11px] tracking-nav uppercase">{{ __('storefront.footer.subscribe') }}</button>
             </form>
             <ul class="mt-8 flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <li><a href="{{ route('pages.show', 'privacy') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.privacy') }}</a></li>
-                <li><a href="{{ route('pages.show', 'terms') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.terms') }}</a></li>
-                <li><a href="{{ route('pages.show', 'cookies') }}" class="transition-colors hover:text-foreground">{{ __('storefront.footer.cookies') }}</a></li>
+                @foreach ($sections['journal']['links'] as $link)
+                    <li><a href="{{ route('pages.show', $link['slug']) }}" class="transition-colors hover:text-foreground">{{ $link['label'] }}</a></li>
+                @endforeach
             </ul>
         </div>
     </div>

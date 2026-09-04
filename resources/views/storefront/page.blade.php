@@ -7,7 +7,10 @@
         <p class="text-[11px] tracking-nav uppercase text-muted-foreground">{{ $meta['kicker'] }}</p>
         <h1 class="mt-4 font-serif text-4xl md:text-5xl">{{ $meta['title'] }}</h1>
         <div class="mt-10 space-y-6 text-sm leading-relaxed text-muted-foreground">
-            @include('storefront.pages.'.$page)
+            <p>{{ $content['p1'] }}</p>
+            @if (filled($content['p2']))
+                <p>{{ $content['p2'] }}</p>
+            @endif
         </div>
     </article>
 @endsection

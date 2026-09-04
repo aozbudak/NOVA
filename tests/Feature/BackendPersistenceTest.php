@@ -10,7 +10,6 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\SaleReturn;
-use App\Models\StockMovement;
 use App\Models\User;
 use Database\Seeders\AdminCatalogSeeder;
 use Database\Seeders\CatalogSeeder;
@@ -38,6 +37,11 @@ class BackendPersistenceTest extends TestCase
         $this->assertEquals(20, (float) $product->vat_rate);
         $this->assertSame(12, (int) $product->variants()->first()?->stock?->quantity);
         $this->assertTrue(Brand::query()->where('name', 'NOVA')->exists());
+        $this->assertDatabaseHas('stock_movements', [
+            'movement_type' => 'adjustment_in',
+            'quantity' => 12,
+            'note' => 'Initial stock',
+        ]);
     }
 
     public function test_admin_customer_and_supplier_creates_persist(): void
@@ -87,7 +91,11 @@ class BackendPersistenceTest extends TestCase
         ])->assertRedirect(route('admin.inventory.index'));
 
         $this->assertSame($before + 3, (int) $variant->fresh()->stock?->quantity);
-        $this->assertTrue(StockMovement::query()->where('product_variant_id', $variant->id)->where('movement_type', 'in')->exists());
+        $this->assertDatabaseHas('stock_movements', [
+            'product_variant_id' => $variant->id,
+            'movement_type' => 'purchase',
+            'quantity' => 3,
+        ]);
 
         $this->postJson(route('api.sales.store'), [
             'payment' => 'cash',

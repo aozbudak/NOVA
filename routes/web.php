@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\SearchController as AdminSearchController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\SiteController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VariantController;
@@ -160,6 +161,8 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::get('/audit/{audit}', [AuditController::class, 'show'])->name('audit.show');
             Route::get('/settings/{category?}', [SettingController::class, 'index'])->name('settings.index');
             Route::put('/settings/{category}', [SettingController::class, 'update'])->name('settings.update');
+            Route::get('/site/{section?}', [SiteController::class, 'index'])->name('site.index');
+            Route::put('/site/{section}', [SiteController::class, 'update'])->name('site.update');
             Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
             Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
             Route::put('/profile/password', [ProfileController::class, 'password'])->name('profile.password');

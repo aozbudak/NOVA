@@ -12,14 +12,13 @@
             'people' => ['customers', 'suppliers'],
             'finance' => ['cash', 'income_expense', 'payments'],
             'reporting' => ['reports'],
-            'management' => ['users', 'roles', 'audit'],
-            'system' => ['settings'],
+            'system' => ['roles', 'users', 'audit', 'site', 'settings'],
         ];
     @endphp
 
     <x-admin.page-header :title="$user ? __('admin.users.edit') : __('admin.users.add')" :description="data_get($user, 'email')">
         <x-slot:actions>
-            <x-admin.button variant="ghost" :href="route('admin.users.index')">{{ __('admin.common.cancel') }}</x-admin.button>
+            <x-admin.button variant="ghost" :href="route('admin.roles.index')">{{ __('admin.common.cancel') }}</x-admin.button>
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -108,7 +107,7 @@
 
         <div class="flex items-center gap-2 border-t border-border pt-4">
             <x-admin.button type="submit" data-busy-label="{{ __('admin.common.saving') }}">{{ __('admin.common.save') }}</x-admin.button>
-            <x-admin.button variant="ghost" :href="route('admin.users.index')">{{ __('admin.common.cancel') }}</x-admin.button>
+            <x-admin.button variant="ghost" :href="route('admin.roles.index')">{{ __('admin.common.cancel') }}</x-admin.button>
         </div>
     </form>
 @endsection

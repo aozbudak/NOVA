@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\StaffRole;
+use App\Enums\StockMovementType;
 use App\Models\AuditLog;
 use App\Models\Brand;
 use App\Models\CashRegister;
@@ -364,10 +365,13 @@ final class DatabaseRecords
 
         if (in_array($type, ['in', 'purchase'], true)) {
             $delta = abs($quantity);
-            $movementType = 'in';
-        } elseif (in_array($type, ['out', 'sale'], true)) {
+            $movementType = StockMovementType::Purchase->value;
+        } elseif ($type === 'sale') {
             $delta = -abs($quantity);
-            $movementType = 'out';
+            $movementType = StockMovementType::Sale->value;
+        } elseif ($type === 'out') {
+            $delta = -abs($quantity);
+            $movementType = StockMovementType::AdjustmentOut->value;
         }
 
         return DB::transaction(function () use ($variant, $delta, $movementType, $reason): true {
@@ -1142,7 +1146,14 @@ final class DatabaseRecords
                 ]);
 
                 if ($quantity !== 0) {
-                    $this->writeStockMovement($variant, $quantity, 'in', 'adjustment', null, 'Initial stock');
+                    $this->writeStockMovement(
+                        $variant,
+                        $quantity,
+                        StockMovementType::AdjustmentIn->value,
+                        'adjustment',
+                        null,
+                        'Initial stock',
+                    );
                 }
             } else {
                 if ((int) $stock->minimum_quantity !== $minStock) {
@@ -1152,7 +1163,16 @@ final class DatabaseRecords
                 $delta = $quantity - (int) $stock->quantity;
 
                 if ($delta !== 0) {
-                    $this->moveStock($variant, $delta, $delta > 0 ? 'in' : 'out', null, 'adjustment', 'Variant stock sync');
+                    $this->moveStock(
+                        $variant,
+                        $delta,
+                        $delta > 0
+                            ? StockMovementType::AdjustmentIn->value
+                            : StockMovementType::AdjustmentOut->value,
+                        null,
+                        'adjustment',
+                        'Variant stock sync',
+                    );
                 }
             }
         }
@@ -1458,11 +1478,18 @@ final class DatabaseRecords
             return;
         }
 
+        $movement = StockMovementType::fromIntent($type, $quantity);
+        $amount = abs($quantity);
+
+        if ($amount === 0) {
+            return;
+        }
+
         StockMovement::query()->create([
             'product_variant_id' => $variant->id,
             'user_id' => $this->actorUserId(),
-            'movement_type' => $type,
-            'quantity' => $quantity,
+            'movement_type' => $movement->value,
+            'quantity' => $amount,
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
             'note' => $note,

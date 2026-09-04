@@ -53,7 +53,7 @@ class AdminLoginTest extends TestCase
                 'password' => 'secret123',
                 'abilities' => ['pos'],
             ])
-            ->assertRedirect(route('admin.users.index'));
+            ->assertRedirect(route('admin.roles.index'));
 
         $this->post(route('admin.logout'));
 
@@ -81,7 +81,7 @@ class AdminLoginTest extends TestCase
                 'password' => 'secret123',
                 'abilities' => ['pos', 'sales', 'customers', 'returns'],
             ])
-            ->assertRedirect(route('admin.users.index'));
+            ->assertRedirect(route('admin.roles.index'));
 
         $this->post(route('admin.logout'))
             ->assertRedirect(route('admin.login'));

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\StaffRole;
+use App\Enums\StockMovementType;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Customer;
@@ -573,7 +574,8 @@ final class AdminStore
                 ->get()
                 ->map(function (StockMovement $movement): array {
                     $type = $this->movementType($movement->movement_type);
-                    $qty = (int) $movement->quantity;
+                    $enum = StockMovementType::tryFrom($movement->movement_type);
+                    $qty = $enum?->signedQuantity((int) $movement->quantity) ?? (int) $movement->quantity;
                     $after = (int) ($movement->variant?->stock?->quantity ?? 0);
                     $before = $after - $qty;
 
@@ -610,11 +612,15 @@ final class AdminStore
 
     private function movementType(string $type): string
     {
+        $enum = StockMovementType::tryFrom($type);
+
+        if ($enum !== null) {
+            return $enum->displayType();
+        }
+
         return match ($type) {
-            'in', 'purchase' => 'purchase',
+            'in' => 'purchase',
             'out', 'manual', 'adjustment' => 'manual',
-            'sale' => 'sale',
-            'return' => 'return',
             'exchange' => 'exchange',
             default => 'manual',
         };

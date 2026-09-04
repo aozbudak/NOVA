@@ -70,6 +70,8 @@ final class AdminNavigation
         'admin.audit.show' => 'audit',
         'admin.settings.index' => 'settings',
         'admin.settings.update' => 'settings',
+        'admin.site.index' => 'site',
+        'admin.site.update' => 'site',
         'admin.profile.show' => 'profile',
         'admin.profile.update' => 'profile',
         'admin.profile.password' => 'profile',
@@ -183,6 +185,15 @@ final class AdminNavigation
                     $this->item('report_cash', 'reports', 'admin.reports.show', 'reports', ['cash']),
                     $this->item('report_customers', 'reports', 'admin.reports.show', 'reports', ['customers']),
                     $this->item('report_suppliers', 'reports', 'admin.reports.show', 'reports', ['suppliers']),
+                ],
+            ],
+            [
+                'key' => 'site',
+                'label' => __('admin.nav.site'),
+                'items' => [
+                    $this->item('site_about', 'site', 'admin.site.index', 'site', ['about']),
+                    $this->item('site_help', 'site', 'admin.site.index', 'site', ['help']),
+                    $this->item('site_journal', 'site', 'admin.site.index', 'site', ['journal']),
                 ],
             ],
             [
@@ -417,7 +428,13 @@ final class AdminNavigation
         $parameters = $item['parameters'] ?? [];
 
         if ($parameters !== []) {
-            return $current === $route && request()->route('report') === $parameters[0];
+            $currentParameter = request()->route('report') ?? request()->route('section');
+
+            if ($route === 'admin.site.index' && $currentParameter === null) {
+                $currentParameter = 'about';
+            }
+
+            return $current === $route && $currentParameter === $parameters[0];
         }
 
         if ($current === $route) {

@@ -7,7 +7,6 @@ use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProductVariant;
-use App\Models\StockMovement;
 use Database\Seeders\AdminCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -66,7 +65,10 @@ class SystemIntegrityTest extends TestCase
         $this->assertSame($before - 2, (int) $variant->fresh()?->stock?->quantity);
         $this->assertTrue(Order::query()->where('order_number', 'like', 'NV-%')->exists());
         $this->assertTrue(Payment::query()->where('status', 'completed')->exists());
-        $this->assertTrue(StockMovement::query()->where('movement_type', 'sale')->where('quantity', -2)->exists());
+        $this->assertDatabaseHas('stock_movements', [
+            'movement_type' => 'sale',
+            'quantity' => 2,
+        ]);
         $this->assertTrue(AuditLog::query()->where('action', 'sale.completed')->exists());
     }
 
@@ -93,7 +95,10 @@ class SystemIntegrityTest extends TestCase
         $this->assertSame($before, (int) $variant->fresh()?->stock?->quantity);
         $this->assertSame('returned', $order->fresh()?->status);
         $this->assertTrue(Payment::query()->where('order_id', $order->id)->where('status', 'refunded')->exists());
-        $this->assertTrue(StockMovement::query()->where('movement_type', 'return')->where('quantity', 2)->exists());
+        $this->assertDatabaseHas('stock_movements', [
+            'movement_type' => 'return',
+            'quantity' => 2,
+        ]);
 
         $this->postJson(route('api.returns.store'), [
             'sale' => $order->order_number,

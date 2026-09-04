@@ -72,6 +72,7 @@ enum StaffRole: string
             'users',
             'roles',
             'audit',
+            'site',
             'settings',
         ];
     }
@@ -116,6 +117,7 @@ enum StaffRole: string
                 'users',
                 'roles',
                 'profile',
+                'site',
             ],
             self::Cashier => [
                 'pos',

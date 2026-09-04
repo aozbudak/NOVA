@@ -3,36 +3,23 @@
 namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
+use App\Support\SiteContent;
 use Illuminate\View\View;
 
 class PageController extends Controller
 {
-    /**
-     * @var list<string>
-     */
-    private const PAGES = [
-        'about',
-        'contact',
-        'shipping',
-        'returns',
-        'faq',
-        'size-guide',
-        'careers',
-        'sustainability',
-        'privacy',
-        'terms',
-        'cookies',
-    ];
-
-    public function __invoke(string $page): View
+    public function __invoke(string $page, SiteContent $site): View
     {
-        abort_unless(in_array($page, self::PAGES, true), 404);
+        $content = $site->page($page);
+
+        abort_if($content === null, 404);
 
         return view('storefront.page', [
             'page' => $page,
+            'content' => $content,
             'meta' => [
-                'title' => __('storefront.pages.'.$page.'.title'),
-                'kicker' => __('storefront.pages.'.$page.'.kicker'),
+                'title' => $content['title'],
+                'kicker' => $content['kicker'],
             ],
         ]);
     }
