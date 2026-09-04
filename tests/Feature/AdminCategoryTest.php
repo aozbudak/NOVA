@@ -15,6 +15,8 @@ class AdminCategoryTest extends TestCase
             ->assertSee('Shirts')
             ->assertSee('Outerwear')
             ->assertSee('Add category')
+            ->assertSee('Parent categories')
+            ->assertSee('Optional. Link this category to a brand.')
             ->assertSee('data-admin-layer="add-category"', false)
             ->assertDontSee('This module is ready for operational data.');
     }
