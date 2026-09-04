@@ -186,18 +186,11 @@ final class AdminNavigation
                 ],
             ],
             [
-                'key' => 'management',
-                'label' => __('admin.nav.management'),
-                'items' => [
-                    $this->item('users', 'users', 'admin.users.index', 'users'),
-                    $this->item('roles', 'roles', 'admin.roles.index', 'roles'),
-                    $this->item('audit', 'audit', 'admin.audit.index', 'audit'),
-                ],
-            ],
-            [
                 'key' => 'system',
                 'label' => __('admin.nav.system'),
                 'items' => [
+                    $this->item('roles', 'roles', 'admin.roles.index', 'roles'),
+                    $this->item('audit', 'audit', 'admin.audit.index', 'audit'),
                     $this->item('notifications', 'bell', 'admin.notifications.index', 'profile'),
                     $this->item('profile', 'user', 'admin.profile.show', 'profile'),
                     $this->item('settings', 'settings', 'admin.settings.index', 'settings'),
@@ -366,11 +359,11 @@ final class AdminNavigation
                 ['label' => __('admin.reports.detail'), 'url' => null],
             ],
             'admin.users.create' => [
-                ['label' => __('admin.nav.users'), 'url' => route('admin.users.index')],
+                ['label' => __('admin.nav.roles'), 'url' => route('admin.roles.index')],
                 ['label' => __('admin.users.add'), 'url' => null],
             ],
             'admin.users.edit' => [
-                ['label' => __('admin.nav.users'), 'url' => route('admin.users.index')],
+                ['label' => __('admin.nav.roles'), 'url' => route('admin.roles.index')],
                 ['label' => __('admin.users.edit'), 'url' => null],
             ],
             'admin.roles.show' => [
@@ -428,6 +421,10 @@ final class AdminNavigation
         }
 
         if ($current === $route) {
+            return true;
+        }
+
+        if ($route === 'admin.roles.index' && request()->routeIs('admin.users.*')) {
             return true;
         }
 
