@@ -45,7 +45,7 @@
             @endforeach
         </x-slot:head>
         <x-slot:body>
-            @foreach ($report['status_rows'] as $row)
+            @forelse ($report['status_rows'] as $row)
                 <tr class="border-b border-border last:border-b-0">
                     <x-admin.td :label="$report['headers'][0] ?? ''">{{ $row['product'] }}</x-admin.td>
                     <x-admin.td :label="$report['headers'][1] ?? ''" tone="muted">{{ $row['sku'] }}</x-admin.td>
@@ -55,7 +55,11 @@
                     <x-admin.td :label="$report['headers'][5] ?? ''"><x-admin.badge :status="$row['status']" /></x-admin.td>
                     <x-admin.td :label="$report['headers'][6] ?? ''">{{ \App\Support\AdminStore::money($row['stock_value']) }}</x-admin.td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="{{ count($report['headers']) }}" class="px-3 py-6 text-center text-muted-foreground">{{ __('admin.search.empty') }}</td>
+                </tr>
+            @endforelse
         </x-slot:body>
     </x-admin.table>
 </div>

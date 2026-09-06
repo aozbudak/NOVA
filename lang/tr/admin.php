@@ -635,6 +635,7 @@ return [
             'total_suppliers' => 'Toplam tedarikçi',
             'total_purchases' => 'Toplam alım',
             'top_suppliers' => 'Öne çıkan tedarikçiler',
+            'stock_value' => 'Stok değeri',
         ],
         'table' => [
             'product' => 'Ürün',
@@ -655,6 +656,8 @@ return [
         ],
         'metric' => 'Metrik',
         'value' => 'Değer',
+        'period' => 'Dönem',
+        'generated_at' => 'Oluşturulma',
     ],
     'users' => [
         'title' => 'Kullanıcılar',

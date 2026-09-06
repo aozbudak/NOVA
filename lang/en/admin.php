@@ -635,6 +635,7 @@ return [
             'total_suppliers' => 'Total suppliers',
             'total_purchases' => 'Total purchases',
             'top_suppliers' => 'Top suppliers',
+            'stock_value' => 'Stock value',
         ],
         'table' => [
             'product' => 'Product',
@@ -655,6 +656,8 @@ return [
         ],
         'metric' => 'Metric',
         'value' => 'Value',
+        'period' => 'Period',
+        'generated_at' => 'Generated at',
     ],
     'users' => [
         'title' => 'Users',

@@ -2201,6 +2201,7 @@ final class AdminStore
                 ['key' => 'total_stock', 'label' => __('admin.reports.metrics.total_stock'), 'value' => (string) $rows->sum('stock')],
                 ['key' => 'low_stock', 'label' => __('admin.reports.metrics.low_stock'), 'value' => (string) $products->where('stock_status', 'low_stock')->count()],
                 ['key' => 'out_of_stock', 'label' => __('admin.reports.metrics.out_of_stock'), 'value' => (string) $products->where('stock_status', 'out_of_stock')->count()],
+                ['key' => 'stock_value', 'label' => __('admin.reports.metrics.stock_value'), 'value' => self::money((int) $rows->sum('stock_value'))],
             ],
             'headers' => [
                 __('admin.reports.table.product'),

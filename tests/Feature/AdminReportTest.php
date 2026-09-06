@@ -146,19 +146,29 @@ class AdminReportTest extends TestCase
         $response = $this->get(route('admin.reports.export', ['report' => 'sales', 'format' => 'csv']));
 
         $response->assertDownload('sales-report.csv');
-        $this->assertStringContainsString('Total sales', $response->streamedContent());
-        $this->assertStringContainsString('Basic Shirt', $response->streamedContent());
+        $csv = $response->streamedContent();
+        $this->assertStringContainsString('NOVA', $csv);
+        $this->assertStringContainsString('Period', $csv);
+        $this->assertStringContainsString('Total sales', $csv);
+        $this->assertStringContainsString('Basic Shirt', $csv);
     }
 
     public function test_export_excel_and_pdf_are_prepared_on_the_server(): void
     {
         $excel = $this->get(route('admin.reports.export', ['report' => 'inventory', 'format' => 'excel']));
         $excel->assertDownload('inventory-report.xls');
-        $this->assertStringContainsString('Workbook', $excel->streamedContent());
+        $excelBody = $excel->streamedContent();
+        $this->assertStringContainsString('Workbook', $excelBody);
+        $this->assertStringContainsString('NOVA', $excelBody);
+        $this->assertStringContainsString('#1C1814', $excelBody);
+        $this->assertStringContainsString('Stock value', $excelBody);
 
         $pdf = $this->get(route('admin.reports.export', ['report' => 'suppliers', 'format' => 'pdf']));
         $pdf->assertDownload('suppliers-report.pdf');
-        $this->assertStringStartsWith('%PDF', $pdf->streamedContent());
+        $pdfBody = $pdf->streamedContent();
+        $this->assertStringStartsWith('%PDF', $pdfBody);
+        $this->assertStringContainsString('xref', $pdfBody);
+        $this->assertStringContainsString('NOVA', $pdfBody);
     }
 
     public function test_unknown_report_and_export_format_return_404(): void
