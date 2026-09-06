@@ -7,6 +7,7 @@ use App\Support\AdminStore;
 use App\Support\DatabaseRecords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class InventoryController extends Controller
 {
@@ -17,6 +18,7 @@ class InventoryController extends Controller
                 'search' => $request->string('search')->toString(),
                 'category' => $request->string('category')->toString(),
                 'stock' => $request->string('stock')->toString(),
+                'supplier' => $request->string('supplier')->toString(),
             ])->values(),
         ]);
     }
@@ -35,6 +37,7 @@ class InventoryController extends Controller
             'quantity' => ['required', 'integer'],
             'reason' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string', 'max:255'],
+            'supplier_id' => ['nullable', 'string', 'max:255', Rule::in($store->suppliers()->pluck('id')->all())],
         ]);
 
         $sku = $validated['sku'] ?? '';
@@ -48,12 +51,20 @@ class InventoryController extends Controller
         $quantity = (int) $validated['quantity'];
         $type = $validated['type'] ?? 'adjustment';
         $note = $validated['note'] ?? $validated['reason'] ?? null;
+        $supplierId = null;
 
         if ($type === 'out' && $quantity > 0) {
             $quantity = -abs($quantity);
         }
 
-        $records->adjustStock($sku, $quantity, $note, $type);
+        if ($type === 'in' && filled($validated['supplier_id'] ?? null)) {
+            $supplierId = $records->resolveSupplierUuid(
+                $validated['supplier_id'],
+                $store->suppliers()->firstWhere('id', $validated['supplier_id']),
+            );
+        }
+
+        $records->adjustStock($sku, $quantity, $note, $type, $supplierId);
 
         return response()->json([
             'status' => 'updated',

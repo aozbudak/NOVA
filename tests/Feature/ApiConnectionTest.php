@@ -191,4 +191,16 @@ class ApiConnectionTest extends TestCase
             'quantity' => 1,
         ])->assertNotFound();
     }
+
+    public function test_unknown_supplier_adjustment_returns_422(): void
+    {
+        $this->postJson(route('api.inventory.adjust'), [
+            'sku' => 'NOVA01-WHI-S',
+            'type' => 'in',
+            'quantity' => 1,
+            'supplier_id' => 'missing-supplier',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('supplier_id');
+    }
 }

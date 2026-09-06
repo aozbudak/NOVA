@@ -453,8 +453,20 @@ final class AdminStore
             return false;
         }
 
-        if (Schema::hasTable('categories') && Category::query()->where('id', $id)->orWhere('slug', $id)->exists()) {
-            return (new DatabaseRecords)->deleteCategory($id);
+        if (Schema::hasTable('categories')) {
+            $exists = Category::query()
+                ->where(function ($query) use ($id): void {
+                    $query->where('slug', $id);
+
+                    if (Str::isUuid($id)) {
+                        $query->orWhere('id', $id);
+                    }
+                })
+                ->exists();
+
+            if ($exists) {
+                return (new DatabaseRecords)->deleteCategory($id);
+            }
         }
 
         $categories = collect(session('admin.categories', []))
@@ -722,7 +734,7 @@ final class AdminStore
     }
 
     /**
-     * @param  array{search?: string|null, category?: string|null, brand?: string|null, stock?: string|null}  $filters
+     * @param  array{search?: string|null, category?: string|null, brand?: string|null, stock?: string|null, supplier?: string|null}  $filters
      * @return Collection<int, array<string, mixed>>
      */
     public function inventory(array $filters = []): Collection
@@ -736,6 +748,7 @@ final class AdminStore
                 'product_slug' => $variant['product_slug'],
                 'variant' => $variant['color'].' / '.$variant['size'],
                 'sku' => $variant['sku'],
+                'barcode' => $variant['barcode'] ?: '—',
                 'stock' => $variant['stock'],
                 'min_stock' => $variant['min_stock'],
                 'status' => $variant['stock_status'],
@@ -746,10 +759,25 @@ final class AdminStore
             ];
         });
 
+        $suppliersBySku = $this->latestSuppliersBySku($rows->pluck('sku')->filter()->values()->all());
+
+        $rows = $rows->map(function (array $row) use ($suppliersBySku): array {
+            $supplier = $suppliersBySku[$row['sku']] ?? null;
+
+            return [
+                ...$row,
+                'supplier' => $supplier['name'] ?? '—',
+                'supplier_id' => $supplier['id'] ?? '',
+            ];
+        });
+
         $search = Str::lower(trim((string) ($filters['search'] ?? '')));
 
         if ($search !== '') {
-            $rows = $rows->filter(fn (array $row): bool => Str::contains(Str::lower($row['product'].' '.$row['sku'].' '.$row['variant']), $search));
+            $rows = $rows->filter(fn (array $row): bool => Str::contains(
+                Str::lower($row['product'].' '.$row['sku'].' '.$row['barcode'].' '.$row['variant'].' '.$row['supplier']),
+                $search,
+            ));
         }
 
         if (filled($filters['category'] ?? null)) {
@@ -769,57 +797,187 @@ final class AdminStore
             $rows = $rows->where('status', $filters['stock']);
         }
 
+        if (filled($filters['supplier'] ?? null)) {
+            $needle = (string) $filters['supplier'];
+            $rows = $rows->filter(function (array $row) use ($needle): bool {
+                return ($row['supplier_id'] ?? '') === $needle
+                    || strcasecmp((string) ($row['supplier'] ?? ''), $needle) === 0;
+            });
+        }
+
         return $rows->values();
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @param  list<string>  $skus
+     * @return array<string, array{id: string, name: string}>
      */
-    public function movements(): array
+    private function latestSuppliersBySku(array $skus): array
     {
-        if (Schema::hasTable('stock_movements') && StockMovement::query()->exists()) {
-            return StockMovement::query()
-                ->with(['variant.product', 'variant.stock', 'user'])
-                ->orderByDesc('created_at')
-                ->orderByDesc('id')
-                ->limit(200)
-                ->get()
-                ->map(function (StockMovement $movement): array {
-                    $type = $this->movementType($movement->movement_type);
-                    $enum = StockMovementType::tryFrom($movement->movement_type);
-                    $qty = $enum?->signedQuantity((int) $movement->quantity) ?? (int) $movement->quantity;
-                    $after = (int) ($movement->variant?->stock?->quantity ?? 0);
-                    $before = $after - $qty;
-
-                    return [
-                        'date' => optional($movement->created_at)->format('Y-m-d H:i') ?? now()->format('Y-m-d H:i'),
-                        'product' => $movement->variant?->product?->name
-                            ?? trim(($movement->variant?->color ?? '').' / '.($movement->variant?->size ?? '')),
-                        'variant' => trim(($movement->variant?->color ?? '').' / '.($movement->variant?->size ?? ''), ' /'),
-                        'type' => $type,
-                        'qty' => $qty,
-                        'before' => max(0, $before),
-                        'after' => max(0, $after),
-                        'user' => $movement->user?->name ?? '—',
-                        'reference' => $movement->reference_type
-                            ? trim($movement->reference_type.($movement->note ? ' — '.$movement->note : ''))
-                            : (string) ($movement->note ?? '—'),
-                    ];
-                })
-                ->all();
+        if (
+            $skus === []
+            || ! Schema::hasTable('stock_movements')
+            || ! Schema::hasTable('product_variants')
+            || ! Schema::hasColumn('stock_movements', 'supplier_id')
+        ) {
+            return [];
         }
 
-        return [
-            ['date' => '2026-09-02 09:14', 'product' => 'Basic Shirt', 'type' => 'sale', 'qty' => -1, 'before' => 43, 'after' => 42, 'user' => 'Ayşe Yılmaz', 'reference' => 'NOVA-1024'],
-            ['date' => '2026-09-02 09:14', 'product' => 'Tailored Trouser', 'type' => 'sale', 'qty' => -1, 'before' => 23, 'after' => 22, 'user' => 'Ayşe Yılmaz', 'reference' => 'NOVA-1024'],
-            ['date' => '2026-09-02 09:14', 'product' => 'Basic Shirt', 'type' => 'sale', 'qty' => -1, 'before' => 42, 'after' => 41, 'user' => 'Ayşe Yılmaz', 'reference' => 'NV-10482'],
-            ['date' => '2026-09-02 08:51', 'product' => 'Wool Coat', 'type' => 'sale', 'qty' => -1, 'before' => 9, 'after' => 8, 'user' => 'Ayşe Yılmaz', 'reference' => 'NV-10481'],
-            ['date' => '2026-09-01 18:20', 'product' => 'Cotton T-Shirt', 'type' => 'return', 'qty' => 1, 'before' => 37, 'after' => 38, 'user' => 'Mert Kaya', 'reference' => 'RT-2204'],
-            ['date' => '2026-09-01 14:05', 'product' => 'Merino Crew Knit', 'type' => 'exchange', 'qty' => -1, 'before' => 5, 'after' => 4, 'user' => 'Ayşe Yılmaz', 'reference' => 'EX-118'],
-            ['date' => '2026-08-30 11:40', 'product' => 'Tailored Trouser', 'type' => 'purchase', 'qty' => 20, 'before' => 2, 'after' => 22, 'user' => 'Deniz Aksoy', 'reference' => 'PO-441'],
-            ['date' => '2026-08-29 16:12', 'product' => 'Fluid Silk Midi Dress', 'type' => 'manual', 'qty' => -2, 'before' => 2, 'after' => 0, 'user' => 'Deniz Aksoy', 'reference' => 'ADJ-19'],
-            ['date' => '2026-08-28 10:02', 'product' => 'Leather Belt', 'type' => 'sale', 'qty' => -2, 'before' => 33, 'after' => 31, 'user' => 'Mert Kaya', 'reference' => 'NV-10390'],
-        ];
+        $variants = ProductVariant::query()
+            ->whereIn('sku', $skus)
+            ->get(['id', 'sku']);
+
+        if ($variants->isEmpty()) {
+            return [];
+        }
+
+        $skuByVariantId = $variants->pluck('sku', 'id');
+
+        $latest = StockMovement::query()
+            ->with('supplier:id,company_name,slug')
+            ->whereIn('product_variant_id', $skuByVariantId->keys())
+            ->whereNotNull('supplier_id')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get(['id', 'product_variant_id', 'supplier_id', 'created_at'])
+            ->unique('product_variant_id');
+
+        $names = [];
+
+        foreach ($latest as $movement) {
+            $sku = $skuByVariantId->get($movement->product_variant_id);
+            $supplier = $movement->supplier;
+
+            if (! is_string($sku) || $sku === '' || $supplier === null) {
+                continue;
+            }
+
+            $names[$sku] = [
+                'id' => $supplier->slug ?: $supplier->id,
+                'name' => $supplier->company_name,
+            ];
+        }
+
+        return $names;
+    }
+
+    /**
+     * @param  array{search?: string|null, product?: string|null}  $filters
+     * @return list<array<string, mixed>>
+     */
+    public function movements(array $filters = []): array
+    {
+        if (Schema::hasTable('stock_movements') && StockMovement::query()->exists()) {
+            $hasSupplierColumn = Schema::hasColumn('stock_movements', 'supplier_id');
+            $relations = ['variant.product', 'variant.stock', 'user'];
+
+            if ($hasSupplierColumn) {
+                $relations[] = 'supplier';
+            }
+
+            return $this->filterMovements(
+                $this->movementsSortedByProduct(
+                    StockMovement::query()
+                        ->with($relations)
+                        ->orderByDesc('created_at')
+                        ->orderByDesc('id')
+                        ->limit(200)
+                        ->get()
+                        ->map(function (StockMovement $movement) use ($hasSupplierColumn): array {
+                            $type = $this->movementType($movement->movement_type);
+                            $enum = StockMovementType::tryFrom($movement->movement_type);
+                            $qty = $enum?->signedQuantity((int) $movement->quantity) ?? (int) $movement->quantity;
+                            $after = (int) ($movement->variant?->stock?->quantity ?? 0);
+                            $before = $after - $qty;
+
+                            return [
+                                'date' => optional($movement->created_at)->format('Y-m-d H:i') ?? now()->format('Y-m-d H:i'),
+                                'product' => $movement->variant?->product?->name
+                                    ?? trim(($movement->variant?->color ?? '').' / '.($movement->variant?->size ?? '')),
+                                'variant' => trim(($movement->variant?->color ?? '').' / '.($movement->variant?->size ?? ''), ' /'),
+                                'barcode' => $movement->variant?->barcode ?: '—',
+                                'type' => $type,
+                                'qty' => $qty,
+                                'before' => max(0, $before),
+                                'after' => max(0, $after),
+                                'user' => $movement->user?->name ?? '—',
+                                'supplier' => $hasSupplierColumn ? ($movement->supplier?->company_name ?? '—') : '—',
+                                'supplier_id' => $hasSupplierColumn
+                                    ? ($movement->supplier?->slug ?: ($movement->supplier_id ?? null))
+                                    : null,
+                                'reference' => $movement->reference_type
+                                    ? trim($movement->reference_type.($movement->note ? ' — '.$movement->note : ''))
+                                    : (string) ($movement->note ?? '—'),
+                            ];
+                        }),
+                ),
+                $filters,
+            );
+        }
+
+        $catalogBarcodes = $this->products()->mapWithKeys(
+            fn (array $product): array => [$product['name'] => $product['barcode'] ?: '—'],
+        );
+
+        return $this->filterMovements(
+            $this->movementsSortedByProduct(collect([
+                ['date' => '2026-09-02 09:14', 'product' => 'Basic Shirt', 'type' => 'sale', 'qty' => -1, 'before' => 43, 'after' => 42, 'user' => 'Ayşe Yılmaz', 'reference' => 'NOVA-1024'],
+                ['date' => '2026-09-02 09:14', 'product' => 'Tailored Trouser', 'type' => 'sale', 'qty' => -1, 'before' => 23, 'after' => 22, 'user' => 'Ayşe Yılmaz', 'reference' => 'NOVA-1024'],
+                ['date' => '2026-09-02 09:14', 'product' => 'Basic Shirt', 'type' => 'sale', 'qty' => -1, 'before' => 42, 'after' => 41, 'user' => 'Ayşe Yılmaz', 'reference' => 'NV-10482'],
+                ['date' => '2026-09-02 08:51', 'product' => 'Wool Coat', 'type' => 'sale', 'qty' => -1, 'before' => 9, 'after' => 8, 'user' => 'Ayşe Yılmaz', 'reference' => 'NV-10481'],
+                ['date' => '2026-09-01 18:20', 'product' => 'Cotton T-Shirt', 'type' => 'return', 'qty' => 1, 'before' => 37, 'after' => 38, 'user' => 'Mert Kaya', 'reference' => 'RT-2204'],
+                ['date' => '2026-09-01 14:05', 'product' => 'Merino Crew Knit', 'type' => 'exchange', 'qty' => -1, 'before' => 5, 'after' => 4, 'user' => 'Ayşe Yılmaz', 'reference' => 'EX-118'],
+                ['date' => '2026-08-30 11:40', 'product' => 'Tailored Trouser', 'type' => 'purchase', 'qty' => 20, 'before' => 2, 'after' => 22, 'user' => 'Deniz Aksoy', 'reference' => 'PO-441'],
+                ['date' => '2026-08-29 16:12', 'product' => 'Fluid Silk Midi Dress', 'type' => 'manual', 'qty' => -2, 'before' => 2, 'after' => 0, 'user' => 'Deniz Aksoy', 'reference' => 'ADJ-19'],
+                ['date' => '2026-08-28 10:02', 'product' => 'Leather Belt', 'type' => 'sale', 'qty' => -2, 'before' => 33, 'after' => 31, 'user' => 'Mert Kaya', 'reference' => 'NV-10390'],
+            ])->map(fn (array $row): array => [
+                ...$row,
+                'barcode' => $catalogBarcodes[$row['product']] ?? '—',
+            ])),
+            $filters,
+        );
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private function movementsSortedByProduct(Collection $rows): array
+    {
+        return $rows
+            ->sortByDesc('date')
+            ->sortBy('product', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @param  array{search?: string|null, product?: string|null}  $filters
+     * @return list<array<string, mixed>>
+     */
+    private function filterMovements(array $rows, array $filters): array
+    {
+        $search = Str::lower(trim((string) ($filters['search'] ?? '')));
+        $product = trim((string) ($filters['product'] ?? ''));
+        $collection = collect($rows);
+
+        if ($search !== '') {
+            $collection = $collection->filter(function (array $row) use ($search): bool {
+                return Str::contains(
+                    Str::lower($row['product'].' '.($row['variant'] ?? '').' '.($row['barcode'] ?? '').' '.$row['reference'].' '.($row['supplier'] ?? '')),
+                    $search,
+                );
+            });
+        }
+
+        if ($product !== '') {
+            $collection = $collection->filter(
+                fn (array $row): bool => strcasecmp((string) $row['product'], $product) === 0,
+            );
+        }
+
+        return $collection->values()->all();
     }
 
     private function movementType(string $type): string
@@ -1066,7 +1224,10 @@ final class AdminStore
             ->values()
             ->all();
         $supplier['movements'] = collect($this->movements())
-            ->filter(fn (array $row): bool => collect($supplier['history'])->contains('number', $row['reference']))
+            ->filter(function (array $row) use ($id, $supplier): bool {
+                return ($row['supplier_id'] ?? null) === $id
+                    || collect($supplier['history'])->contains('number', $row['reference']);
+            })
             ->values()
             ->all();
 

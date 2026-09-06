@@ -323,6 +323,7 @@ return [
         'before' => 'Önce',
         'after' => 'Sonra',
         'user' => 'Kullanıcı',
+        'supplier' => 'Tedarikçi',
         'reference' => 'Referans',
         'search' => 'Stok ara',
         'filter_category' => 'Kategori',

@@ -551,6 +551,8 @@ function initStockAdjust() {
     document.querySelectorAll('[data-stock-form]').forEach((form) => {
         const product = form.querySelector('[data-stock-product]');
         const variant = form.querySelector('[data-stock-variant]');
+        const type = form.querySelector('[data-stock-type]');
+        const supplierField = form.querySelector('[data-stock-supplier]');
 
         if (! product || ! variant) {
             return;
@@ -577,8 +579,29 @@ function initStockAdjust() {
             });
         };
 
+        const syncSupplier = () => {
+            if (! supplierField) {
+                return;
+            }
+
+            const inbound = ! type || type.value === 'in';
+            const select = supplierField.querySelector('select');
+
+            supplierField.hidden = ! inbound;
+
+            if (select) {
+                select.disabled = ! inbound;
+
+                if (! inbound) {
+                    select.value = '';
+                }
+            }
+        };
+
         product.addEventListener('change', sync);
+        type?.addEventListener('change', syncSupplier);
         sync();
+        syncSupplier();
     });
 }
 

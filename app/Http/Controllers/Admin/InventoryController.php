@@ -8,6 +8,7 @@ use App\Support\AdminStore;
 use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class InventoryController extends Controller
@@ -18,15 +19,17 @@ class InventoryController extends Controller
             'search' => $request->string('search')->toString(),
             'category' => $request->string('category')->toString(),
             'stock' => $request->string('stock')->toString(),
+            'supplier' => $request->string('supplier')->toString(),
         ];
 
         return view('admin.inventory.index', [
             'rows' => AdminList::apply(
                 $store->inventory($filters),
-                ['product', 'sku', 'stock', 'status'],
+                ['product', 'sku', 'barcode', 'stock', 'status', 'supplier'],
             ),
             'categories' => $store->categories(),
             'products' => $store->products(),
+            'suppliers' => $store->suppliers(['status' => 'active']),
             'filters' => $filters,
             'chips' => AdminList::chips($filters, [
                 'search' => ['label' => __('admin.common.search')],
@@ -35,14 +38,34 @@ class InventoryController extends Controller
                     'label' => __('admin.inventory.filter_stock'),
                     'value' => $filters['stock'] === '' ? '' : __('admin.stock.'.$filters['stock']),
                 ],
+                'supplier' => [
+                    'label' => __('admin.inventory.supplier'),
+                    'value' => $filters['supplier'] === ''
+                        ? ''
+                        : (string) ($store->suppliers()->firstWhere('id', $filters['supplier'])['name'] ?? $filters['supplier']),
+                ],
             ]),
         ]);
     }
 
-    public function movements(AdminStore $store): View
+    public function movements(Request $request, AdminStore $store): View
     {
+        $filters = [
+            'search' => $request->string('search')->toString(),
+            'product' => $request->string('product')->toString(),
+        ];
+
         return view('admin.inventory.movements', [
-            'movements' => AdminList::apply(collect($store->movements()), ['date', 'product', 'type', 'qty']),
+            'movements' => AdminList::apply(
+                collect($store->movements($filters)),
+                ['date', 'product', 'barcode', 'type', 'qty'],
+            ),
+            'products' => $store->products(),
+            'filters' => $filters,
+            'chips' => AdminList::chips($filters, [
+                'search' => ['label' => __('admin.common.search')],
+                'product' => ['label' => __('admin.inventory.product')],
+            ]),
         ]);
     }
 
@@ -55,6 +78,7 @@ class InventoryController extends Controller
             'quantity' => ['required', 'integer'],
             'reason' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string', 'max:255'],
+            'supplier_id' => ['nullable', 'string', 'max:255', Rule::in($store->suppliers()->pluck('id')->all())],
         ]);
 
         $sku = $validated['sku'] ?? '';
@@ -68,6 +92,7 @@ class InventoryController extends Controller
         $quantity = (int) $validated['quantity'];
         $type = $validated['type'] ?? 'adjustment';
         $note = $validated['note'] ?? $validated['reason'] ?? null;
+        $supplierId = null;
 
         if ($type === 'in' && $quantity < 0) {
             $quantity = abs($quantity);
@@ -78,7 +103,14 @@ class InventoryController extends Controller
             $type = 'out';
         }
 
-        $records->adjustStock($sku, $quantity, $note, $type);
+        if ($type === 'in' && filled($validated['supplier_id'] ?? null)) {
+            $supplierId = $records->resolveSupplierUuid(
+                $validated['supplier_id'],
+                $store->suppliers()->firstWhere('id', $validated['supplier_id']),
+            );
+        }
+
+        $records->adjustStock($sku, $quantity, $note, $type, $supplierId);
 
         return redirect()
             ->route('admin.inventory.index')

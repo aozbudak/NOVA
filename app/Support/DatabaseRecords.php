@@ -47,13 +47,13 @@ final class DatabaseRecords
 
         $parentId = filled($record['parent_id'] ?? null) ? (string) $record['parent_id'] : null;
         $existing = $id !== null
-            ? Category::query()->where('id', $id)->orWhere('slug', $id)->first()
+            ? $this->findByUuidOrSlug(Category::class, $id)
             : null;
 
         $slugBase = Str::slug($record['name']) ?: 'category';
 
         if ($existing === null && $parentId !== null) {
-            $parentSlug = Category::query()->where('id', $parentId)->value('slug');
+            $parentSlug = $this->findByUuidOrSlug(Category::class, $parentId)?->slug;
 
             if (is_string($parentSlug) && $parentSlug !== '') {
                 $slugBase = $parentSlug.'-'.$slugBase;
@@ -85,7 +85,7 @@ final class DatabaseRecords
             return false;
         }
 
-        $category = Category::query()->where('id', $id)->orWhere('slug', $id)->first();
+        $category = $this->findByUuidOrSlug(Category::class, $id);
 
         if ($category === null || $category->products()->exists()) {
             return false;
@@ -102,7 +102,7 @@ final class DatabaseRecords
             return null;
         }
 
-        $category = Category::query()->where('id', $id)->orWhere('slug', $id)->first();
+        $category = $this->findByUuidOrSlug(Category::class, $id);
 
         if ($category === null) {
             return null;
@@ -123,7 +123,7 @@ final class DatabaseRecords
         }
 
         $existing = $id !== null
-            ? Brand::query()->where('id', $id)->orWhere('slug', $id)->first()
+            ? $this->findByUuidOrSlug(Brand::class, $id)
             : null;
 
         $slug = filled($record['slug'] ?? null)
@@ -154,7 +154,7 @@ final class DatabaseRecords
 
     public function toggleBrand(string $id): ?Brand
     {
-        $brand = Brand::query()->where('id', $id)->orWhere('slug', $id)->first();
+        $brand = $this->findByUuidOrSlug(Brand::class, $id);
 
         if ($brand === null) {
             return null;
@@ -167,7 +167,7 @@ final class DatabaseRecords
 
     public function deleteBrand(string $id): bool
     {
-        $brand = Brand::query()->where('id', $id)->orWhere('slug', $id)->first();
+        $brand = $this->findByUuidOrSlug(Brand::class, $id);
 
         if ($brand === null) {
             return false;
@@ -392,7 +392,29 @@ final class DatabaseRecords
         return $user;
     }
 
-    public function adjustStock(string $sku, int $quantity, ?string $reason = null, string $type = 'adjustment'): bool
+    /**
+     * @param  array{id: string, name: string, contact?: string|null, email?: string|null, phone?: string|null, address?: string|null, tax?: string|null, status?: string|null}|null  $catalog
+     */
+    public function resolveSupplierUuid(?string $key, ?array $catalog = null): ?string
+    {
+        if (! filled($key) || ! Schema::hasTable('suppliers')) {
+            return null;
+        }
+
+        $existing = $this->findByUuidOrSlug(Supplier::class, $key);
+
+        if ($existing !== null) {
+            return $existing->id;
+        }
+
+        if ($catalog === null) {
+            return null;
+        }
+
+        return $this->saveSupplier($catalog)?->id;
+    }
+
+    public function adjustStock(string $sku, int $quantity, ?string $reason = null, string $type = 'adjustment', ?string $supplierId = null): bool
     {
         if (! Schema::hasTable('product_variants') || ! Schema::hasTable('stocks')) {
             return false;
@@ -406,6 +428,7 @@ final class DatabaseRecords
 
         $delta = $quantity;
         $movementType = $type;
+        $resolvedSupplierId = $supplierId;
 
         if (in_array($type, ['in', 'purchase'], true)) {
             $delta = abs($quantity);
@@ -413,13 +436,19 @@ final class DatabaseRecords
         } elseif ($type === 'sale') {
             $delta = -abs($quantity);
             $movementType = StockMovementType::Sale->value;
+            $resolvedSupplierId = null;
         } elseif ($type === 'out') {
             $delta = -abs($quantity);
             $movementType = StockMovementType::AdjustmentOut->value;
+            $resolvedSupplierId = null;
         }
 
-        return DB::transaction(function () use ($variant, $delta, $movementType, $reason): true {
-            $this->moveStock($variant, $delta, $movementType, null, 'adjustment', $reason);
+        return DB::transaction(function () use ($variant, $delta, $movementType, $reason, $resolvedSupplierId): true {
+            if ($delta > 0) {
+                $this->ensureSystemBarcode($variant);
+            }
+
+            $this->moveStock($variant, $delta, $movementType, null, 'adjustment', $reason, $resolvedSupplierId);
 
             return true;
         });
@@ -1098,15 +1127,70 @@ final class DatabaseRecords
         return max($max, 1000) + 1;
     }
 
+    private function ensureSystemBarcode(ProductVariant $variant): void
+    {
+        if (filled($variant->barcode)) {
+            return;
+        }
+
+        $variant->update(['barcode' => $this->nextSystemBarcode($variant->id)]);
+    }
+
+    private function nextSystemBarcode(?string $ignoreId = null): string
+    {
+        $sequence = $this->nextSystemBarcodeSequence();
+
+        do {
+            $body = '200'.str_pad((string) $sequence, 9, '0', STR_PAD_LEFT);
+            $barcode = $body.$this->ean13CheckDigit($body);
+            $sequence++;
+        } while ($this->barcodeTaken($barcode, $ignoreId));
+
+        return $barcode;
+    }
+
+    private function nextSystemBarcodeSequence(): int
+    {
+        $max = 0;
+
+        ProductVariant::query()
+            ->where('barcode', 'like', '200%')
+            ->select('barcode')
+            ->cursor()
+            ->each(function (ProductVariant $variant) use (&$max): void {
+                if (preg_match('/^200(\d{9})\d$/', (string) $variant->barcode, $matches) === 1) {
+                    $max = max($max, (int) $matches[1]);
+                }
+            });
+
+        return $max + 1;
+    }
+
+    private function ean13CheckDigit(string $twelveDigits): string
+    {
+        $sum = 0;
+
+        for ($index = 0; $index < 12; $index++) {
+            $digit = (int) $twelveDigits[$index];
+            $sum += ($index % 2 === 0) ? $digit : $digit * 3;
+        }
+
+        return (string) ((10 - ($sum % 10)) % 10);
+    }
+
     private function resolveCategory(mixed $value): Category
     {
         $value = is_string($value) || is_int($value) ? trim((string) $value) : '';
 
         if ($value !== '') {
             $category = Category::query()
-                ->where('id', $value)
-                ->orWhere('slug', $value)
-                ->orWhere('name', $value)
+                ->where(function ($query) use ($value): void {
+                    $query->where('slug', $value)->orWhere('name', $value);
+
+                    if (Str::isUuid($value)) {
+                        $query->orWhere('id', $value);
+                    }
+                })
                 ->first();
 
             if ($category !== null) {
@@ -1141,9 +1225,13 @@ final class DatabaseRecords
         }
 
         $existing = Brand::query()
-            ->where('id', $value)
-            ->orWhere('slug', $value)
-            ->orWhere('name', $value)
+            ->where(function ($query) use ($value): void {
+                $query->where('slug', $value)->orWhere('name', $value);
+
+                if (Str::isUuid($value)) {
+                    $query->orWhere('id', $value);
+                }
+            })
             ->first();
 
         if ($existing !== null) {
@@ -1234,6 +1322,10 @@ final class DatabaseRecords
                 throw ValidationException::withMessages([
                     'barcode' => __('validation.unique', ['attribute' => 'barcode']),
                 ]);
+            }
+
+            if ($barcode === null && ($variant === null || ! filled($variant->barcode))) {
+                $barcode = $this->nextSystemBarcode($variant?->id);
             }
 
             $active = (bool) ($row['is_active'] ?? true);
@@ -1542,6 +1634,25 @@ final class DatabaseRecords
         );
     }
 
+    /**
+     * @template TModel of Model
+     *
+     * @param  class-string<TModel>  $model
+     * @return TModel|null
+     */
+    private function findByUuidOrSlug(string $model, string $key): ?Model
+    {
+        return $model::query()
+            ->where(function ($query) use ($key): void {
+                $query->where('slug', $key);
+
+                if (Str::isUuid($key)) {
+                    $query->orWhere('id', $key);
+                }
+            })
+            ->first();
+    }
+
     private function customerBySlug(string $slug): ?Customer
     {
         if ($slug === '' || ! $this->hasSlug('customers')) {
@@ -1551,7 +1662,7 @@ final class DatabaseRecords
         return Customer::query()->where('slug', $slug)->first();
     }
 
-    private function moveStock(ProductVariant $variant, int $delta, string $type, ?string $referenceId = null, ?string $referenceType = null, ?string $note = null): void
+    private function moveStock(ProductVariant $variant, int $delta, string $type, ?string $referenceId = null, ?string $referenceType = null, ?string $note = null, ?string $supplierId = null): void
     {
         if (! Schema::hasTable('stocks') || $delta === 0) {
             return;
@@ -1588,7 +1699,7 @@ final class DatabaseRecords
             $stock->update(['quantity' => $this->allowsNegativeStock() ? $next : max(0, $next)]);
         }
 
-        $this->writeStockMovement($variant, $delta, $type, $referenceType ?? $type, $referenceId, $note);
+        $this->writeStockMovement($variant, $delta, $type, $referenceType ?? $type, $referenceId, $note, $supplierId);
     }
 
     private function writeStockMovement(
@@ -1598,6 +1709,7 @@ final class DatabaseRecords
         string $referenceType,
         ?string $referenceId = null,
         ?string $note = null,
+        ?string $supplierId = null,
     ): void {
         if (! Schema::hasTable('stock_movements')) {
             return;
@@ -1610,7 +1722,7 @@ final class DatabaseRecords
             return;
         }
 
-        StockMovement::query()->create([
+        $payload = [
             'product_variant_id' => $variant->id,
             'user_id' => $this->actorUserId(),
             'movement_type' => $movement->value,
@@ -1618,7 +1730,13 @@ final class DatabaseRecords
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
             'note' => $note,
-        ]);
+        ];
+
+        if (Schema::hasColumn('stock_movements', 'supplier_id')) {
+            $payload['supplier_id'] = $supplierId;
+        }
+
+        StockMovement::query()->create($payload);
     }
 
     /**

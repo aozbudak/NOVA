@@ -10,6 +10,8 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\SaleReturn;
+use App\Models\StockMovement;
+use App\Models\Supplier;
 use App\Models\User;
 use App\Support\Catalog;
 use Database\Seeders\AdminCatalogSeeder;
@@ -40,6 +42,7 @@ class BackendPersistenceTest extends TestCase
         $this->assertNotNull($product);
         $this->assertEquals(20, (float) $product->vat_rate);
         $this->assertSame(12, (int) $product->variants()->first()?->stock?->quantity);
+        $this->assertSame('2000000000015', $product->variants()->first()?->barcode);
         $this->assertSame(0, $product->images()->count());
         $this->assertSame([], (new Catalog)->findBySlug('canvas-tote')['images']);
         $this->assertTrue(Brand::query()->where('name', 'NOVA')->exists());
@@ -121,19 +124,35 @@ class BackendPersistenceTest extends TestCase
         $this->assertNotNull($variant);
         $before = (int) $variant->stock?->quantity;
 
+        $this->post(route('admin.suppliers.store'), [
+            'name' => 'Harbor Mills',
+            'contact' => 'Ece Yılmaz',
+            'email' => 'ece@harbormills.example',
+        ])->assertRedirect(route('admin.suppliers.index'));
+
+        $supplier = Supplier::query()->where('slug', 'harbor-mills')->first();
+        $this->assertNotNull($supplier);
+
         $this->post(route('admin.inventory.adjust'), [
             'sku' => 'NOVA01-WHI-S',
             'type' => 'in',
             'quantity' => 3,
             'note' => 'New delivery',
+            'supplier_id' => 'harbor-mills',
         ])->assertRedirect(route('admin.inventory.index'));
 
         $this->assertSame($before + 3, (int) $variant->fresh()->stock?->quantity);
+        $this->assertSame($variant->barcode, $variant->fresh()->barcode);
         $this->assertDatabaseHas('stock_movements', [
             'product_variant_id' => $variant->id,
             'movement_type' => 'purchase',
             'quantity' => 3,
+            'supplier_id' => $supplier->id,
         ]);
+
+        $this->get(route('admin.inventory.movements'))
+            ->assertOk()
+            ->assertSee('Harbor Mills');
 
         $this->postJson(route('api.sales.store'), [
             'payment' => 'cash',
@@ -144,6 +163,76 @@ class BackendPersistenceTest extends TestCase
 
         $this->assertTrue(Order::query()->where('order_number', 'like', 'NV-%')->exists());
         $this->assertSame($before + 2, (int) $variant->fresh()->stock?->quantity);
+    }
+
+    public function test_stock_in_with_catalog_supplier_slug_persists(): void
+    {
+        $this->seed(AdminCatalogSeeder::class);
+
+        $variant = ProductVariant::query()->where('sku', 'NOVA01-WHI-S')->first();
+        $this->assertNotNull($variant);
+
+        $this->post(route('admin.inventory.adjust'), [
+            'sku' => 'NOVA01-WHI-S',
+            'type' => 'in',
+            'quantity' => 1,
+            'supplier_id' => 'studio-textiles',
+        ])->assertRedirect(route('admin.inventory.index'));
+
+        $supplier = Supplier::query()->where('slug', 'studio-textiles')->first();
+        $this->assertNotNull($supplier);
+        $this->assertDatabaseHas('stock_movements', [
+            'product_variant_id' => $variant->id,
+            'movement_type' => 'purchase',
+            'quantity' => 1,
+            'supplier_id' => $supplier->id,
+        ]);
+
+        $this->getJson(route('api.inventory.index', ['supplier' => 'studio-textiles']))
+            ->assertOk()
+            ->assertJsonFragment([
+                'sku' => 'NOVA01-WHI-S',
+                'supplier' => 'Studio Textiles',
+            ]);
+    }
+
+    public function test_stock_in_assigns_a_system_barcode_when_the_variant_has_none(): void
+    {
+        $variant = ProductVariant::factory()->create(['barcode' => null]);
+
+        $this->post(route('admin.inventory.adjust'), [
+            'sku' => $variant->sku,
+            'type' => 'in',
+            'quantity' => 1,
+        ])->assertRedirect(route('admin.inventory.index'));
+
+        $this->assertSame('2000000000015', $variant->fresh()->barcode);
+    }
+
+    public function test_stock_movements_list_groups_rows_by_product_name(): void
+    {
+        $alpha = Product::factory()->create(['name' => 'Alpha Coat']);
+        $zeta = Product::factory()->create(['name' => 'Zeta Scarf']);
+        $alphaVariant = ProductVariant::factory()->for($alpha)->create();
+        $zetaVariant = ProductVariant::factory()->for($zeta)->create();
+
+        StockMovement::query()->create([
+            'product_variant_id' => $zetaVariant->id,
+            'movement_type' => 'purchase',
+            'quantity' => 4,
+            'created_at' => now(),
+        ]);
+
+        StockMovement::query()->create([
+            'product_variant_id' => $alphaVariant->id,
+            'movement_type' => 'purchase',
+            'quantity' => 2,
+            'created_at' => now()->subHour(),
+        ]);
+
+        $this->get(route('admin.inventory.movements'))
+            ->assertOk()
+            ->assertSeeInOrder(['Alpha Coat', 'Zeta Scarf']);
     }
 
     public function test_checkout_and_return_persist_orders(): void

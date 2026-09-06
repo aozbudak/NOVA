@@ -323,6 +323,7 @@ return [
         'before' => 'Before',
         'after' => 'After',
         'user' => 'User',
+        'supplier' => 'Supplier',
         'reference' => 'Reference',
         'search' => 'Search stock',
         'filter_category' => 'Category',
