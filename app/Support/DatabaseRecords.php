@@ -662,7 +662,7 @@ final class DatabaseRecords
     }
 
     /**
-     * @param  array{payment: string, customer_id?: string|null}  $sale
+     * @param  array{payment: string, customer_id?: string|null, items: list<array{sku: string, quantity: int, discount?: float|int|string|null}>}  $sale
      * @param  Collection<int, array<string, mixed>>  $lines
      */
     public function placeSale(array $sale, Collection $lines, string $number): ?Order
@@ -672,11 +672,12 @@ final class DatabaseRecords
         }
 
         return DB::transaction(function () use ($sale, $lines, $number): Order {
-            $number = $this->uniqueOrderNumber($number);
+            $resolved = $this->resolveSaleLines($sale['items'] ?? $lines->all());
             $customer = $this->customerBySlug((string) ($sale['customer_id'] ?? ''));
-            $subtotal = (float) $lines->sum(fn (array $line): float => $line['unit'] * $line['qty']);
-            $discount = (float) $lines->sum('discount');
-            $total = (float) $lines->sum('total');
+            $subtotal = (float) $resolved->sum(fn (array $line): float => $line['unit'] * $line['qty']);
+            $discount = (float) $resolved->sum('discount');
+            $total = (float) $resolved->sum('total');
+            $number = $this->nextPosOrderNumber($number);
 
             $order = Order::query()->create([
                 'order_number' => $number,
@@ -686,28 +687,34 @@ final class DatabaseRecords
                 'discount_amount' => $discount,
                 'total_amount' => $total,
                 'currency' => 'TRY',
+                'notes' => 'pos:'.$this->cashierName(),
             ]);
 
-            foreach ($lines as $line) {
-                $variant = ProductVariant::query()->where('sku', $line['sku'])->first();
-                $parts = explode(' / ', (string) $line['variant']);
+            foreach ($resolved as $line) {
+                /** @var ProductVariant $variant */
+                $variant = $line['variant_model'];
 
                 OrderItem::query()->create([
                     'order_id' => $order->id,
-                    'product_variant_id' => $variant?->id,
+                    'product_variant_id' => $variant->id,
                     'product_name' => $line['product'],
                     'sku' => $line['sku'],
-                    'color' => $parts[0] ?? null,
-                    'size' => $parts[1] ?? null,
+                    'color' => $line['color'],
+                    'size' => $line['size'],
                     'quantity' => (int) $line['qty'],
                     'unit_price' => $line['unit'],
                     'discount_amount' => $line['discount'],
                     'total_price' => $line['total'],
                 ]);
 
-                if ($variant !== null) {
-                    $this->moveStock($variant, -((int) $line['qty']), 'sale', $order->id);
-                }
+                $this->moveStock(
+                    $variant,
+                    -((int) $line['qty']),
+                    StockMovementType::Sale->value,
+                    $order->id,
+                    'sale',
+                    $order->order_number,
+                );
             }
 
             $this->recordPayment($order, $sale['payment'], $total);
@@ -734,26 +741,42 @@ final class DatabaseRecords
             return null;
         }
 
-        $order = Order::query()->where('order_number', $saleNumber)->with('items.variant.stock')->first();
+        return DB::transaction(function () use ($saleNumber, $reason): ?SaleReturn {
+            $order = Order::query()
+                ->where('order_number', $saleNumber)
+                ->with('items.variant')
+                ->lockForUpdate()
+                ->first();
 
-        if ($order === null) {
-            return null;
-        }
+            if ($order === null) {
+                return null;
+            }
 
-        if ($order->status === 'returned' || SaleReturn::query()->where('order_id', $order->id)->exists()) {
-            throw ValidationException::withMessages([
-                'sale' => __('admin.returns.already_returned'),
-            ]);
-        }
+            $alreadyReturned = $order->status === 'returned'
+                || SaleReturn::query()->where('order_id', $order->id)->lockForUpdate()->exists();
 
-        return DB::transaction(function () use ($order, $reason): SaleReturn {
+            if ($alreadyReturned) {
+                throw ValidationException::withMessages([
+                    'sale' => __('admin.returns.already_returned'),
+                ]);
+            }
+
+            $refundAmount = (float) $order->total_amount;
+            $originalPayment = Schema::hasTable('payments')
+                ? Payment::query()
+                    ->where('order_id', $order->id)
+                    ->where('status', 'completed')
+                    ->orderBy('id')
+                    ->first()
+                : null;
+
             $return = SaleReturn::query()->create([
                 'order_id' => $order->id,
                 'customer_id' => $order->customer_id,
-                'return_number' => 'RT-'.now()->format('ymdHis'),
+                'return_number' => $this->nextReturnNumber(),
                 'reason' => $reason,
                 'status' => 'completed',
-                'total_amount' => $order->total_amount,
+                'total_amount' => $refundAmount,
                 'approved_at' => now(),
                 'completed_at' => now(),
             ]);
@@ -769,7 +792,14 @@ final class DatabaseRecords
                 ]);
 
                 if ($item->variant !== null) {
-                    $this->moveStock($item->variant, (int) $item->quantity, 'return', $return->id);
+                    $this->moveStock(
+                        $item->variant,
+                        (int) $item->quantity,
+                        StockMovementType::Return->value,
+                        $return->id,
+                        'return',
+                        $order->order_number,
+                    );
                 }
             }
 
@@ -778,27 +808,24 @@ final class DatabaseRecords
             $order->update(['status' => 'returned']);
 
             if (Schema::hasTable('payments')) {
-                $payment = Payment::query()->where('order_id', $order->id)->latest('id')->first();
-
                 Payment::query()->create([
                     'order_id' => $order->id,
-                    'payment_method' => $payment?->payment_method ?? 'cash',
-                    'amount' => $order->total_amount,
+                    'payment_method' => $originalPayment?->payment_method ?? 'cash',
+                    'amount' => $refundAmount,
                     'status' => 'refunded',
+                    'transaction_reference' => 'refund:'.$return->return_number,
                     'paid_at' => now(),
                 ]);
-            } else {
-                $payment = null;
             }
 
             $register = $this->activeRegister();
 
-            if ($register !== null && ($payment?->payment_method ?? 'cash') === 'cash') {
+            if ($register !== null && ($originalPayment?->payment_method ?? null) === 'cash') {
                 $this->addCashTransaction(
                     $register,
                     'refund',
-                    (float) $order->total_amount,
-                    $return->return_number,
+                    -abs($refundAmount),
+                    $return->return_number.' · '.$order->order_number,
                     'return',
                     $return->id,
                 );
@@ -807,7 +834,7 @@ final class DatabaseRecords
             $this->recordAudit('return.completed', $return, ['status' => $previousStatus], [
                 'return_number' => $return->return_number,
                 'order_number' => $order->order_number,
-                'total_amount' => $order->total_amount,
+                'total_amount' => $refundAmount,
             ]);
 
             return $return;
@@ -1591,6 +1618,151 @@ final class DatabaseRecords
             'reference_id' => $referenceId,
             'note' => $note,
         ]);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function resolveSaleLines(array $items): Collection
+    {
+        $merged = [];
+
+        foreach ($items as $item) {
+            $sku = (string) ($item['sku'] ?? '');
+
+            if ($sku === '') {
+                continue;
+            }
+
+            if (! isset($merged[$sku])) {
+                $merged[$sku] = [
+                    'sku' => $sku,
+                    'quantity' => 0,
+                    'discount' => 0.0,
+                ];
+            }
+
+            $merged[$sku]['quantity'] += (int) ($item['quantity'] ?? $item['qty'] ?? 0);
+            $merged[$sku]['discount'] += (float) ($item['discount'] ?? 0);
+        }
+
+        $skus = collect($merged)->keys()->sort()->values();
+
+        $variants = ProductVariant::query()
+            ->whereIn('sku', $skus->all())
+            ->with('product')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('sku');
+
+        Stock::query()
+            ->whereIn('product_variant_id', $variants->pluck('id')->all())
+            ->lockForUpdate()
+            ->get();
+
+        return collect($merged)->values()->map(function (array $item) use ($variants): array {
+            $variant = $variants->get($item['sku']);
+
+            if ($variant === null) {
+                throw ValidationException::withMessages([
+                    'items' => __('validation.exists', ['attribute' => 'sku']),
+                ]);
+            }
+
+            $quantity = (int) $item['quantity'];
+            $discount = round((float) $item['discount'], 2);
+            $unit = (float) ($variant->price ?? $variant->product?->base_price ?? 0);
+            $gross = round($unit * $quantity, 2);
+
+            if ($discount > $gross) {
+                throw ValidationException::withMessages([
+                    'items' => __('admin.pos.discount_exceeds'),
+                ]);
+            }
+
+            $stock = Stock::query()
+                ->where('product_variant_id', $variant->id)
+                ->lockForUpdate()
+                ->first();
+            $available = $stock === null
+                ? 0
+                : (int) $stock->quantity - (int) $stock->reserved_quantity;
+
+            if ($quantity > $available && ! $this->allowsNegativeStock()) {
+                throw ValidationException::withMessages([
+                    'items' => __('admin.pos.insufficient_stock'),
+                ]);
+            }
+
+            $color = $variant->color;
+            $size = $variant->size;
+
+            return [
+                'variant_model' => $variant,
+                'product' => $variant->product?->name ?? $item['sku'],
+                'variant' => trim(($color ?? '').' / '.($size ?? ''), ' /'),
+                'color' => $color,
+                'size' => $size,
+                'sku' => $variant->sku,
+                'qty' => $quantity,
+                'unit' => $unit,
+                'discount' => $discount,
+                'total' => round($gross - $discount, 2),
+            ];
+        });
+    }
+
+    private function nextPosOrderNumber(string $fallback): string
+    {
+        $prefix = 'NV-'.now()->format('Ymd').'-';
+        $latest = Order::query()
+            ->where('order_number', 'like', $prefix.'%')
+            ->orderByDesc('order_number')
+            ->lockForUpdate()
+            ->value('order_number');
+
+        $sequence = 1;
+
+        if (is_string($latest) && preg_match('/-(\d+)$/', $latest, $matches) === 1) {
+            $sequence = (int) $matches[1] + 1;
+        }
+
+        $number = $prefix.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+
+        return $this->uniqueOrderNumber($number !== '' ? $number : $fallback);
+    }
+
+    private function nextReturnNumber(): string
+    {
+        $prefix = 'RT-'.now()->format('Ymd').'-';
+        $latest = SaleReturn::query()
+            ->where('return_number', 'like', $prefix.'%')
+            ->orderByDesc('return_number')
+            ->lockForUpdate()
+            ->value('return_number');
+
+        $sequence = 1;
+
+        if (is_string($latest) && preg_match('/-(\d+)$/', $latest, $matches) === 1) {
+            $sequence = (int) $matches[1] + 1;
+        }
+
+        $number = $prefix.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+
+        while (SaleReturn::query()->where('return_number', $number)->exists()) {
+            $sequence++;
+            $number = $prefix.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+        }
+
+        return $number;
+    }
+
+    private function cashierName(): string
+    {
+        $name = session('admin.name');
+
+        return is_string($name) && $name !== '' ? $name : '—';
     }
 
     private function uniqueOrderNumber(string $number): string
