@@ -246,7 +246,7 @@ function initSearch() {
     });
 }
 
-function showAdminToast(message) {
+function showAdminToast(message, duration = 2200) {
     const root = document.getElementById('admin-toast');
     const text = root?.querySelector('[data-toast-message]');
 
@@ -263,7 +263,7 @@ function showAdminToast(message) {
         window.setTimeout(() => {
             root.hidden = true;
         }, 200);
-    }, 2200);
+    }, duration);
 }
 
 function initAdminToast() {
@@ -618,13 +618,33 @@ function initPos() {
     const subtotalEl = root.querySelector('[data-pos-subtotal]');
     const discountEl = root.querySelector('[data-pos-discount]');
     const totalEl = root.querySelector('[data-pos-total]');
+    const otherNote = root.querySelector('[data-pos-other-note]');
+    const noteInput = root.querySelector('[data-pos-note]');
+    const lastSale = root.querySelector('[data-pos-last-sale]');
+    const lastSaleNumber = root.querySelector('[data-pos-last-sale-number]');
     /** @type {HTMLElement[]} */
     let items = [...root.querySelectorAll('[data-pos-item]')];
-    /** @type {Map<string, {sku: string, name: string, variant: string, price: number, qty: number, discount: number}>} */
+    /** @type {Map<string, {sku: string, name: string, brand: string, variant: string, price: number, qty: number, discount: number, stock: number, barcode: string}>} */
     const cart = new Map();
+    let searchTimer = 0;
+    let paying = false;
 
     const refreshItemNodes = () => {
         items = [...root.querySelectorAll('[data-pos-item]')];
+    };
+
+    const validationMessage = (payload, fallback) => {
+        const errors = payload?.errors;
+
+        if (errors && typeof errors === 'object') {
+            const first = Object.values(errors)[0];
+
+            if (Array.isArray(first) && first[0]) {
+                return String(first[0]);
+            }
+        }
+
+        return payload?.message ?? fallback;
     };
 
     const renderItems = (rows) => {
@@ -640,8 +660,9 @@ function initPos() {
                     type="button"
                     data-pos-item
                     data-sku="${escapeHtml(item.sku)}"
-                    data-barcode="${escapeHtml(item.barcode)}"
+                    data-barcode="${escapeHtml(item.barcode ?? '')}"
                     data-name="${escapeHtml(item.name)}"
+                    data-brand="${escapeHtml(item.brand ?? '')}"
                     data-variant="${escapeHtml(item.variant)}"
                     data-price="${escapeHtml(item.price)}"
                     data-stock="${escapeHtml(item.stock)}"
@@ -653,7 +674,7 @@ function initPos() {
                     }
                     <span class="min-w-0 flex-1">
                         <span class="block truncate text-[13px] text-foreground">${escapeHtml(item.name)}</span>
-                        <span class="block truncate text-[12px] text-muted-foreground">${escapeHtml(item.variant)} · ${escapeHtml(item.barcode)}</span>
+                        <span class="block truncate text-[12px] text-muted-foreground">${escapeHtml([item.brand, item.variant, item.sku, item.barcode].filter(Boolean).join(' · '))}</span>
                     </span>
                     <span class="shrink-0 text-right">
                         <span class="block text-[13px] text-foreground">${money(item.price)}</span>
@@ -664,13 +685,10 @@ function initPos() {
         `).join('');
 
         refreshItemNodes();
-
-        if (search?.value) {
-            filter(search.value);
-        }
+        empty?.toggleAttribute('hidden', rows.length > 0);
     };
 
-    const loadItems = async () => {
+    const loadItems = async (query = '') => {
         const url = window.NOVA?.api?.posItems;
 
         if (! url) {
@@ -678,7 +696,13 @@ function initPos() {
         }
 
         try {
-            const response = await fetch(url, {
+            const endpoint = new URL(url, window.location.origin);
+
+            if (query) {
+                endpoint.searchParams.set('q', query);
+            }
+
+            const response = await fetch(endpoint.toString(), {
                 headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             });
 
@@ -696,9 +720,11 @@ function initPos() {
     const payload = (button) => ({
         sku: button.dataset.sku,
         name: button.dataset.name,
+        brand: button.dataset.brand ?? '',
         variant: button.dataset.variant,
         price: Number(button.dataset.price),
         barcode: button.dataset.barcode,
+        stock: Number(button.dataset.stock ?? 0),
     });
 
     const renderCart = () => {
@@ -715,6 +741,7 @@ function initPos() {
                 <td class="px-3 py-2" data-label="${escapeHtml(table?.dataset.labelProduct ?? '')}">
                     <span class="block text-foreground">${escapeHtml(line.name)}</span>
                     <span class="block text-muted-foreground">${escapeHtml(line.variant)}</span>
+                    <span class="block text-muted-foreground">${escapeHtml(line.sku)}</span>
                 </td>
                 <td class="px-3 py-2" data-label="${escapeHtml(table?.dataset.labelQty ?? '')}">
                     <button type="button" data-pos-qty="${escapeHtml(line.sku)}" data-delta="-1" class="px-1 text-muted-foreground">−</button>
@@ -722,8 +749,20 @@ function initPos() {
                     <button type="button" data-pos-qty="${escapeHtml(line.sku)}" data-delta="1" class="px-1 text-muted-foreground">+</button>
                 </td>
                 <td class="px-3 py-2 text-foreground" data-label="${escapeHtml(table?.dataset.labelUnit ?? '')}">${money(line.price)}</td>
-                <td class="px-3 py-2 text-muted-foreground" data-label="${escapeHtml(table?.dataset.labelDiscount ?? '')}">${money(line.discount)}</td>
-                <td class="px-3 py-2 text-foreground" data-label="${escapeHtml(table?.dataset.labelTotal ?? '')}">${money((line.price * line.qty) - line.discount)}</td>
+                <td class="px-3 py-2 text-muted-foreground" data-label="${escapeHtml(table?.dataset.labelDiscount ?? '')}">
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value="${line.discount}"
+                        data-pos-discount-input="${escapeHtml(line.sku)}"
+                        class="h-7 w-16 rounded-md border border-input bg-background px-1 text-[12px] text-foreground"
+                    >
+                </td>
+                <td class="px-3 py-2 text-foreground" data-label="${escapeHtml(table?.dataset.labelTotal ?? '')}">
+                    <span class="mr-2">${money((line.price * line.qty) - line.discount)}</span>
+                    <button type="button" data-pos-remove="${escapeHtml(line.sku)}" class="text-muted-foreground hover:text-foreground">${escapeHtml(table?.dataset.labelRemove ?? '×')}</button>
+                </td>
             </tr>
         `).join('');
 
@@ -743,9 +782,16 @@ function initPos() {
 
     const addItem = (data) => {
         const current = cart.get(data.sku);
+        const nextQty = (current?.qty ?? 0) + 1;
+
+        if (Number.isFinite(data.stock) && data.stock >= 0 && nextQty > data.stock) {
+            showAdminToast(root.dataset.posInsufficient ?? '');
+            return;
+        }
 
         if (current) {
-            current.qty += 1;
+            current.qty = nextQty;
+            current.stock = data.stock;
         } else {
             cart.set(data.sku, { ...data, qty: 1, discount: 0 });
         }
@@ -753,39 +799,115 @@ function initPos() {
         renderCart();
     };
 
+    const hideOtherNote = () => {
+        if (otherNote) {
+            otherNote.hidden = true;
+        }
+
+        if (noteInput) {
+            noteInput.value = '';
+        }
+    };
+
+    const showOtherNote = () => {
+        if (cart.size === 0 || paying) {
+            return;
+        }
+
+        if (otherNote) {
+            otherNote.hidden = false;
+        }
+
+        noteInput?.focus();
+    };
+
+    const rememberSaleNumber = (number) => {
+        if (! lastSale || ! lastSaleNumber || ! number) {
+            return;
+        }
+
+        lastSaleNumber.textContent = number;
+        lastSale.hidden = false;
+    };
+
     const checkout = async (payment) => {
-        if (cart.size === 0) {
+        if (cart.size === 0 || paying) {
             return;
         }
 
-        const response = await fetch(window.NOVA?.api?.sales ?? '/api/sales', {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': window.NOVA?.csrf ?? document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: JSON.stringify({
-                payment,
-                items: [...cart.values()].map((line) => ({
-                    sku: line.sku,
-                    quantity: line.qty,
-                    discount: line.discount,
-                })),
-            }),
-        });
+        const note = payment === 'other' ? (noteInput?.value ?? '').trim() : '';
 
-        if (! response.ok) {
+        if (payment === 'other' && note === '') {
+            showOtherNote();
+            showAdminToast(root.dataset.posNoteRequired ?? '');
+            return;
+        }
+
+        for (const line of cart.values()) {
+            if (line.discount > (line.price * line.qty)) {
+                showAdminToast(root.dataset.posDiscountError ?? '');
+                return;
+            }
+
+            if (Number.isFinite(line.stock) && line.stock >= 0 && line.qty > line.stock) {
+                showAdminToast(root.dataset.posInsufficient ?? '');
+                return;
+            }
+        }
+
+        paying = true;
+
+        try {
+            const response = await fetch(window.NOVA?.api?.sales ?? '/api/sales', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': window.NOVA?.csrf ?? document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    payment,
+                    note: note === '' ? null : note,
+                    items: [...cart.values()].map((line) => ({
+                        sku: line.sku,
+                        quantity: line.qty,
+                        discount: line.discount,
+                    })),
+                }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (! response.ok) {
+                showAdminToast(validationMessage(data, document.getElementById('admin-toast')?.dataset.errorFallback ?? 'Something went wrong. Please try again.'));
+                return;
+            }
+
+            const paymentLabels = {
+                cash: root.dataset.posCashLabel,
+                card: root.dataset.posCardLabel,
+                other: root.dataset.posOtherLabel,
+            };
+            const sale = data.data ?? {};
+            const summary = [
+                data.message ?? '',
+                `${root.dataset.posSaleNoLabel ?? ''}: ${sale.number ?? ''}`.trim(),
+                `${root.dataset.posTotalLabel ?? ''}: ${money(sale.total ?? 0)}`.trim(),
+                `${root.dataset.posPaymentLabel ?? ''}: ${paymentLabels[sale.payment] ?? sale.payment ?? ''}`.trim(),
+            ].filter(Boolean).join('\n');
+
+            cart.clear();
+            hideOtherNote();
+            rememberSaleNumber(sale.number ?? '');
+            renderCart();
+            await loadItems(search?.value?.trim() ?? '');
+            showAdminToast(summary, 5000);
+        } catch {
             showAdminToast(document.getElementById('admin-toast')?.dataset.errorFallback ?? 'Something went wrong. Please try again.');
-            return;
+        } finally {
+            paying = false;
         }
-
-        const data = await response.json();
-        cart.clear();
-        renderCart();
-        await loadItems();
-        showAdminToast(data.message ?? data.data?.number ?? 'OK');
     };
 
     const visibleItems = () => items.filter((item) => ! item.closest('li')?.classList.contains('hidden'));
@@ -795,7 +917,7 @@ function initPos() {
         let shown = 0;
 
         items.forEach((item) => {
-            const haystack = `${item.dataset.sku} ${item.dataset.barcode} ${item.dataset.name} ${item.dataset.variant}`.toLowerCase();
+            const haystack = `${item.dataset.sku} ${item.dataset.barcode} ${item.dataset.name} ${item.dataset.brand} ${item.dataset.variant}`.toLowerCase();
             const match = value === '' || haystack.includes(value);
             item.closest('li')?.classList.toggle('hidden', ! match);
             if (match) {
@@ -806,7 +928,13 @@ function initPos() {
         empty?.toggleAttribute('hidden', shown > 0);
     };
 
-    search?.addEventListener('input', () => filter(search.value));
+    search?.addEventListener('input', () => {
+        filter(search.value);
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(() => {
+            loadItems(search.value.trim());
+        }, 150);
+    });
 
     search?.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter') {
@@ -815,13 +943,14 @@ function initPos() {
 
         event.preventDefault();
         const needle = search.value.trim().toLowerCase();
-        const exact = items.find((item) => item.dataset.barcode === needle || item.dataset.sku?.toLowerCase() === needle);
+        const exact = items.find((item) => item.dataset.barcode?.toLowerCase() === needle || item.dataset.sku?.toLowerCase() === needle);
         const first = exact ?? visibleItems()[0];
 
         if (first) {
             addItem(payload(first));
             search.value = '';
             filter('');
+            loadItems();
         }
     });
 
@@ -839,7 +968,12 @@ function initPos() {
             if (! line) {
                 return;
             }
-            line.qty += Number(qty.dataset.delta);
+            const nextQty = line.qty + Number(qty.dataset.delta);
+            if (Number(qty.dataset.delta) > 0 && Number.isFinite(line.stock) && nextQty > line.stock) {
+                showAdminToast(root.dataset.posInsufficient ?? '');
+                return;
+            }
+            line.qty = nextQty;
             if (line.qty <= 0) {
                 cart.delete(line.sku);
             }
@@ -847,11 +981,80 @@ function initPos() {
             return;
         }
 
+        const remove = event.target.closest('[data-pos-remove]');
+        if (remove) {
+            cart.delete(remove.dataset.posRemove);
+            renderCart();
+            return;
+        }
+
+        const clear = event.target.closest('[data-pos-clear]');
+        if (clear) {
+            cart.clear();
+            hideOtherNote();
+            renderCart();
+            return;
+        }
+
         const pay = event.target.closest('[data-pos-pay]');
         if (pay) {
             event.preventDefault();
+
+            if (pay.dataset.posPay === 'other') {
+                showOtherNote();
+                return;
+            }
+
+            hideOtherNote();
             checkout(pay.dataset.posPay);
+            return;
         }
+
+        if (event.target.closest('[data-pos-note-cancel]')) {
+            hideOtherNote();
+            return;
+        }
+
+        if (event.target.closest('[data-pos-note-confirm]')) {
+            checkout('other');
+            return;
+        }
+
+        const copySale = event.target.closest('[data-pos-copy-sale]');
+
+        if (copySale && lastSaleNumber?.textContent) {
+            navigator.clipboard?.writeText(lastSaleNumber.textContent).then(() => {
+                showAdminToast(root.dataset.posCopied ?? lastSaleNumber.textContent);
+            }).catch(() => {
+                showAdminToast(lastSaleNumber.textContent);
+            });
+        }
+    });
+
+    root.addEventListener('change', (event) => {
+        const input = event.target.closest('[data-pos-discount-input]');
+
+        if (! input) {
+            return;
+        }
+
+        const line = cart.get(input.dataset.posDiscountInput);
+
+        if (! line) {
+            return;
+        }
+
+        const value = Math.max(0, Number(input.value) || 0);
+        const max = line.price * line.qty;
+
+        if (value > max) {
+            showAdminToast(root.dataset.posDiscountError ?? '');
+            input.value = String(line.discount);
+            return;
+        }
+
+        line.discount = value;
+        renderCart();
     });
 
     document.addEventListener('keydown', (event) => {
@@ -861,7 +1064,21 @@ function initPos() {
 
         if (event.key === 'F2' || event.key === 'F3' || event.key === 'F4') {
             event.preventDefault();
-            checkout({ F2: 'cash', F3: 'card', F4: 'other' }[event.key]);
+
+            if (event.key === 'F4') {
+                showOtherNote();
+                return;
+            }
+
+            hideOtherNote();
+            checkout({ F2: 'cash', F3: 'card' }[event.key]);
+            return;
+        }
+
+        if (event.key === 'Enter' && event.target === noteInput) {
+            event.preventDefault();
+            checkout('other');
+            return;
         }
 
         if (event.target instanceof HTMLInputElement && event.target !== search) {

@@ -86,6 +86,12 @@
                 <dt class="text-muted-foreground">{{ __('admin.sales.status') }}</dt>
                 <dd><x-admin.badge group="status" :status="$sale['status']" /></dd>
             </div>
+            @if (($sale['payment'] ?? null) === 'other' && filled($sale['note'] ?? null))
+                <div>
+                    <dt class="text-muted-foreground">{{ __('admin.pos.note') }}</dt>
+                    <dd class="text-foreground">{{ $sale['note'] }}</dd>
+                </div>
+            @endif
         </dl>
     </section>
 

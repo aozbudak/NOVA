@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\SaleReturn;
 use App\Support\AdminList;
 use App\Support\AdminStore;
 use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ReturnController extends Controller
@@ -57,15 +59,13 @@ class ReturnController extends Controller
     public function store(Request $request, AdminStore $store, DatabaseRecords $records): RedirectResponse
     {
         $validated = $request->validate([
-            'sale' => ['nullable', 'string', 'max:255'],
-            'reason' => ['nullable', 'string', 'max:255'],
+            'sale' => ['required', 'string', 'max:255'],
+            'reason' => ['required', 'string', Rule::in(SaleReturn::reasons())],
         ]);
 
-        if (filled($validated['sale'] ?? null)) {
-            $fromStore = $store->sale($validated['sale']);
-            $persisted = $records->completeReturn($validated['sale'], $validated['reason'] ?? null);
-            abort_if($fromStore === null && $persisted === null, 404);
-        }
+        $persisted = $records->completeReturn($validated['sale'], $validated['reason']);
+
+        abort_if($store->sale($validated['sale']) === null && $persisted === null, 404);
 
         return redirect()
             ->route('admin.returns.index')

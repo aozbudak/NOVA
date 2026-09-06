@@ -16,9 +16,10 @@
         <x-admin.input type="date" name="date" value="{{ $filters['date'] }}" aria-label="{{ __('admin.returns.date') }}" />
         <x-admin.select name="reason">
             <option value="">{{ __('admin.returns.reason') }}</option>
+            <option value="customer_changed_mind" @selected($filters['reason'] === 'customer_changed_mind')>{{ __('admin.status.customer_changed_mind') }}</option>
             <option value="wrong_size" @selected($filters['reason'] === 'wrong_size')>{{ __('admin.status.wrong_size') }}</option>
             <option value="defective" @selected($filters['reason'] === 'defective')>{{ __('admin.status.defective') }}</option>
-            <option value="customer_request" @selected($filters['reason'] === 'customer_request')>{{ __('admin.status.customer_request') }}</option>
+            <option value="wrong_product" @selected($filters['reason'] === 'wrong_product')>{{ __('admin.status.wrong_product') }}</option>
             <option value="other" @selected($filters['reason'] === 'other')>{{ __('admin.status.other') }}</option>
         </x-admin.select>
         <x-admin.select name="status">
@@ -46,6 +47,7 @@
                 <x-admin.th>{{ __('admin.returns.products') }}</x-admin.th>
                 <x-admin.th sort="amount" align="end">{{ __('admin.returns.amount') }}</x-admin.th>
                 <x-admin.th>{{ __('admin.returns.reason') }}</x-admin.th>
+                <x-admin.th>{{ __('admin.returns.user') }}</x-admin.th>
                 <x-admin.th sort="date">{{ __('admin.returns.date') }}</x-admin.th>
                 <x-admin.th sort="status">{{ __('admin.returns.status') }}</x-admin.th>
                 <x-admin.th align="end">{{ __('admin.common.actions') }}</x-admin.th>
@@ -59,6 +61,7 @@
                         <x-admin.td :label="__('admin.returns.products')" tone="muted">{{ $row['products'] }}</x-admin.td>
                         <x-admin.td :label="__('admin.returns.amount')" align="end">{{ \App\Support\AdminStore::money($row['amount']) }}</x-admin.td>
                         <x-admin.td :label="__('admin.returns.reason')" tone="muted">{{ __('admin.status.'.$row['reason']) }}</x-admin.td>
+                        <x-admin.td :label="__('admin.returns.user')" tone="muted">{{ $row['user'] ?? '—' }}</x-admin.td>
                         <x-admin.td :label="__('admin.returns.date')" tone="muted">{{ $row['date'] }}</x-admin.td>
                         <x-admin.td :label="__('admin.returns.status')"><x-admin.badge group="status" :status="$row['status']" /></x-admin.td>
                         <x-admin.td :label="__('admin.common.actions')" align="end">

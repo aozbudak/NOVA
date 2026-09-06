@@ -662,7 +662,7 @@ final class DatabaseRecords
     }
 
     /**
-     * @param  array{payment: string, customer_id?: string|null, items: list<array{sku: string, quantity: int, discount?: float|int|string|null}>}  $sale
+     * @param  array{payment: string, customer_id?: string|null, note?: string|null, items: list<array{sku: string, quantity: int, discount?: float|int|string|null}>}  $sale
      * @param  Collection<int, array<string, mixed>>  $lines
      */
     public function placeSale(array $sale, Collection $lines, string $number): ?Order
@@ -717,7 +717,7 @@ final class DatabaseRecords
                 );
             }
 
-            $this->recordPayment($order, $sale['payment'], $total);
+            $this->recordPayment($order, $sale['payment'], $total, $sale['note'] ?? null);
 
             $register = $this->activeRegister();
 
@@ -1492,7 +1492,7 @@ final class DatabaseRecords
         ]);
     }
 
-    private function recordPayment(Order $order, string $method, float $amount): void
+    private function recordPayment(Order $order, string $method, float $amount, ?string $note = null): void
     {
         if (! Schema::hasTable('payments')) {
             return;
@@ -1503,6 +1503,7 @@ final class DatabaseRecords
             'payment_method' => $method,
             'amount' => $amount,
             'status' => 'completed',
+            'transaction_reference' => filled($note) ? $note : null,
             'paid_at' => now(),
         ]);
     }

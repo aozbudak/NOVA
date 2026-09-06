@@ -4,10 +4,15 @@ namespace App\Support;
 
 use App\Enums\StaffRole;
 use App\Enums\StockMovementType;
+use App\Models\AuditLog;
 use App\Models\Brand;
+use App\Models\CashTransaction;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\SaleReturn;
 use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Models\User;
@@ -707,6 +712,7 @@ final class AdminStore
                     ...$variant,
                     'product' => $product['name'],
                     'product_slug' => $product['slug'],
+                    'brand' => $product['brand'] ?? '',
                     'image' => $product['image'],
                     'min_stock' => $product['min_stock'],
                     'stock_status' => $this->stockStatus($variant['stock'], $product['min_stock']),
@@ -965,17 +971,33 @@ final class AdminStore
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    public function posItems(): Collection
+    public function posItems(string $query = ''): Collection
     {
-        return $this->variants()->map(fn (array $variant): array => [
-            'sku' => $variant['sku'],
-            'barcode' => $variant['barcode'],
-            'name' => $variant['product'],
-            'variant' => $variant['color'].' / '.$variant['size'],
-            'price' => $variant['price'],
-            'stock' => $variant['stock'],
-            'image' => $variant['image'],
-        ]);
+        $needle = trim($query);
+
+        if (Schema::hasTable('product_variants') && Schema::hasTable('products')) {
+            return $this->searchPosVariants($needle);
+        }
+
+        $rows = $this->variants()->map(fn (array $variant): array => $this->mapPosItem($variant));
+
+        if ($needle === '') {
+            return $rows->values();
+        }
+
+        $lower = Str::lower($needle);
+        $exact = $rows->filter(function (array $item) use ($lower): bool {
+            return Str::lower((string) $item['sku']) === $lower
+                || Str::lower((string) $item['barcode']) === $lower;
+        });
+
+        if ($exact->isNotEmpty()) {
+            return $exact->values();
+        }
+
+        return $rows->filter(function (array $item) use ($lower): bool {
+            return Str::contains(Str::lower($item['sku'].' '.$item['barcode'].' '.$item['name'].' '.$item['brand'].' '.$item['variant']), $lower);
+        })->values();
     }
 
     /**
@@ -1070,7 +1092,9 @@ final class AdminStore
      */
     public function sales(array $filters = []): Collection
     {
-        $rows = collect($this->saleCatalog());
+        $rows = Schema::hasTable('orders')
+            ? $this->databaseSales()
+            : collect($this->saleCatalog());
         $search = Str::lower(trim((string) ($filters['search'] ?? '')));
 
         if ($search !== '') {
@@ -1109,6 +1133,21 @@ final class AdminStore
      */
     public function sale(string $id): ?array
     {
+        if (Schema::hasTable('orders')) {
+            $order = Order::query()
+                ->with(['customer', 'items', 'payments'])
+                ->where(function ($query) use ($id): void {
+                    $query->where('order_number', $id);
+
+                    if (Str::isUuid($id)) {
+                        $query->orWhere('id', $id);
+                    }
+                })
+                ->first();
+
+            return $order === null ? null : $this->mapSale($order, true);
+        }
+
         $sale = collect($this->saleCatalog())->first(fn (array $row): bool => $row['id'] === $id || $row['number'] === $id);
 
         if ($sale === null) {
@@ -1132,7 +1171,14 @@ final class AdminStore
      */
     public function cashiers(): array
     {
-        return ['Ayşe Yılmaz', 'Mert Kaya'];
+        $names = $this->sales()
+            ->pluck('cashier')
+            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '' && $name !== '—')
+            ->unique()
+            ->values()
+            ->all();
+
+        return $names === [] ? ['Ayşe Yılmaz', 'Mert Kaya'] : $names;
     }
 
     /**
@@ -1141,7 +1187,9 @@ final class AdminStore
      */
     public function returns(array $filters = []): Collection
     {
-        $rows = collect($this->returnCatalog());
+        $rows = Schema::hasTable('returns')
+            ? $this->databaseReturns()
+            : collect($this->returnCatalog());
         $searchReturn = Str::lower(trim((string) ($filters['return'] ?? '')));
         $searchSale = Str::lower(trim((string) ($filters['sale'] ?? '')));
         $searchCustomer = Str::lower(trim((string) ($filters['customer'] ?? '')));
@@ -1172,6 +1220,21 @@ final class AdminStore
      */
     public function returnRecord(string $id): ?array
     {
+        if (Schema::hasTable('returns')) {
+            $record = SaleReturn::query()
+                ->with(['order.customer', 'order.items', 'order.payments', 'items.orderItem', 'customer'])
+                ->where(function ($query) use ($id): void {
+                    $query->where('return_number', $id);
+
+                    if (Str::isUuid($id)) {
+                        $query->orWhere('id', $id);
+                    }
+                })
+                ->first();
+
+            return $record === null ? null : $this->mapReturn($record, true);
+        }
+
         $record = collect($this->returnCatalog())->firstWhere('id', $id);
 
         if ($record === null) {
@@ -2766,6 +2829,372 @@ final class AdminStore
                 'status' => 'inactive',
                 'balance' => 9600,
             ],
+        ];
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function databaseSales(): Collection
+    {
+        if (! Schema::hasTable('orders')) {
+            return collect();
+        }
+
+        return Order::query()
+            ->with(['customer', 'items', 'payments'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (Order $order): array => $this->mapSale($order, false))
+            ->values();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapSale(Order $order, bool $detailed = false): array
+    {
+        $items = $order->items->map(fn ($item): array => [
+            'product' => $item->product_name,
+            'variant' => trim(($item->color ?? '').' / '.($item->size ?? ''), ' /'),
+            'sku' => (string) $item->sku,
+            'qty' => (int) $item->quantity,
+            'unit' => (float) $item->unit_price,
+            'discount' => (float) $item->discount_amount,
+            'total' => (float) $item->total_price,
+        ]);
+
+        $payment = $order->payments->firstWhere('status', 'completed')
+            ?? $order->payments->first();
+        $customerName = trim(($order->customer?->first_name ?? '').' '.($order->customer?->last_name ?? ''));
+        $cashier = $this->saleCashier($order);
+
+        $sale = [
+            'id' => $order->order_number,
+            'number' => $order->order_number,
+            'date' => optional($order->created_at)->format('Y-m-d H:i') ?? now()->format('Y-m-d H:i'),
+            'customer' => $customerName !== '' ? $customerName : '—',
+            'customer_id' => $order->customer?->slug,
+            'items_count' => $items->count(),
+            'items_label' => $items->pluck('product')->unique()->implode(', '),
+            'items' => $items->all(),
+            'subtotal' => (float) $order->subtotal,
+            'discount' => (float) $order->discount_amount,
+            'total' => (float) $order->total_amount,
+            'payment' => $payment?->payment_method ?? 'other',
+            'note' => $payment?->transaction_reference,
+            'cashier' => $cashier,
+            'status' => $order->status,
+        ];
+
+        if ($detailed) {
+            $sale['stock_effects'] = $this->saleStockEffects($order);
+            $sale['cash_effects'] = $this->saleCashEffects($order);
+        }
+
+        return $sale;
+    }
+
+    private function saleCashier(Order $order): string
+    {
+        $notes = (string) $order->notes;
+
+        if (str_starts_with($notes, 'pos:')) {
+            $name = trim(substr($notes, 4));
+
+            return $name !== '' ? $name : '—';
+        }
+
+        return '—';
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function saleStockEffects(Order $order): array
+    {
+        if (! Schema::hasTable('stock_movements')) {
+            return [];
+        }
+
+        return StockMovement::query()
+            ->with(['variant.product', 'variant.stock'])
+            ->where('reference_id', $order->id)
+            ->where('reference_type', 'sale')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(function (StockMovement $movement): array {
+                $qty = abs((int) $movement->quantity);
+                $after = (int) ($movement->variant?->stock?->quantity ?? 0);
+
+                return [
+                    'product' => $movement->variant?->product?->name ?? (string) $movement->note,
+                    'qty' => -$qty,
+                    'before' => $after + $qty,
+                    'after' => $after,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function saleCashEffects(Order $order): array
+    {
+        if (! Schema::hasTable('cash_transactions')) {
+            return [];
+        }
+
+        return CashTransaction::query()
+            ->where('reference_type', 'order')
+            ->where('reference_id', $order->id)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (CashTransaction $transaction): array => [
+                'description' => $transaction->description ?: $order->order_number,
+                'amount' => (float) $transaction->amount,
+                'reference' => $order->order_number,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function databaseReturns(): Collection
+    {
+        if (! Schema::hasTable('returns')) {
+            return collect();
+        }
+
+        $users = $this->returnProcessors();
+
+        return SaleReturn::query()
+            ->with(['order.customer', 'order.items', 'order.payments', 'items.orderItem', 'customer'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (SaleReturn $return): array => $this->mapReturn($return, false, $users))
+            ->values();
+    }
+
+    /**
+     * @param  array<string, string>  $users
+     * @return array<string, mixed>
+     */
+    private function mapReturn(SaleReturn $return, bool $detailed = false, array $users = []): array
+    {
+        $order = $return->order;
+        $items = $return->items->map(function ($item): string {
+            $orderItem = $item->orderItem;
+
+            if ($orderItem === null) {
+                return '';
+            }
+
+            return trim($orderItem->product_name.' / '.trim(($orderItem->color ?? '').' / '.($orderItem->size ?? ''), ' /'), ' /');
+        })->filter()->values();
+
+        $customer = $return->customer ?? $order?->customer;
+        $customerName = trim(($customer?->first_name ?? '').' '.($customer?->last_name ?? ''));
+        $reason = (string) ($return->reason ?: 'other');
+
+        $record = [
+            'id' => $return->return_number,
+            'number' => $return->return_number,
+            'sale' => $order?->order_number ?? '—',
+            'customer' => $customerName !== '' ? $customerName : '—',
+            'products' => $items->implode(', '),
+            'amount' => (float) $return->total_amount,
+            'reason' => $reason,
+            'date' => optional($return->created_at)->format('Y-m-d') ?? now()->format('Y-m-d'),
+            'status' => $return->status,
+            'type' => 'full',
+            'refund' => (float) $return->total_amount,
+            'user' => $users[$return->id] ?? $this->returnProcessor($return),
+        ];
+
+        if ($detailed) {
+            $record['stock_effects'] = $this->returnStockEffects($return);
+            $record['cash_effects'] = $this->returnCashEffects($return);
+        }
+
+        return $record;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function returnProcessors(): array
+    {
+        if (! Schema::hasTable('audit_logs')) {
+            return [];
+        }
+
+        return AuditLog::query()
+            ->with('user')
+            ->where('action', 'return.completed')
+            ->where('auditable_type', SaleReturn::class)
+            ->get()
+            ->mapWithKeys(fn (AuditLog $log): array => [
+                (string) $log->auditable_id => $log->user?->name ?? (string) session('admin.name', '—'),
+            ])
+            ->all();
+    }
+
+    private function returnProcessor(SaleReturn $return): string
+    {
+        if (! Schema::hasTable('audit_logs')) {
+            return (string) session('admin.name', '—');
+        }
+
+        $log = AuditLog::query()
+            ->with('user')
+            ->where('action', 'return.completed')
+            ->where('auditable_type', SaleReturn::class)
+            ->where('auditable_id', $return->id)
+            ->first();
+
+        return $log?->user?->name ?? (string) session('admin.name', '—');
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function returnStockEffects(SaleReturn $return): array
+    {
+        if (! Schema::hasTable('stock_movements')) {
+            return [];
+        }
+
+        return StockMovement::query()
+            ->with('variant.product')
+            ->where('reference_id', $return->id)
+            ->where('reference_type', 'return')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (StockMovement $movement): array => [
+                'product' => $movement->variant?->product?->name ?? (string) $movement->note,
+                'qty' => abs((int) $movement->quantity),
+                'reference' => (string) ($movement->note ?? $return->return_number),
+            ])
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function returnCashEffects(SaleReturn $return): array
+    {
+        if (! Schema::hasTable('cash_transactions')) {
+            return [];
+        }
+
+        return CashTransaction::query()
+            ->where('reference_type', 'return')
+            ->where('reference_id', $return->id)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (CashTransaction $transaction): array => [
+                'description' => $transaction->description ?: $return->return_number,
+                'amount' => (float) $transaction->amount,
+                'reference' => $return->return_number,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function searchPosVariants(string $needle): Collection
+    {
+        $query = ProductVariant::query()
+            ->where('is_active', true)
+            ->whereHas('product', fn ($product) => $product->where('is_active', true))
+            ->with(['product.brandRecord', 'product.images', 'stock']);
+
+        if ($needle !== '') {
+            $lower = Str::lower($needle);
+            $exact = (clone $query)
+                ->where(function ($builder) use ($needle, $lower): void {
+                    $builder->where('sku', $needle)
+                        ->orWhere('barcode', $needle)
+                        ->orWhereRaw('LOWER(sku) = ?', [$lower])
+                        ->orWhereRaw('LOWER(COALESCE(barcode, \'\')) = ?', [$lower]);
+                })
+                ->orderBy('sku')
+                ->limit(20)
+                ->get();
+
+            if ($exact->isNotEmpty()) {
+                return $exact->map(fn (ProductVariant $variant): array => $this->mapPosVariant($variant))->values();
+            }
+
+            $like = '%'.$lower.'%';
+            $query->where(function ($builder) use ($like): void {
+                $builder->whereRaw('LOWER(sku) like ?', [$like])
+                    ->orWhereRaw('LOWER(COALESCE(barcode, \'\')) like ?', [$like])
+                    ->orWhereRaw('LOWER(COALESCE(color, \'\')) like ?', [$like])
+                    ->orWhereRaw('LOWER(COALESCE(size, \'\')) like ?', [$like])
+                    ->orWhereHas('product', function ($product) use ($like): void {
+                        $product->whereRaw('LOWER(name) like ?', [$like])
+                            ->orWhereRaw('LOWER(COALESCE(brand, \'\')) like ?', [$like]);
+                    });
+            });
+        }
+
+        if ($needle !== '') {
+            $query->limit(50);
+        }
+
+        return $query
+            ->orderBy('sku')
+            ->get()
+            ->map(fn (ProductVariant $variant): array => $this->mapPosVariant($variant))
+            ->values();
+    }
+
+    /**
+     * @param  array<string, mixed>  $variant
+     * @return array<string, mixed>
+     */
+    private function mapPosItem(array $variant): array
+    {
+        return [
+            'sku' => $variant['sku'],
+            'barcode' => $variant['barcode'] ?? '',
+            'name' => $variant['product'],
+            'brand' => $variant['brand'] ?? '',
+            'variant' => trim(($variant['color'] ?? '').' / '.($variant['size'] ?? ''), ' /'),
+            'price' => $variant['price'],
+            'stock' => $variant['stock'],
+            'image' => $variant['image'] ?? '',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapPosVariant(ProductVariant $variant): array
+    {
+        $product = $variant->product;
+        $image = $product?->images->first()?->image_url ?? '';
+
+        return [
+            'sku' => $variant->sku,
+            'barcode' => (string) $variant->barcode,
+            'name' => $product?->name ?? $variant->sku,
+            'brand' => $product?->brandRecord?->name ?? (string) $product?->brand,
+            'variant' => trim(($variant->color ?? '').' / '.($variant->size ?? ''), ' /'),
+            'price' => (float) ($variant->price ?? $product?->base_price ?? 0),
+            'stock' => (int) ($variant->stock?->quantity ?? 0),
+            'image' => $image,
         ];
     }
 

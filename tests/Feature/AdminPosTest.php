@@ -18,6 +18,7 @@ class AdminPosTest extends TestCase
         $response->assertSee('Cash');
         $response->assertSee('Card');
         $response->assertSee('Other');
+        $response->assertSee('data-pos-note', false);
         $response->assertSee('Basic Shirt');
     }
 }

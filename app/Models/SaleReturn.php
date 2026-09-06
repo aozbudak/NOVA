@@ -25,6 +25,21 @@ class SaleReturn extends Model
     protected $table = 'returns';
 
     /**
+     * @return list<string>
+     */
+    public static function reasons(): array
+    {
+        return [
+            'customer_changed_mind',
+            'wrong_size',
+            'defective',
+            'wrong_product',
+            'other',
+            'customer_request',
+        ];
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

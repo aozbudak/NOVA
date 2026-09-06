@@ -30,9 +30,10 @@ class AdminReturnTest extends TestCase
         $response->assertSee('₺1,499');
         $response->assertSee('Wrong size');
         $response->assertSee('Defective product');
-        $response->assertSee('Customer request');
-        $response->assertSee('Full return');
-        $response->assertSee('Partial return');
+        $response->assertSee('Customer changed mind');
+        $response->assertSee('Wrong product');
+        $response->assertDontSee('Full return');
+        $response->assertDontSee('Partial return');
     }
 
     public function test_return_detail_renders_stock_refund_and_cash_links(): void

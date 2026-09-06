@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Support\AdminStore;
 use App\Support\DatabaseRecords;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -28,16 +30,38 @@ class SaleController extends Controller
 
     public function store(Request $request, AdminStore $store, DatabaseRecords $records): JsonResponse
     {
-        $skus = $store->variants()->pluck('sku')->all();
+        $skuRule = Schema::hasTable('product_variants')
+            ? Rule::exists('product_variants', 'sku')
+            : Rule::in($store->variants()->pluck('sku')->all());
 
         $validated = $request->validate([
             'payment' => ['required', 'in:cash,card,other'],
             'customer_id' => ['nullable', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:255', 'required_if:payment,other'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.sku' => ['required', 'string', Rule::in($skus)],
+            'items.*.sku' => ['required', 'string', $skuRule],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
+        ], [
+            'note.required_if' => __('admin.pos.note_required'),
         ]);
+
+        $validated['note'] = filled($validated['note'] ?? null) ? trim((string) $validated['note']) : null;
+
+        if ($validated['payment'] === 'other' && $validated['note'] === null) {
+            throw ValidationException::withMessages([
+                'note' => __('admin.pos.note_required'),
+            ]);
+        }
+
+        $order = $records->placeSale($validated, collect(), '');
+
+        if ($order instanceof Order) {
+            return response()->json([
+                'data' => $this->orderPayload($order, $validated['payment'], $validated['note']),
+                'message' => __('admin.toast.sale_completed'),
+            ], 201);
+        }
 
         $variants = $store->variants()->keyBy('sku');
         $lines = collect($validated['items'])->map(function (array $item) use ($variants): array {
@@ -45,11 +69,19 @@ class SaleController extends Controller
             $quantity = (int) $item['quantity'];
             $discount = (float) ($item['discount'] ?? 0);
             $unit = (float) $variant['price'];
-            $lineTotal = ($unit * $quantity) - $discount;
+            $gross = $unit * $quantity;
 
-            if ($lineTotal < 0) {
+            if ($discount > $gross) {
                 throw ValidationException::withMessages([
-                    'items' => __('validation.min.numeric', ['attribute' => 'total', 'min' => 0]),
+                    'items' => __('admin.pos.discount_exceeds'),
+                ]);
+            }
+
+            $available = (int) ($variant['stock'] ?? 0);
+
+            if ($quantity > $available) {
+                throw ValidationException::withMessages([
+                    'items' => __('admin.pos.insufficient_stock'),
                 ]);
             }
 
@@ -60,27 +92,26 @@ class SaleController extends Controller
                 'qty' => $quantity,
                 'unit' => $unit,
                 'discount' => $discount,
-                'total' => $lineTotal,
+                'total' => $gross - $discount,
             ];
         });
 
-        $number = 'NV-'.now()->format('ymdHis').str_pad((string) random_int(0, 99), 2, '0', STR_PAD_LEFT);
-
-        $records->placeSale($validated, $lines, $number);
+        $number = 'NV-'.now()->format('Ymd').'-0001';
 
         return response()->json([
             'data' => [
-                'id' => strtolower($number),
+                'id' => $number,
                 'number' => $number,
                 'payment' => $validated['payment'],
                 'customer_id' => $validated['customer_id'] ?? null,
+                'note' => $validated['note'],
                 'items' => $lines->all(),
                 'subtotal' => $lines->sum(fn (array $line): float => $line['unit'] * $line['qty']),
                 'discount' => $lines->sum('discount'),
                 'total' => $lines->sum('total'),
                 'status' => 'completed',
             ],
-            'message' => __('admin.toast.transaction_saved'),
+            'message' => __('admin.toast.sale_completed'),
         ], 201);
     }
 
@@ -91,5 +122,36 @@ class SaleController extends Controller
         abort_if($record === null, 404);
 
         return response()->json(['data' => $record]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function orderPayload(Order $order, string $payment, ?string $note = null): array
+    {
+        $order->loadMissing('items');
+
+        $items = $order->items->map(fn ($item): array => [
+            'product' => $item->product_name,
+            'variant' => trim(($item->color ?? '').' / '.($item->size ?? ''), ' /'),
+            'sku' => $item->sku,
+            'qty' => (int) $item->quantity,
+            'unit' => (float) $item->unit_price,
+            'discount' => (float) $item->discount_amount,
+            'total' => (float) $item->total_price,
+        ]);
+
+        return [
+            'id' => $order->order_number,
+            'number' => $order->order_number,
+            'payment' => $payment,
+            'customer_id' => $order->customer_id,
+            'note' => $note,
+            'items' => $items->all(),
+            'subtotal' => (float) $order->subtotal,
+            'discount' => (float) $order->discount_amount,
+            'total' => (float) $order->total_amount,
+            'status' => $order->status,
+        ];
     }
 }

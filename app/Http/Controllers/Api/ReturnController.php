@@ -31,10 +31,11 @@ class ReturnController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $fromStore = $store->sale($validated['sale']);
         $persisted = $records->completeReturn($validated['sale'], $validated['reason'] ?? null);
 
-        abort_if($fromStore === null && $persisted === null, 404);
+        if ($persisted === null) {
+            abort_if($store->sale($validated['sale']) === null, 404);
+        }
 
         return response()->json([
             'status' => 'completed',
