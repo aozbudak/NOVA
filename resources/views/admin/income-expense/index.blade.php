@@ -18,7 +18,7 @@
         <x-admin.select name="category">
             <option value="">{{ __('admin.income_expense.filter_category') }}</option>
             @foreach ($categories as $category)
-                <option value="{{ $category }}" @selected($filters['category'] === $category)>{{ $category }}</option>
+                <option value="{{ $category }}" @selected($filters['category'] === $category)>{{ \App\Support\AdminStore::incomeExpenseCategoryLabel($category) }}</option>
             @endforeach
         </x-admin.select>
         <x-admin.input type="date" name="date" value="{{ $filters['date'] }}" aria-label="{{ __('admin.income_expense.filter_date') }}" />
@@ -45,7 +45,7 @@
                 <tr class="border-b border-border last:border-b-0">
                     <x-admin.td :label="__('admin.income_expense.date')" tone="muted">{{ $row['date'] }}</x-admin.td>
                     <x-admin.td :label="__('admin.income_expense.type')"><x-admin.badge group="status" :status="$row['type']" /></x-admin.td>
-                    <x-admin.td :label="__('admin.income_expense.category')" tone="muted">{{ $row['category'] }}</x-admin.td>
+                    <x-admin.td :label="__('admin.income_expense.category')" tone="muted">{{ \App\Support\AdminStore::incomeExpenseCategoryLabel($row['category']) }}</x-admin.td>
                     <x-admin.td :label="__('admin.income_expense.description')">{{ $row['description'] }}</x-admin.td>
                     <x-admin.td :label="__('admin.income_expense.amount')" align="end" :tone="$row['type'] === 'income' ? 'success' : 'danger'">
                         {{ \App\Support\AdminStore::money($row['amount']) }}

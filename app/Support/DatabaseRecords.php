@@ -11,6 +11,7 @@ use App\Models\CashTransaction;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
+use App\Models\Exchange;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -764,13 +765,13 @@ final class DatabaseRecords
         });
     }
 
-    public function completeReturn(string $saleNumber, ?string $reason = null): ?SaleReturn
+    public function completeReturn(string $saleNumber, ?string $reason = null, ?string $notes = null): ?SaleReturn
     {
         if (! Schema::hasTable('returns') || ! Schema::hasTable('orders')) {
             return null;
         }
 
-        return DB::transaction(function () use ($saleNumber, $reason): ?SaleReturn {
+        return DB::transaction(function () use ($saleNumber, $reason, $notes): ?SaleReturn {
             $order = Order::query()
                 ->where('order_number', $saleNumber)
                 ->with('items.variant')
@@ -817,7 +818,7 @@ final class DatabaseRecords
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
                     'total_price' => $item->total_price,
-                    'reason' => $reason,
+                    'reason' => ($reason === 'other' && filled($notes)) ? $notes : $reason,
                 ]);
 
                 if ($item->variant !== null) {
@@ -867,6 +868,173 @@ final class DatabaseRecords
             ]);
 
             return $return;
+        });
+    }
+
+    public function completeExchange(string $saleNumber, string $originalSku, string $newSku, int $quantity): ?Exchange
+    {
+        if (! Schema::hasTable('exchanges') || ! Schema::hasTable('orders') || ! Schema::hasTable('product_variants')) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($saleNumber, $originalSku, $newSku, $quantity): ?Exchange {
+            $order = Order::query()
+                ->where('order_number', $saleNumber)
+                ->with(['items.variant.product', 'payments'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($order === null) {
+                return null;
+            }
+
+            if (in_array($order->status, ['returned', 'cancelled'], true)) {
+                throw ValidationException::withMessages([
+                    'sale' => __('admin.exchanges.already_returned'),
+                ]);
+            }
+
+            $fullReturnExists = SaleReturn::query()
+                ->where('order_id', $order->id)
+                ->where(function ($query): void {
+                    $query->whereNull('reason')->orWhere('reason', '!=', 'exchange');
+                })
+                ->lockForUpdate()
+                ->exists();
+
+            if ($fullReturnExists) {
+                throw ValidationException::withMessages([
+                    'sale' => __('admin.exchanges.already_returned'),
+                ]);
+            }
+
+            $orderItem = $order->items->first(
+                fn (OrderItem $item): bool => Str::lower((string) $item->sku) === Str::lower($originalSku),
+            );
+
+            if ($orderItem === null || $orderItem->variant === null) {
+                throw ValidationException::withMessages([
+                    'original_sku' => __('admin.exchanges.item_not_on_sale'),
+                ]);
+            }
+
+            $returnedQty = (int) ReturnItem::query()->where('order_item_id', $orderItem->id)->sum('quantity');
+            $remaining = (int) $orderItem->quantity - $returnedQty;
+
+            if ($quantity > $remaining) {
+                throw ValidationException::withMessages([
+                    'quantity' => __('admin.exchanges.insufficient_quantity'),
+                ]);
+            }
+
+            $newVariant = ProductVariant::query()
+                ->where('sku', $newSku)
+                ->with(['product', 'stock'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($newVariant === null) {
+                throw ValidationException::withMessages([
+                    'new_sku' => __('admin.exchanges.new_not_found'),
+                ]);
+            }
+
+            if ($newVariant->id === $orderItem->product_variant_id) {
+                throw ValidationException::withMessages([
+                    'new_sku' => __('admin.exchanges.same_item'),
+                ]);
+            }
+
+            $oldVariant = $orderItem->variant;
+            $oldPrice = (float) $orderItem->unit_price;
+            $newPrice = (float) $newVariant->price;
+            $difference = round(($newPrice - $oldPrice) * $quantity, 2);
+            $lineTotal = round($oldPrice * $quantity, 2);
+
+            $return = SaleReturn::query()->create([
+                'order_id' => $order->id,
+                'customer_id' => $order->customer_id,
+                'return_number' => $this->nextExchangeNumber(),
+                'reason' => 'exchange',
+                'status' => 'completed',
+                'total_amount' => $lineTotal,
+                'approved_at' => now(),
+                'completed_at' => now(),
+            ]);
+
+            ReturnItem::query()->create([
+                'return_id' => $return->id,
+                'order_item_id' => $orderItem->id,
+                'quantity' => $quantity,
+                'unit_price' => $oldPrice,
+                'total_price' => $lineTotal,
+                'reason' => 'exchange',
+            ]);
+
+            $exchange = Exchange::query()->create([
+                'return_id' => $return->id,
+                'old_product_variant_id' => $oldVariant->id,
+                'new_product_variant_id' => $newVariant->id,
+                'quantity' => $quantity,
+                'price_difference' => $difference,
+                'status' => 'completed',
+            ]);
+
+            $this->moveStock(
+                $oldVariant,
+                $quantity,
+                StockMovementType::ExchangeIn->value,
+                $exchange->id,
+                'exchange',
+                $return->return_number,
+            );
+
+            $this->moveStock(
+                $newVariant,
+                -$quantity,
+                StockMovementType::ExchangeOut->value,
+                $exchange->id,
+                'exchange',
+                $return->return_number,
+            );
+
+            $originalPayment = $order->payments
+                ->firstWhere('status', 'completed')
+                ?? $order->payments->first();
+
+            if ($difference !== 0.0 && Schema::hasTable('payments')) {
+                Payment::query()->create([
+                    'order_id' => $order->id,
+                    'payment_method' => $originalPayment?->payment_method ?? 'cash',
+                    'amount' => abs($difference),
+                    'status' => $difference > 0 ? 'completed' : 'refunded',
+                    'transaction_reference' => ($difference > 0 ? 'exchange:' : 'refund:').$return->return_number,
+                    'paid_at' => now(),
+                ]);
+            }
+
+            $register = $this->activeRegister();
+
+            if ($register !== null && ($originalPayment?->payment_method ?? null) === 'cash' && $difference !== 0.0) {
+                $this->addCashTransaction(
+                    $register,
+                    $difference > 0 ? 'sale' : 'refund',
+                    $difference > 0 ? $difference : -abs($difference),
+                    $return->return_number.' · '.$order->order_number,
+                    'exchange',
+                    $exchange->id,
+                );
+            }
+
+            $this->recordAudit('exchange.completed', $exchange, null, [
+                'return_number' => $return->return_number,
+                'order_number' => $order->order_number,
+                'old_sku' => $oldVariant->sku,
+                'new_sku' => $newVariant->sku,
+                'price_difference' => $difference,
+            ]);
+
+            return $exchange;
         });
     }
 
@@ -1855,6 +2023,31 @@ final class DatabaseRecords
     private function nextReturnNumber(): string
     {
         $prefix = 'RT-'.now()->format('Ymd').'-';
+        $latest = SaleReturn::query()
+            ->where('return_number', 'like', $prefix.'%')
+            ->orderByDesc('return_number')
+            ->lockForUpdate()
+            ->value('return_number');
+
+        $sequence = 1;
+
+        if (is_string($latest) && preg_match('/-(\d+)$/', $latest, $matches) === 1) {
+            $sequence = (int) $matches[1] + 1;
+        }
+
+        $number = $prefix.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+
+        while (SaleReturn::query()->where('return_number', $number)->exists()) {
+            $sequence++;
+            $number = $prefix.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+        }
+
+        return $number;
+    }
+
+    private function nextExchangeNumber(): string
+    {
+        $prefix = 'EX-'.now()->format('Ymd').'-';
         $latest = SaleReturn::query()
             ->where('return_number', 'like', $prefix.'%')
             ->orderByDesc('return_number')

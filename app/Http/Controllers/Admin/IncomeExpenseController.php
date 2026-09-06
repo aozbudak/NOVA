@@ -31,7 +31,10 @@ class IncomeExpenseController extends Controller
                     'label' => __('admin.income_expense.filter_type'),
                     'value' => $filters['type'] === '' ? '' : __('admin.income_expense.'.$filters['type']),
                 ],
-                'category' => ['label' => __('admin.income_expense.filter_category')],
+                'category' => [
+                    'label' => __('admin.income_expense.filter_category'),
+                    'value' => $filters['category'] === '' ? '' : AdminStore::incomeExpenseCategoryLabel($filters['category']),
+                ],
                 'date' => ['label' => __('admin.income_expense.filter_date')],
                 'user' => ['label' => __('admin.income_expense.filter_user')],
             ]),
@@ -50,13 +53,16 @@ class IncomeExpenseController extends Controller
         $validated = $request->validate([
             'type' => ['required', 'in:income,expense'],
             'category' => ['required', 'string', 'max:255'],
+            'custom_category' => ['nullable', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
         ]);
 
+        $category = trim((string) ($validated['custom_category'] ?? ''));
+
         $records->recordIncomeExpense(
             $validated['type'],
-            $validated['category'],
+            $category !== '' ? $category : $validated['category'],
             $validated['description'],
             (float) $validated['amount'],
         );

@@ -9,6 +9,7 @@ use App\Models\Brand;
 use App\Models\CashTransaction;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Exchange;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -34,6 +35,26 @@ final class AdminStore
     public static function money(float|int $amount): string
     {
         return '₺'.number_format($amount, 0, '.', ',');
+    }
+
+    public static function incomeExpenseCategoryLabel(string $category): string
+    {
+        $key = match ($category) {
+            'Packaging', 'packaging' => 'packaging',
+            'Alterations', 'alterations' => 'alterations',
+            'Shipping', 'shipping' => 'shipping',
+            'Utilities', 'utilities' => 'utilities',
+            'Other', 'other' => 'other',
+            default => null,
+        };
+
+        if ($key === null) {
+            return $category;
+        }
+
+        $translation = 'admin.income_expense.categories.'.$key;
+
+        return trans()->has($translation) ? __($translation) : $category;
     }
 
     /**
@@ -1419,6 +1440,10 @@ final class AdminStore
      */
     public function exchanges(): Collection
     {
+        if (Schema::hasTable('exchanges')) {
+            return $this->databaseExchanges();
+        }
+
         return collect($this->exchangeCatalog());
     }
 
@@ -1427,6 +1452,27 @@ final class AdminStore
      */
     public function exchange(string $id): ?array
     {
+        if (Schema::hasTable('exchanges')) {
+            $record = Exchange::query()
+                ->with([
+                    'saleReturn.order.customer',
+                    'oldVariant.product',
+                    'newVariant.product',
+                ])
+                ->where(function ($query) use ($id): void {
+                    $query->whereHas('saleReturn', function ($return) use ($id): void {
+                        $return->where('return_number', $id);
+                    });
+
+                    if (Str::isUuid($id)) {
+                        $query->orWhere('id', $id);
+                    }
+                })
+                ->first();
+
+            return $record === null ? null : $this->mapExchange($record);
+        }
+
         return collect($this->exchangeCatalog())->firstWhere('id', $id);
     }
 
@@ -1489,7 +1535,14 @@ final class AdminStore
      */
     public function incomeExpenseCategories(): array
     {
-        return ['Packaging', 'Alterations', 'Shipping', 'Utilities', 'Other'];
+        $defaults = ['Packaging', 'Alterations', 'Shipping', 'Utilities', 'Other'];
+
+        return collect($defaults)
+            ->merge($this->incomeExpenses()->pluck('category'))
+            ->filter(fn (mixed $category): bool => is_string($category) && $category !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
@@ -3164,6 +3217,7 @@ final class AdminStore
         $customer = $return->customer ?? $order?->customer;
         $customerName = trim(($customer?->first_name ?? '').' '.($customer?->last_name ?? ''));
         $reason = (string) ($return->reason ?: 'other');
+        $itemReason = (string) ($return->items->first()?->reason ?? '');
 
         $record = [
             'id' => $return->return_number,
@@ -3173,6 +3227,7 @@ final class AdminStore
             'products' => $items->implode(', '),
             'amount' => (float) $return->total_amount,
             'reason' => $reason,
+            'notes' => ($reason === 'other' && $itemReason !== '' && $itemReason !== 'other') ? $itemReason : '',
             'date' => optional($return->created_at)->format('Y-m-d') ?? now()->format('Y-m-d'),
             'status' => $return->status,
             'type' => 'full',
@@ -3269,6 +3324,66 @@ final class AdminStore
                 'reference' => $return->return_number,
             ])
             ->all();
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function databaseExchanges(): Collection
+    {
+        if (! Schema::hasTable('exchanges')) {
+            return collect();
+        }
+
+        return Exchange::query()
+            ->with([
+                'saleReturn.order.customer',
+                'oldVariant.product',
+                'newVariant.product',
+            ])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (Exchange $exchange): array => $this->mapExchange($exchange))
+            ->values();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapExchange(Exchange $exchange): array
+    {
+        $return = $exchange->saleReturn;
+        $order = $return?->order;
+        $customer = $order?->customer;
+        $customerName = trim(($customer?->first_name ?? '').' '.($customer?->last_name ?? ''));
+        $difference = (float) $exchange->price_difference;
+        $number = $return?->return_number ?? (string) $exchange->id;
+
+        return [
+            'id' => $number,
+            'number' => $number,
+            'date' => optional($exchange->created_at)->format('Y-m-d') ?? now()->format('Y-m-d'),
+            'customer' => $customerName !== '' ? $customerName : '—',
+            'original' => $this->mapExchangeVariant($exchange->oldVariant, (float) $exchange->oldVariant?->price),
+            'new' => $this->mapExchangeVariant($exchange->newVariant, (float) $exchange->newVariant?->price),
+            'difference' => $difference > 0 ? 'additional_payment' : ($difference < 0 ? 'refund' : 'no_difference'),
+            'difference_amount' => $difference,
+            'status' => $exchange->status,
+        ];
+    }
+
+    /**
+     * @return array{product: string, variant: string, sku: string, price: float}
+     */
+    private function mapExchangeVariant(?ProductVariant $variant, ?float $price = null): array
+    {
+        return [
+            'product' => $variant?->product?->name ?? '—',
+            'variant' => trim(($variant?->color ?? '').' / '.($variant?->size ?? ''), ' /'),
+            'sku' => (string) ($variant?->sku ?? ''),
+            'price' => $price ?? (float) ($variant?->price ?? 0),
+        ];
     }
 
     /**

@@ -33,6 +33,12 @@
                     <dt class="text-muted-foreground">{{ __('admin.returns.reason') }}</dt>
                     <dd class="text-foreground">{{ __('admin.status.'.$return['reason']) }}</dd>
                 </div>
+                @if (($return['notes'] ?? '') !== '')
+                    <div class="flex justify-between gap-3">
+                        <dt class="text-muted-foreground">{{ __('admin.returns.notes') }}</dt>
+                        <dd class="text-right text-foreground">{{ $return['notes'] }}</dd>
+                    </div>
+                @endif
             </dl>
         </section>
 

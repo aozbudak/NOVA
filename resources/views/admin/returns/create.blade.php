@@ -68,14 +68,20 @@
                 <input type="hidden" name="sale" value="{{ $sale['number'] }}">
                 <p class="text-[12px] text-muted-foreground">{{ __('admin.returns.all_items') }}</p>
                 <x-admin.field :label="__('admin.returns.reason')" name="reason">
-                    <x-admin.select name="reason">
-                        <option value="customer_changed_mind">{{ __('admin.status.customer_changed_mind') }}</option>
-                        <option value="wrong_size">{{ __('admin.status.wrong_size') }}</option>
-                        <option value="defective">{{ __('admin.status.defective') }}</option>
-                        <option value="wrong_product">{{ __('admin.status.wrong_product') }}</option>
-                        <option value="other">{{ __('admin.status.other') }}</option>
+                    <x-admin.select name="reason" data-return-reason>
+                        <option value="customer_changed_mind" @selected(old('reason') === 'customer_changed_mind')>{{ __('admin.status.customer_changed_mind') }}</option>
+                        <option value="wrong_size" @selected(old('reason') === 'wrong_size')>{{ __('admin.status.wrong_size') }}</option>
+                        <option value="defective" @selected(old('reason') === 'defective')>{{ __('admin.status.defective') }}</option>
+                        <option value="wrong_product" @selected(old('reason') === 'wrong_product')>{{ __('admin.status.wrong_product') }}</option>
+                        <option value="exchange" @selected(old('reason') === 'exchange')>{{ __('admin.status.exchange') }}</option>
+                        <option value="other" @selected(old('reason') === 'other')>{{ __('admin.status.other') }}</option>
                     </x-admin.select>
                 </x-admin.field>
+                <div data-return-notes @if (old('reason') !== 'other') hidden @endif>
+                    <x-admin.field :label="__('admin.returns.notes')" name="notes" :help="__('admin.returns.notes_help')">
+                        <x-admin.textarea name="notes" rows="3">{{ old('notes') }}</x-admin.textarea>
+                    </x-admin.field>
+                </div>
                 <x-admin.button type="submit">{{ __('admin.common.save') }}</x-admin.button>
             </form>
         @endif

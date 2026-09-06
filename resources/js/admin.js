@@ -456,6 +456,7 @@ initBusyForms();
 initTableLoading();
 initAuditRows();
 initAdminRetry();
+initReturnReasonNotes();
 
 function showAdminLoadError(shell = document.querySelector('[data-table-shell]')) {
     shell?.querySelector('[data-table-error]')?.removeAttribute('hidden');
@@ -1116,4 +1117,20 @@ function initPos() {
 
     search?.focus();
     loadItems();
+}
+
+function initReturnReasonNotes() {
+    const select = document.querySelector('[data-return-reason]');
+    const notes = document.querySelector('[data-return-notes]');
+
+    if (! select || ! notes) {
+        return;
+    }
+
+    const sync = () => {
+        notes.hidden = select.value !== 'other';
+    };
+
+    select.addEventListener('change', sync);
+    sync();
 }

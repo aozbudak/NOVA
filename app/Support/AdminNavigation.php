@@ -38,8 +38,6 @@ final class AdminNavigation
         'admin.returns.create' => 'returns',
         'admin.returns.store' => 'returns',
         'admin.returns.show' => 'returns',
-        'admin.exchanges.index' => 'exchanges',
-        'admin.exchanges.show' => 'exchanges',
         'admin.customers.index' => 'customers',
         'admin.customers.store' => 'customers',
         'admin.customers.show' => 'customers',
@@ -93,8 +91,6 @@ final class AdminNavigation
         'api.returns.index' => 'returns',
         'api.returns.store' => 'returns',
         'api.returns.show' => 'returns',
-        'api.exchanges.index' => 'exchanges',
-        'api.exchanges.show' => 'exchanges',
         'api.categories.index' => 'categories',
         'api.categories.store' => 'categories',
         'api.categories.update' => 'categories',
@@ -162,7 +158,6 @@ final class AdminNavigation
                     $this->item('pos', 'pos', 'admin.pos.index', 'pos'),
                     $this->item('sales', 'sales', 'admin.sales.index', 'sales'),
                     $this->item('returns', 'returns', 'admin.returns.index', 'returns'),
-                    $this->item('exchanges', 'exchanges', 'admin.exchanges.index', 'exchanges'),
                 ],
             ],
             [
@@ -352,10 +347,6 @@ final class AdminNavigation
             'admin.returns.show' => [
                 ['label' => __('admin.nav.returns'), 'url' => route('admin.returns.index')],
                 ['label' => __('admin.returns.detail'), 'url' => null],
-            ],
-            'admin.exchanges.show' => [
-                ['label' => __('admin.nav.exchanges'), 'url' => route('admin.exchanges.index')],
-                ['label' => __('admin.exchanges.detail'), 'url' => null],
             ],
             'admin.cash.movements' => [
                 ['label' => __('admin.nav.cash'), 'url' => route('admin.cash.index')],

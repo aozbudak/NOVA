@@ -8,7 +8,6 @@ use App\Http\Controllers\Admin\CashController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ExchangeController;
 use App\Http\Controllers\Admin\IncomeExpenseController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\LogoutController;
@@ -128,8 +127,6 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::get('/returns/create', [ReturnController::class, 'create'])->name('returns.create');
             Route::post('/returns', [ReturnController::class, 'store'])->name('returns.store');
             Route::get('/returns/{return}', [ReturnController::class, 'show'])->name('returns.show');
-            Route::get('/exchanges', [ExchangeController::class, 'index'])->name('exchanges.index');
-            Route::get('/exchanges/{exchange}', [ExchangeController::class, 'show'])->name('exchanges.show');
             Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
             Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
             Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');

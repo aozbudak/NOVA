@@ -8,7 +8,7 @@
         $selectedAbilities = collect(old('abilities', data_get($user, 'abilities', $roleAbilities[$roleKey] ?? [])))->all();
         $abilitySections = [
             'store' => ['products', 'categories', 'brands', 'variants', 'inventory', 'barcode'],
-            'sales_group' => ['pos', 'sales', 'returns', 'exchanges'],
+            'sales_group' => ['pos', 'sales', 'returns'],
             'people' => ['customers', 'suppliers'],
             'finance' => ['cash', 'income_expense', 'payments'],
             'reporting' => ['reports'],

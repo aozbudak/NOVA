@@ -29,9 +29,18 @@ class ReturnController extends Controller
         $validated = $request->validate([
             'sale' => ['required', 'string', 'max:255'],
             'reason' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $persisted = $records->completeReturn($validated['sale'], $validated['reason'] ?? null);
+        $notes = ($validated['reason'] ?? null) === 'other'
+            ? trim((string) ($validated['notes'] ?? ''))
+            : '';
+
+        $persisted = $records->completeReturn(
+            $validated['sale'],
+            $validated['reason'] ?? null,
+            $notes !== '' ? $notes : null,
+        );
 
         if ($persisted === null) {
             abort_if($store->sale($validated['sale']) === null, 404);

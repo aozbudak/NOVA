@@ -32,6 +32,9 @@ class AdminReturnTest extends TestCase
         $response->assertSee('Defective product');
         $response->assertSee('Customer changed mind');
         $response->assertSee('Wrong product');
+        $response->assertSee('Exchange');
+        $response->assertSee('Other');
+        $response->assertSee('Explanation');
         $response->assertDontSee('Full return');
         $response->assertDontSee('Partial return');
     }
@@ -52,5 +55,17 @@ class AdminReturnTest extends TestCase
     public function test_unknown_return_returns_404(): void
     {
         $this->get(route('admin.returns.show', 'missing'))->assertNotFound();
+    }
+
+    public function test_optional_notes_are_accepted_for_other_reason(): void
+    {
+        $this->from(route('admin.returns.create'))
+            ->post(route('admin.returns.store'), [
+                'sale' => 'NOVA-1024',
+                'reason' => 'other',
+                'notes' => 'Customer asked for a different color',
+            ])
+            ->assertRedirect(route('admin.returns.index'))
+            ->assertSessionHas('status');
     }
 }

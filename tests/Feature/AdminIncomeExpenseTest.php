@@ -27,5 +27,39 @@ class AdminIncomeExpenseTest extends TestCase
         $response->assertSee('Income');
         $response->assertSee('Expense');
         $response->assertSee('Category');
+        $response->assertSee('Packaging');
+        $response->assertSee('Custom category');
+    }
+
+    public function test_category_dropdown_uses_turkish_labels(): void
+    {
+        $this->withSession([
+            'admin.authenticated' => true,
+            'locale' => 'tr',
+        ]);
+
+        $response = $this->get(route('admin.income-expense.create'));
+
+        $response->assertOk();
+        $response->assertSee('Ambalaj');
+        $response->assertSee('Tadilat');
+        $response->assertSee('Kargo');
+        $response->assertSee('Faturalar');
+        $response->assertSee('Diğer');
+        $response->assertSee('Özel kategori');
+    }
+
+    public function test_custom_category_is_accepted_when_saving(): void
+    {
+        $this->from(route('admin.income-expense.create'))
+            ->post(route('admin.income-expense.store'), [
+                'type' => 'expense',
+                'category' => 'Packaging',
+                'custom_category' => 'Kira',
+                'description' => 'Office rent',
+                'amount' => 1500,
+            ])
+            ->assertRedirect(route('admin.income-expense.index'))
+            ->assertSessionHas('status');
     }
 }

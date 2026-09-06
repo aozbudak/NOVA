@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\CustomerController;
-use App\Http\Controllers\Api\ExchangeController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PosController;
@@ -66,9 +65,6 @@ Route::middleware(['web', EnsureAdminAuthenticated::class, EnsureAdminPageAccess
     Route::get('/returns', [ReturnController::class, 'index'])->name('returns.index');
     Route::post('/returns', [ReturnController::class, 'store'])->name('returns.store');
     Route::get('/returns/{return}', [ReturnController::class, 'show'])->name('returns.show');
-
-    Route::get('/exchanges', [ExchangeController::class, 'index'])->name('exchanges.index');
-    Route::get('/exchanges/{exchange}', [ExchangeController::class, 'show'])->name('exchanges.show');
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');

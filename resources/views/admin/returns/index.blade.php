@@ -20,6 +20,7 @@
             <option value="wrong_size" @selected($filters['reason'] === 'wrong_size')>{{ __('admin.status.wrong_size') }}</option>
             <option value="defective" @selected($filters['reason'] === 'defective')>{{ __('admin.status.defective') }}</option>
             <option value="wrong_product" @selected($filters['reason'] === 'wrong_product')>{{ __('admin.status.wrong_product') }}</option>
+            <option value="exchange" @selected($filters['reason'] === 'exchange')>{{ __('admin.status.exchange') }}</option>
             <option value="other" @selected($filters['reason'] === 'other')>{{ __('admin.status.other') }}</option>
         </x-admin.select>
         <x-admin.select name="status">
