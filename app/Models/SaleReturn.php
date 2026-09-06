@@ -36,6 +36,7 @@ class SaleReturn extends Model
             'wrong_product',
             'other',
             'customer_request',
+            'exchange',
         ];
     }
 
