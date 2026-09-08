@@ -13,10 +13,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'customer_id',
     'return_number',
     'reason',
+    'notes',
+    'admin_notes',
     'status',
     'total_amount',
     'approved_at',
     'completed_at',
+    'rejected_at',
 ])]
 class SaleReturn extends Model
 {
@@ -34,9 +37,25 @@ class SaleReturn extends Model
             'wrong_size',
             'defective',
             'wrong_product',
+            'not_as_expected',
             'exchange',
             'other',
             'customer_request',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function customerReasons(): array
+    {
+        return [
+            'customer_changed_mind',
+            'wrong_size',
+            'wrong_product',
+            'defective',
+            'not_as_expected',
+            'other',
         ];
     }
 
@@ -49,6 +68,7 @@ class SaleReturn extends Model
             'total_amount' => 'decimal:2',
             'approved_at' => 'datetime',
             'completed_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 

@@ -42,6 +42,20 @@ class AdminNotificationTest extends TestCase
         $this->post(route('admin.notifications.read', 'missing'))->assertNotFound();
     }
 
+    public function test_notification_copy_is_turkish_when_locale_is_tr(): void
+    {
+        $this->withSession(['locale' => 'tr'])
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Bildirimler')
+            ->assertSee('Düşük stok: Basic T-Shirt')
+            ->assertSee('Yeni iade talebi oluşturuldu')
+            ->assertSee('Kasa kapatılmayı bekliyor')
+            ->assertSee('Yeni satış tamamlandı')
+            ->assertSee('Tümünü okundu işaretle')
+            ->assertSee('Okundu işaretle');
+    }
+
     public function test_cashier_can_open_the_notification_panel_on_pos(): void
     {
         $this->withSession(['admin.role' => StaffRole::Cashier->value])

@@ -34,8 +34,10 @@ use App\Http\Controllers\Storefront\CheckoutController;
 use App\Http\Controllers\Storefront\CollectionController;
 use App\Http\Controllers\Storefront\HomeController;
 use App\Http\Controllers\Storefront\LocaleController;
+use App\Http\Controllers\Storefront\OrderController as StorefrontOrderController;
 use App\Http\Controllers\Storefront\PageController;
 use App\Http\Controllers\Storefront\ProductController;
+use App\Http\Controllers\Storefront\ReturnRequestController as StorefrontReturnRequestController;
 use App\Http\Controllers\Storefront\SearchController;
 use App\Http\Controllers\Storefront\WishlistController;
 use App\Http\Middleware\EnsureAdminAuthenticated;
@@ -75,6 +77,10 @@ Route::post('/register', [AuthController::class, 'register'])->name('register.st
 
 Route::get('/account', [AccountController::class, 'show'])->name('account.show');
 Route::get('/account/orders', [AccountController::class, 'orders'])->name('account.orders');
+Route::get('/account/orders/{order}', [StorefrontOrderController::class, 'show'])->name('account.orders.show');
+Route::get('/account/returns', [StorefrontReturnRequestController::class, 'index'])->name('account.returns');
+Route::post('/account/returns', [StorefrontReturnRequestController::class, 'store'])->name('account.returns.store');
+Route::get('/account/returns/{returnRequest}', [StorefrontReturnRequestController::class, 'show'])->name('account.returns.show');
 Route::get('/account/profile', [AccountController::class, 'profile'])->name('account.profile');
 Route::put('/account/profile', [AccountController::class, 'update'])->name('account.profile.update');
 Route::put('/account/password', [AccountController::class, 'password'])->name('account.password');
@@ -127,6 +133,8 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::get('/returns/create', [ReturnController::class, 'create'])->name('returns.create');
             Route::post('/returns', [ReturnController::class, 'store'])->name('returns.store');
             Route::get('/returns/{return}', [ReturnController::class, 'show'])->name('returns.show');
+            Route::post('/returns/{return}/approve', [ReturnController::class, 'approve'])->name('returns.approve');
+            Route::post('/returns/{return}/reject', [ReturnController::class, 'reject'])->name('returns.reject');
             Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
             Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
             Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');

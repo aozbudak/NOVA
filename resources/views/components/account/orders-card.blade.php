@@ -23,13 +23,15 @@
         </x-account.empty>
     @else
         <div @class([
-            'hidden grid-cols-[auto_minmax(0,1.3fr)_1fr_1fr_auto] gap-4 px-5 py-2.5 text-[11px] font-medium tracking-label text-muted-foreground uppercase md:grid',
+            'hidden grid-cols-[auto_minmax(0,1.2fr)_0.9fr_0.7fr_0.9fr_0.8fr_auto] gap-4 px-5 py-2.5 text-[11px] font-medium tracking-label text-muted-foreground uppercase md:grid',
             'border-t border-border' => filled($title) || $slot->isNotEmpty(),
         ])>
             <span class="size-10"></span>
             <span>{{ __('storefront.account.order_id') }}</span>
             <span>{{ __('storefront.account.order_date') }}</span>
+            <span>{{ __('storefront.account.order_items') }}</span>
             <span>{{ __('storefront.account.order_total') }}</span>
+            <span>{{ __('storefront.account.payment_method') }}</span>
             <span class="text-right">{{ __('storefront.account.order_status') }}</span>
         </div>
         <div class="divide-y divide-border border-t border-border">

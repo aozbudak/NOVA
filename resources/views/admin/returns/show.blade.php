@@ -39,6 +39,12 @@
                         <dd class="text-right text-foreground">{{ $return['notes'] }}</dd>
                     </div>
                 @endif
+                @if (($return['admin_notes'] ?? '') !== '')
+                    <div class="flex justify-between gap-3">
+                        <dt class="text-muted-foreground">{{ __('admin.returns.reject_reason') }}</dt>
+                        <dd class="text-right text-foreground">{{ $return['admin_notes'] }}</dd>
+                    </div>
+                @endif
             </dl>
         </section>
 
@@ -60,6 +66,31 @@
             </dl>
         </section>
     </div>
+
+    @if (($return['status'] ?? '') === 'pending')
+        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+            <form method="POST" action="{{ route('admin.returns.approve', $return['id']) }}" class="admin-card rounded-2xl border p-4">
+                @csrf
+                <h2 class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.returns.approve') }}</h2>
+                <p class="mt-2 text-[13px] text-muted-foreground">{{ __('admin.returns.approve_help') }}</p>
+                <div class="mt-4">
+                    <x-admin.button type="submit">{{ __('admin.returns.approve') }}</x-admin.button>
+                </div>
+            </form>
+            <form method="POST" action="{{ route('admin.returns.reject', $return['id']) }}" class="admin-card rounded-2xl border p-4">
+                @csrf
+                <h2 class="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{{ __('admin.returns.reject') }}</h2>
+                <div class="mt-3">
+                    <x-admin.field :label="__('admin.returns.reject_reason')" name="admin_notes" required>
+                        <x-admin.textarea name="admin_notes" rows="3" required>{{ old('admin_notes') }}</x-admin.textarea>
+                    </x-admin.field>
+                </div>
+                <div class="mt-4">
+                    <x-admin.button type="submit" variant="danger">{{ __('admin.returns.reject') }}</x-admin.button>
+                </div>
+            </form>
+        </div>
+    @endif
 
     <div class="mt-4 grid gap-4 lg:grid-cols-2">
         <section class="admin-card rounded-2xl border">

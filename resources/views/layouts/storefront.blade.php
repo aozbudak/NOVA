@@ -62,6 +62,10 @@
                     catalog: @json(route('api.catalog.index')),
                     checkout: @json(route('api.checkout.store')),
                     checkoutConfirmation: @json(route('checkout.confirmation')),
+                    orders: @json(route('api.orders.index')),
+                    order: @json(route('api.orders.show', ['order' => '__ID__'])),
+                    returnRequests: @json(route('api.return-requests.store')),
+                    accountReturns: @json(route('account.returns')),
                 },
                 csrf: @json(csrf_token()),
                 catalog: @json($searchIndex),
@@ -73,6 +77,7 @@
                     addToWishlist: @json(__('storefront.wishlist.add')),
                     removeFromWishlist: @json(__('storefront.wishlist.remove')),
                     productImage: @json(__('storefront.product.image')),
+                    returnSubmitted: @json(__('storefront.account.return_submitted')),
                 },
             };
         </script>

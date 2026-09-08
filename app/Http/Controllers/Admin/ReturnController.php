@@ -91,4 +91,42 @@ class ReturnController extends Controller
             'return' => $record,
         ]);
     }
+
+    public function approve(string $return, AdminStore $store, DatabaseRecords $records): RedirectResponse
+    {
+        $record = $store->returnRecord($return);
+
+        abort_if($record === null, 404);
+
+        $persisted = $records->completeReturn(
+            $record['sale'],
+            $record['reason'] ?: null,
+            filled($record['notes'] ?? null) ? (string) $record['notes'] : null,
+        );
+
+        abort_if($persisted === null, 404);
+
+        return redirect()
+            ->route('admin.returns.show', $persisted->return_number)
+            ->with('status', __('admin.toast.return_completed'));
+    }
+
+    public function reject(Request $request, string $return, AdminStore $store, DatabaseRecords $records): RedirectResponse
+    {
+        $validated = $request->validate([
+            'admin_notes' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $record = $store->returnRecord($return);
+
+        abort_if($record === null, 404);
+
+        $model = SaleReturn::query()->where('return_number', $record['number'])->firstOrFail();
+
+        $records->rejectReturnRequest($model, trim($validated['admin_notes']));
+
+        return redirect()
+            ->route('admin.returns.show', $record['number'])
+            ->with('status', __('admin.toast.return_rejected'));
+    }
 }

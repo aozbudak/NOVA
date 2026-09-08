@@ -422,6 +422,24 @@ function stepGallery(delta) {
 }
 
 document.addEventListener('click', async (event) => {
+    const returnOpen = event.target.closest('[data-return-open]');
+    if (returnOpen) {
+        event.preventDefault();
+        document.querySelectorAll('[data-return-trigger]').forEach((node) => node.classList.add('hidden'));
+        const panel = document.querySelector('[data-return-panel]');
+        panel?.classList.remove('hidden');
+        panel?.querySelector('select, textarea, input:not([type="hidden"])')?.focus();
+        return;
+    }
+
+    const returnClose = event.target.closest('[data-return-close]');
+    if (returnClose) {
+        event.preventDefault();
+        document.querySelector('[data-return-panel]')?.classList.add('hidden');
+        document.querySelectorAll('[data-return-trigger]').forEach((node) => node.classList.remove('hidden'));
+        return;
+    }
+
     const open = event.target.closest('[data-open]');
     if (open) {
         if (open.dataset.open === 'cart') {
@@ -513,6 +531,41 @@ document.addEventListener('click', async (event) => {
 });
 
 document.addEventListener('submit', async (event) => {
+    const returnForm = event.target.closest('[data-return-form]');
+
+    if (returnForm && nova().routes.returnRequests && returnForm.dataset.native !== 'true') {
+        event.preventDefault();
+
+        const payload = Object.fromEntries(new FormData(returnForm).entries());
+        delete payload._token;
+
+        if (! payload.notes) {
+            payload.notes = null;
+        }
+
+        const response = await fetch(nova().routes.returnRequests, {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify(payload),
+        });
+
+        if (response.status === 422 || response.status === 401) {
+            returnForm.dataset.native = 'true';
+            returnForm.submit();
+            return;
+        }
+
+        if (! response.ok) {
+            toast(t('error', 'Something went wrong. Please try again.'));
+            return;
+        }
+
+        const data = await response.json();
+        toast(data.message ?? t('returnSubmitted', 'Your return request has been sent.'));
+        window.location.href = data.data?.href ?? nova().routes.accountReturns;
+        return;
+    }
+
     const checkout = event.target.closest('[data-checkout]');
 
     if (checkout && nova().routes.checkout && checkout.dataset.native !== 'true') {

@@ -3,8 +3,8 @@
 @php
     $tone = match ($status) {
         'in_stock', 'active', 'completed', 'received', 'income', 'sale', 'opening', 'success' => 'text-success',
-        'low_stock', 'partially_returned', 'open', 'adjustment', 'no_difference' => 'text-warning',
-        'out_of_stock', 'cancelled', 'returned', 'refund', 'refunded', 'expense', 'closing', 'additional_payment', 'failure' => 'text-destructive',
+        'low_stock', 'partially_returned', 'open', 'pending', 'adjustment', 'no_difference' => 'text-warning',
+        'out_of_stock', 'cancelled', 'returned', 'rejected', 'refund', 'refunded', 'expense', 'closing', 'additional_payment', 'failure' => 'text-destructive',
         default => 'text-muted-foreground',
     };
 

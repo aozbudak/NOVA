@@ -53,6 +53,14 @@ class Customer extends Model
     }
 
     /**
+     * @return HasMany<SaleReturn, $this>
+     */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SaleReturn::class);
+    }
+
+    /**
      * @return HasOne<ShoppingCart, $this>
      */
     public function cart(): HasOne

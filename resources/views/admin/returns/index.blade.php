@@ -26,6 +26,8 @@
         <x-admin.select name="status">
             <option value="">{{ __('admin.returns.status') }}</option>
             <option value="completed" @selected($filters['status'] === 'completed')>{{ __('admin.status.completed') }}</option>
+            <option value="pending" @selected($filters['status'] === 'pending')>{{ __('admin.status.pending') }}</option>
+            <option value="rejected" @selected($filters['status'] === 'rejected')>{{ __('admin.status.rejected') }}</option>
             <option value="open" @selected($filters['status'] === 'open')>{{ __('admin.status.open') }}</option>
         </x-admin.select>
     </x-admin.filters>

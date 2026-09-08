@@ -9,10 +9,12 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PosController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReturnController;
+use App\Http\Controllers\Api\ReturnRequestController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\SupplierController;
@@ -38,6 +40,12 @@ Route::middleware('web')->name('api.')->group(function (): void {
     Route::post('/wishlist', [WishlistController::class, 'store'])->name('wishlist.store');
 
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/return-requests', [ReturnRequestController::class, 'index'])->name('return-requests.index');
+    Route::post('/return-requests', [ReturnRequestController::class, 'store'])->name('return-requests.store');
+    Route::get('/return-requests/{returnRequest}', [ReturnRequestController::class, 'show'])->name('return-requests.show');
 });
 
 Route::middleware(['web', EnsureAdminAuthenticated::class, EnsureAdminPageAccess::class])->name('api.')->group(function (): void {

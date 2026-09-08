@@ -3227,7 +3227,10 @@ final class AdminStore
             'products' => $items->implode(', '),
             'amount' => (float) $return->total_amount,
             'reason' => $reason,
-            'notes' => ($reason === 'other' && $itemReason !== '' && $itemReason !== 'other') ? $itemReason : '',
+            'notes' => filled($return->notes)
+                ? (string) $return->notes
+                : (($reason === 'other' && $itemReason !== '' && $itemReason !== 'other') ? $itemReason : ''),
+            'admin_notes' => (string) ($return->admin_notes ?? ''),
             'date' => optional($return->created_at)->format('Y-m-d') ?? now()->format('Y-m-d'),
             'status' => $return->status,
             'type' => 'full',

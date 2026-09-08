@@ -325,31 +325,6 @@ class Catalog
     }
 
     /**
-     * @return list<array{id: string, date: string, total: float, currency: string, status: string, status_key: string}>
-     */
-    public function sampleOrders(): array
-    {
-        return [
-            [
-                'id' => 'NOVA-1024',
-                'date' => '12 Aug 2026',
-                'total' => 389.00,
-                'currency' => 'EUR',
-                'status' => $this->t('account.status_delivered'),
-                'status_key' => 'delivered',
-            ],
-            [
-                'id' => 'NOVA-0981',
-                'date' => '28 Jul 2026',
-                'total' => 229.00,
-                'currency' => 'EUR',
-                'status' => $this->t('account.status_in_transit'),
-                'status_key' => 'in_transit',
-            ],
-        ];
-    }
-
-    /**
      * @return list<string>
      */
     public function departments(): array

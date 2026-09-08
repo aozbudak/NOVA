@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Storefront;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
-use App\Models\Order;
+use App\Support\CustomerAccount;
 use App\Support\DatabaseRecords;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,17 +15,17 @@ use Illuminate\View\View;
 
 class AccountController extends Controller
 {
-    public function show(): View|RedirectResponse
+    public function show(CustomerAccount $account): View|RedirectResponse
     {
         return $this->guardedView('storefront.account.index', [
-            'orders' => $this->accountOrders(),
+            'orders' => $account->orderSummaries($this->customerRecord()),
         ]);
     }
 
-    public function orders(): View|RedirectResponse
+    public function orders(CustomerAccount $account): View|RedirectResponse
     {
         return $this->guardedView('storefront.account.orders', [
-            'orders' => $this->accountOrders(),
+            'orders' => $account->orderSummaries($this->customerRecord()),
         ]);
     }
 
@@ -289,53 +289,5 @@ class AccountController extends Controller
         $data['is_default'] = $request->boolean('is_default');
 
         return $data;
-    }
-
-    /**
-     * @return list<array{id: string, date: string, total: float, currency: string, status: string, status_key: string}>
-     */
-    private function accountOrders(): array
-    {
-        $customer = $this->customerRecord();
-
-        if ($customer === null) {
-            return [];
-        }
-
-        return $customer->orders()
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (Order $order): array => [
-                'id' => $order->order_number,
-                'date' => $order->created_at?->translatedFormat('d M Y') ?? '',
-                'total' => (float) $order->total_amount,
-                'currency' => filled($order->currency) ? $order->currency : 'EUR',
-                'status' => $this->orderStatusLabel($order->status),
-                'status_key' => $this->orderStatusKey($order->status),
-            ])
-            ->all();
-    }
-
-    private function orderStatusKey(string $status): string
-    {
-        return match ($status) {
-            'completed', 'delivered' => 'delivered',
-            'in_transit' => 'in_transit',
-            default => $status,
-        };
-    }
-
-    private function orderStatusLabel(string $status): string
-    {
-        return match ($status) {
-            'delivered' => __('storefront.account.status_delivered'),
-            'in_transit' => __('storefront.account.status_in_transit'),
-            'completed' => __('storefront.account.status_completed'),
-            'cancelled' => __('storefront.account.status_cancelled'),
-            'returned' => __('storefront.account.status_returned'),
-            'partially_returned' => __('storefront.account.status_partially_returned'),
-            default => __('storefront.account.status_pending'),
-        };
     }
 }

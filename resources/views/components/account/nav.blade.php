@@ -9,6 +9,7 @@
     $links = [
         ['label' => __('storefront.account.overview'), 'route' => 'account.show', 'icon' => 'dashboard'],
         ['label' => __('storefront.account.orders'), 'route' => 'account.orders', 'icon' => 'bag'],
+        ['label' => __('storefront.account.returns'), 'route' => 'account.returns', 'icon' => 'returns'],
         ['label' => __('storefront.header.wishlist'), 'route' => 'wishlist.index', 'icon' => 'heart'],
         ['label' => __('storefront.account.profile'), 'route' => 'account.profile', 'icon' => 'user'],
         ['label' => __('storefront.account.addresses'), 'route' => 'account.addresses', 'icon' => 'map-pin'],
@@ -31,7 +32,7 @@
 
     <nav class="grid grid-cols-3 gap-1 p-2 md:flex md:flex-col" aria-label="{{ __('storefront.account.title') }}">
         @foreach ($links as $link)
-            @php $active = request()->routeIs($link['route']); @endphp
+            @php $active = request()->routeIs($link['route'], $link['route'].'.*'); @endphp
             <a
                 href="{{ route($link['route']) }}"
                 @if ($active) aria-current="page" @endif

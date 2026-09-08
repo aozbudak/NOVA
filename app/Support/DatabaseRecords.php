@@ -782,10 +782,12 @@ final class DatabaseRecords
                 return null;
             }
 
-            $alreadyReturned = $order->status === 'returned'
-                || SaleReturn::query()->where('order_id', $order->id)->lockForUpdate()->exists();
+            $existing = SaleReturn::query()
+                ->where('order_id', $order->id)
+                ->lockForUpdate()
+                ->get();
 
-            if ($alreadyReturned) {
+            if ($order->status === 'returned' || $existing->contains(fn (SaleReturn $return): bool => $return->status === 'completed')) {
                 throw ValidationException::withMessages([
                     'sale' => __('admin.returns.already_returned'),
                 ]);
@@ -800,27 +802,43 @@ final class DatabaseRecords
                     ->first()
                 : null;
 
-            $return = SaleReturn::query()->create([
-                'order_id' => $order->id,
-                'customer_id' => $order->customer_id,
-                'return_number' => $this->nextReturnNumber(),
-                'reason' => $reason,
-                'status' => 'completed',
-                'total_amount' => $refundAmount,
-                'approved_at' => now(),
-                'completed_at' => now(),
-            ]);
+            $pending = $existing->first(fn (SaleReturn $return): bool => $return->status === 'pending');
 
-            foreach ($order->items as $item) {
-                ReturnItem::query()->create([
-                    'return_id' => $return->id,
-                    'order_item_id' => $item->id,
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
-                    'total_price' => $item->total_price,
-                    'reason' => ($reason === 'other' && filled($notes)) ? $notes : $reason,
+            if ($pending instanceof SaleReturn) {
+                $pending->update([
+                    'reason' => $reason ?? $pending->reason,
+                    'status' => 'completed',
+                    'total_amount' => $refundAmount,
+                    'approved_at' => now(),
+                    'completed_at' => now(),
                 ]);
 
+                $return = $pending->fresh() ?? $pending;
+            } else {
+                $return = SaleReturn::query()->create([
+                    'order_id' => $order->id,
+                    'customer_id' => $order->customer_id,
+                    'return_number' => $this->nextReturnNumber(),
+                    'reason' => $reason,
+                    'status' => 'completed',
+                    'total_amount' => $refundAmount,
+                    'approved_at' => now(),
+                    'completed_at' => now(),
+                ]);
+
+                foreach ($order->items as $item) {
+                    ReturnItem::query()->create([
+                        'return_id' => $return->id,
+                        'order_item_id' => $item->id,
+                        'quantity' => $item->quantity,
+                        'unit_price' => $item->unit_price,
+                        'total_price' => $item->total_price,
+                        'reason' => ($reason === 'other' && filled($notes)) ? $notes : $reason,
+                    ]);
+                }
+            }
+
+            foreach ($order->items as $item) {
                 if ($item->variant !== null) {
                     $this->moveStock(
                         $item->variant,
@@ -868,6 +886,94 @@ final class DatabaseRecords
             ]);
 
             return $return;
+        });
+    }
+
+    public function requestReturn(Customer $customer, Order $order, string $reason, ?string $notes = null): SaleReturn
+    {
+        return DB::transaction(function () use ($customer, $order, $reason, $notes): SaleReturn {
+            $locked = Order::query()
+                ->where('id', $order->id)
+                ->with('items')
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_if($locked->customer_id !== $customer->id, 404);
+
+            if (! in_array($locked->status, ['completed', 'delivered', 'shipped', 'processing', 'confirmed'], true)) {
+                throw ValidationException::withMessages([
+                    'order_id' => __('storefront.account.return_not_allowed'),
+                ]);
+            }
+
+            $existing = SaleReturn::query()
+                ->where('order_id', $locked->id)
+                ->lockForUpdate()
+                ->get();
+
+            if ($existing->contains(fn (SaleReturn $return): bool => in_array($return->status, ['pending', 'completed'], true))) {
+                throw ValidationException::withMessages([
+                    'order_id' => __('storefront.account.return_already_requested'),
+                ]);
+            }
+
+            $return = SaleReturn::query()->create([
+                'order_id' => $locked->id,
+                'customer_id' => $customer->id,
+                'return_number' => $this->nextReturnNumber(),
+                'reason' => $reason,
+                'notes' => $notes,
+                'status' => 'pending',
+                'total_amount' => $locked->total_amount,
+            ]);
+
+            foreach ($locked->items as $item) {
+                ReturnItem::query()->create([
+                    'return_id' => $return->id,
+                    'order_item_id' => $item->id,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                    'total_price' => $item->total_price,
+                    'reason' => ($reason === 'other' && filled($notes)) ? $notes : $reason,
+                ]);
+            }
+
+            $this->recordAudit('return.requested', $return, null, [
+                'return_number' => $return->return_number,
+                'order_number' => $locked->order_number,
+                'reason' => $reason,
+            ]);
+
+            return $return;
+        });
+    }
+
+    public function rejectReturnRequest(SaleReturn $return, string $adminNotes): SaleReturn
+    {
+        return DB::transaction(function () use ($return, $adminNotes): SaleReturn {
+            $locked = SaleReturn::query()
+                ->where('id', $return->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'return' => __('admin.returns.already_returned'),
+                ]);
+            }
+
+            $locked->update([
+                'status' => 'rejected',
+                'admin_notes' => $adminNotes,
+                'rejected_at' => now(),
+            ]);
+
+            $this->recordAudit('return.rejected', $locked, ['status' => 'pending'], [
+                'return_number' => $locked->return_number,
+                'admin_notes' => $adminNotes,
+            ]);
+
+            return $locked->fresh() ?? $locked;
         });
     }
 

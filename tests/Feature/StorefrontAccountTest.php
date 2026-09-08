@@ -50,6 +50,10 @@ class StorefrontAccountTest extends TestCase
         $this->get(route('account.orders'))
             ->assertSee('NOVA-1024')
             ->assertSee('Completed');
+
+        $this->get(route('account.orders.show', 'NOVA-1024'))
+            ->assertSee('NOVA-1024')
+            ->assertSee('Completed');
     }
 
     public function test_order_history_hides_another_customers_orders(): void
