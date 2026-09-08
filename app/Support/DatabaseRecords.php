@@ -11,6 +11,7 @@ use App\Models\CashTransaction;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
+use App\Models\Discount;
 use App\Models\Exchange;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -175,6 +176,94 @@ final class DatabaseRecords
         }
 
         $brand->delete();
+
+        return true;
+    }
+
+    /**
+     * @param  array{
+     *     name: string,
+     *     type: string,
+     *     value: float|int|string,
+     *     starts_at?: string|null,
+     *     ends_at?: string|null,
+     *     status?: string|null,
+     *     product_ids?: list<string>,
+     *     variant_ids?: list<string>,
+     *     category_ids?: list<string>,
+     *     brand_ids?: list<string>
+     * }  $data
+     */
+    public function saveDiscount(array $data, ?string $id = null): ?Discount
+    {
+        if (! Schema::hasTable('discounts')) {
+            return null;
+        }
+
+        $existing = $id !== null ? Discount::query()->find($id) : null;
+
+        $payload = [
+            'name' => $data['name'],
+            'type' => $data['type'],
+            'value' => Price::money($data['value']),
+            'starts_at' => filled($data['starts_at'] ?? null) ? $data['starts_at'] : null,
+            'ends_at' => filled($data['ends_at'] ?? null) ? $data['ends_at'] : null,
+            'is_active' => ($data['status'] ?? 'active') !== 'inactive',
+        ];
+
+        if ($existing === null) {
+            $payload['created_by'] = $this->actorUserId();
+            $existing = Discount::query()->create($payload);
+        } else {
+            $existing->update($payload);
+            $existing = $existing->fresh() ?? $existing;
+        }
+
+        $existing->products()->sync($data['product_ids'] ?? []);
+        $existing->variants()->sync($data['variant_ids'] ?? []);
+        $existing->categories()->sync($data['category_ids'] ?? []);
+        $existing->brands()->sync($data['brand_ids'] ?? []);
+
+        $this->discountService()->forget();
+
+        $this->recordAudit(
+            $id === null ? 'discount.created' : 'discount.updated',
+            $existing,
+            null,
+            [
+                'name' => $existing->name,
+                'type' => $existing->type->value,
+                'value' => $existing->value,
+            ],
+        );
+
+        return $existing->load(['products', 'variants', 'categories', 'brands', 'creator']);
+    }
+
+    public function toggleDiscount(string $id): ?Discount
+    {
+        $discount = Discount::query()->find($id);
+
+        if ($discount === null) {
+            return null;
+        }
+
+        $discount->update(['is_active' => ! $discount->is_active]);
+        $this->discountService()->forget();
+
+        return $discount->fresh() ?? $discount;
+    }
+
+    public function deleteDiscount(string $id): bool
+    {
+        $discount = Discount::query()->find($id);
+
+        if ($discount === null) {
+            return false;
+        }
+
+        $discount->delete();
+        $this->discountService()->forget();
 
         return true;
     }
@@ -630,7 +719,12 @@ final class DatabaseRecords
             $orderNumber = $this->uniqueOrderNumber($orderNumber);
             $customer = $this->customerFromCheckout($checkout);
             $items = $cart->items();
-            $subtotal = $cart->subtotal();
+            $priced = $this->priceCheckoutLines($items);
+            $subtotal = (float) $priced->sum(fn (array $line): float => $line['line_original']);
+            $discount = (float) $priced->sum(fn (array $line): float => $line['line_discount']);
+            $tax = (float) $priced->sum(fn (array $line): float => $line['line_tax']);
+            $shipping = ($checkout['delivery'] ?? 'standard') === 'express' ? 15.0 : 0.0;
+            $total = round($subtotal - $discount + $shipping, 2);
             $currency = (string) ($items->first()['product']['currency'] ?? 'EUR');
 
             $address = [
@@ -647,32 +741,33 @@ final class DatabaseRecords
                 'customer_id' => $customer?->id,
                 'status' => 'completed',
                 'subtotal' => $subtotal,
-                'shipping_amount' => 0,
-                'total_amount' => $subtotal,
+                'discount_amount' => $discount,
+                'shipping_amount' => $shipping,
+                'tax_amount' => $tax,
+                'total_amount' => $total,
                 'currency' => $currency,
                 'shipping_address' => $address,
                 'billing_address' => $address,
                 'notes' => $checkout['delivery'].'/'.$checkout['payment'],
             ]);
 
-            foreach ($items as $line) {
-                $variant = $this->storefrontVariant(
-                    (int) $line['product']['id'],
-                    (string) $line['size'],
-                    isset($line['color']) ? (string) $line['color'] : null,
-                );
+            foreach ($priced as $line) {
+                /** @var ProductVariant|null $variant */
+                $variant = $line['variant'];
                 $quantity = (int) $line['quantity'];
-                $unit = (float) $line['product']['price'];
 
                 OrderItem::query()->create([
                     'order_id' => $order->id,
                     'product_variant_id' => $variant?->id,
-                    'product_name' => $line['product']['name'],
+                    'product_name' => $line['name'],
                     'sku' => $variant?->sku,
+                    'color' => $line['color'] !== '' ? $line['color'] : null,
                     'size' => $line['size'],
                     'quantity' => $quantity,
-                    'unit_price' => $unit,
-                    'total_price' => $line['line_total'],
+                    'unit_price' => $line['unit_original'],
+                    'discount_amount' => $line['line_discount'],
+                    'discount_name' => $line['discount_name'],
+                    'total_price' => $line['line_final'],
                 ]);
 
                 if ($variant !== null) {
@@ -681,10 +776,10 @@ final class DatabaseRecords
             }
 
             $this->storeAddress($customer, $checkout);
-            $this->recordPayment($order, $checkout['payment'], $subtotal);
+            $this->recordPayment($order, $checkout['payment'], $total);
             $this->recordAudit('order.placed', $order, null, [
                 'order_number' => $order->order_number,
-                'total_amount' => $subtotal,
+                'total_amount' => $total,
             ]);
 
             return $order;
@@ -707,6 +802,11 @@ final class DatabaseRecords
             $subtotal = (float) $resolved->sum(fn (array $line): float => $line['unit'] * $line['qty']);
             $discount = (float) $resolved->sum('discount');
             $total = (float) $resolved->sum('total');
+            $tax = (float) $resolved->sum(function (array $line): float {
+                $rate = $line['variant_model']->product?->vat_rate ?? 20;
+
+                return (float) Price::breakdown($line['total'], $rate)['vat'];
+            });
             $number = $this->nextPosOrderNumber($number);
 
             $order = Order::query()->create([
@@ -715,6 +815,7 @@ final class DatabaseRecords
                 'status' => 'completed',
                 'subtotal' => $subtotal,
                 'discount_amount' => $discount,
+                'tax_amount' => $tax,
                 'total_amount' => $total,
                 'currency' => 'TRY',
                 'notes' => 'pos:'.$this->cashierName(),
@@ -734,6 +835,7 @@ final class DatabaseRecords
                     'quantity' => (int) $line['qty'],
                     'unit_price' => $line['unit'],
                     'discount_amount' => $line['discount'],
+                    'discount_name' => $line['discount_name'] ?? null,
                     'total_price' => $line['total'],
                 ]);
 
@@ -831,7 +933,7 @@ final class DatabaseRecords
                         'return_id' => $return->id,
                         'order_item_id' => $item->id,
                         'quantity' => $item->quantity,
-                        'unit_price' => $item->unit_price,
+                        'unit_price' => $this->soldUnitPrice($item),
                         'total_price' => $item->total_price,
                         'reason' => ($reason === 'other' && filled($notes)) ? $notes : $reason,
                     ]);
@@ -932,7 +1034,7 @@ final class DatabaseRecords
                     'return_id' => $return->id,
                     'order_item_id' => $item->id,
                     'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
+                    'unit_price' => $this->soldUnitPrice($item),
                     'total_price' => $item->total_price,
                     'reason' => ($reason === 'other' && filled($notes)) ? $notes : $reason,
                 ]);
@@ -1052,7 +1154,7 @@ final class DatabaseRecords
             }
 
             $oldVariant = $orderItem->variant;
-            $oldPrice = (float) $orderItem->unit_price;
+            $oldPrice = $this->soldUnitPrice($orderItem);
             $newPrice = (float) $newVariant->price;
             $difference = round(($newPrice - $oldPrice) * $quantity, 2);
             $lineTotal = round($oldPrice * $quantity, 2);
@@ -1874,13 +1976,85 @@ final class DatabaseRecords
         ]);
     }
 
+    private function soldUnitPrice(OrderItem $item): float
+    {
+        $quantity = (int) $item->quantity;
+
+        if ($quantity < 1) {
+            return (float) $item->unit_price;
+        }
+
+        return round((float) $item->total_price / $quantity, 2);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $items
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function priceCheckoutLines(Collection $items): Collection
+    {
+        return $items->map(function (array $line): array {
+            $quantity = (int) $line['quantity'];
+            $color = isset($line['color']) ? (string) $line['color'] : '';
+            $variant = $this->storefrontVariant(
+                (int) $line['product']['id'],
+                (string) $line['size'],
+                $color !== '' ? $color : null,
+            );
+            $product = $variant?->product;
+
+            if ($product === null && Schema::hasTable('products') && Schema::hasColumn('products', 'catalog_code')) {
+                $product = Product::query()
+                    ->with(['category', 'brandRecord'])
+                    ->where('catalog_code', (int) $line['product']['id'])
+                    ->first();
+            }
+
+            if ($product instanceof Product && ($product->relationLoaded('category') === false || $product->relationLoaded('brandRecord') === false)) {
+                $product->loadMissing(['category', 'brandRecord']);
+            }
+
+            $quote = $product instanceof Product
+                ? $this->discountService()->quote($product, $variant, $quantity)
+                : null;
+
+            $unitOriginal = (float) ($quote?->unitOriginal ?? $line['product']['oldPrice'] ?? $line['product']['price']);
+            $lineDiscount = (float) ($quote?->lineAmount ?? 0);
+            $lineFinal = (float) ($quote?->lineFinal ?? $line['line_total']);
+            $vatRate = $product?->vat_rate ?? 20;
+            $tax = (float) Price::breakdown($lineFinal, $vatRate)['vat'];
+
+            return [
+                'variant' => $variant,
+                'name' => $line['product']['name'],
+                'size' => $line['size'],
+                'color' => $color,
+                'quantity' => $quantity,
+                'unit_original' => $unitOriginal,
+                'line_original' => (float) ($quote?->lineOriginal ?? round($unitOriginal * $quantity, 2)),
+                'line_discount' => $lineDiscount,
+                'line_final' => $lineFinal,
+                'line_tax' => $tax,
+                'discount_name' => $quote?->name,
+            ];
+        });
+    }
+
+    private function discountService(): DiscountService
+    {
+        return app(DiscountService::class);
+    }
+
     private function storefrontVariant(int $catalogCode, string $size, ?string $color = null): ?ProductVariant
     {
         if (! Schema::hasTable('products') || ! Schema::hasColumn('products', 'catalog_code')) {
             return null;
         }
 
-        $product = Product::query()->where('catalog_code', $catalogCode)->with('variants')->first();
+        $product = Product::query()
+            ->where('catalog_code', $catalogCode)
+            ->with(['category', 'brandRecord', 'variants'])
+            ->first();
 
         if ($product === null) {
             return null;
@@ -2044,7 +2218,7 @@ final class DatabaseRecords
 
         $variants = ProductVariant::query()
             ->whereIn('sku', $skus->all())
-            ->with('product')
+            ->with(['product.category', 'product.brandRecord'])
             ->lockForUpdate()
             ->get()
             ->keyBy('sku');
@@ -2064,9 +2238,15 @@ final class DatabaseRecords
             }
 
             $quantity = (int) $item['quantity'];
-            $discount = round((float) $item['discount'], 2);
-            $unit = (float) ($variant->price ?? $variant->product?->base_price ?? 0);
+            $product = $variant->product;
+            $quote = $product instanceof Product
+                ? $this->discountService()->quote($product, $variant, $quantity)
+                : null;
+            $unit = (float) ($quote?->unitOriginal ?? $variant->price ?? $product?->base_price ?? 0);
             $gross = round($unit * $quantity, 2);
+            $campaign = (float) ($quote?->lineAmount ?? 0);
+            $cashier = round((float) $item['discount'], 2);
+            $discount = max($campaign, $cashier);
 
             if ($discount > $gross) {
                 throw ValidationException::withMessages([
@@ -2101,6 +2281,7 @@ final class DatabaseRecords
                 'qty' => $quantity,
                 'unit' => $unit,
                 'discount' => $discount,
+                'discount_name' => $quote?->name,
                 'total' => round($gross - $discount, 2),
             ];
         });

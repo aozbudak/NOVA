@@ -10,11 +10,21 @@
         <div class="lg:sticky lg:top-24 lg:self-start lg:py-4">
             <p class="text-[11px] tracking-nav uppercase text-muted-foreground">{{ $product['brand_name'] ?? 'NOVA' }}</p>
             <h1 class="mt-2 font-serif text-3xl md:text-4xl">{{ $product['name'] }}</h1>
-            <p class="mt-4 text-sm">
-                @if ($product['oldPrice'])
-                    <span class="text-muted-foreground line-through">{{ Number::currency($product['oldPrice'], in: 'EUR') }}</span>
-                @endif
-                {{ Number::currency($product['price'], in: 'EUR') }}
+            <p
+                class="mt-4 text-sm"
+                data-product-price
+                data-variant-prices='@json($product['variantPrices'] ?? [])'
+                data-base-price="{{ $product['price'] }}"
+                data-base-old="{{ $product['oldPrice'] ?? '' }}"
+                data-base-percent="{{ $product['discountPercent'] ?? '' }}"
+            >
+                <span data-price-old @class(['text-muted-foreground line-through' => true, 'hidden' => ! $product['oldPrice']])>
+                    {{ $product['oldPrice'] ? Number::currency($product['oldPrice'], in: 'EUR') : '' }}
+                </span>
+                <span data-price-current>{{ Number::currency($product['price'], in: 'EUR') }}</span>
+            </p>
+            <p data-price-badge @class(['mt-2 text-[11px] tracking-nav uppercase text-muted-foreground' => true, 'hidden' => ! ($product['discountPercent'] ?? null)])>
+                {{ ($product['discountPercent'] ?? null) ? __('storefront.product.off', ['percent' => $product['discountPercent']]) : '' }}
             </p>
 
             <form id="add-to-cart" class="mt-8 flex flex-col gap-8" data-add-to-cart>

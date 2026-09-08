@@ -47,6 +47,7 @@
                                 data-brand="{{ $item['brand'] ?? '' }}"
                                 data-variant="{{ $item['variant'] }}"
                                 data-price="{{ $item['price'] }}"
+                                data-campaign-discount="{{ $item['campaign_discount'] ?? 0 }}"
                                 data-stock="{{ $item['stock'] }}"
                                 class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-accent"
                             >
@@ -56,7 +57,12 @@
                                     <span class="block truncate text-[12px] text-muted-foreground">{{ $item['brand'] ?? '' }}{{ filled($item['brand'] ?? null) ? ' · ' : '' }}{{ $item['variant'] }} · {{ $item['sku'] }} · {{ $item['barcode'] }}</span>
                                 </span>
                                 <span class="shrink-0 text-right">
-                                    <span class="block text-[13px] text-foreground">{{ \App\Support\AdminStore::money($item['price']) }}</span>
+                                    @if (($item['campaign_discount'] ?? 0) > 0)
+                                        <span class="block text-[11px] text-muted-foreground line-through">{{ \App\Support\AdminStore::money($item['price']) }}</span>
+                                        <span class="block text-[13px] text-foreground">{{ \App\Support\AdminStore::money($item['sale_price'] ?? ($item['price'] - $item['campaign_discount'])) }}</span>
+                                    @else
+                                        <span class="block text-[13px] text-foreground">{{ \App\Support\AdminStore::money($item['price']) }}</span>
+                                    @endif
                                     <span class="block text-[11px] text-muted-foreground">{{ __('admin.pos.stock') }} {{ $item['stock'] }}</span>
                                 </span>
                             </button>

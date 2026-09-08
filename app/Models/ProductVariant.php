@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['product_id', 'sku', 'barcode', 'color', 'size', 'price', 'is_active'])]
@@ -41,5 +42,13 @@ class ProductVariant extends Model
     public function stock(): HasOne
     {
         return $this->hasOne(Stock::class);
+    }
+
+    /**
+     * @return BelongsToMany<Discount, $this>
+     */
+    public function discounts(): BelongsToMany
+    {
+        return $this->belongsToMany(Discount::class, 'discount_product_variant');
     }
 }

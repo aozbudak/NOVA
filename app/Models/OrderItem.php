@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'quantity',
     'unit_price',
     'discount_amount',
+    'discount_name',
     'total_price',
 ])]
 class OrderItem extends Model

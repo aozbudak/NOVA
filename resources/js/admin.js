@@ -333,6 +333,12 @@ function initAdminLayers() {
             closeAdminLayer();
         }
     });
+
+    const autoOpen = document.querySelector('[data-open-layer-on-load]');
+
+    if (autoOpen?.dataset.openLayerOnLoad) {
+        openAdminLayer(autoOpen.dataset.openLayerOnLoad);
+    }
 }
 
 function initConfirm() {
@@ -457,6 +463,7 @@ initTableLoading();
 initAuditRows();
 initAdminRetry();
 initReturnReasonNotes();
+initPickers();
 
 function showAdminLoadError(shell = document.querySelector('[data-table-shell]')) {
     shell?.querySelector('[data-table-error]')?.removeAttribute('hidden');
@@ -648,7 +655,7 @@ function initPos() {
     const lastSaleNumber = root.querySelector('[data-pos-last-sale-number]');
     /** @type {HTMLElement[]} */
     let items = [...root.querySelectorAll('[data-pos-item]')];
-    /** @type {Map<string, {sku: string, name: string, brand: string, variant: string, price: number, qty: number, discount: number, stock: number, barcode: string}>} */
+    /** @type {Map<string, {sku: string, name: string, brand: string, variant: string, price: number, qty: number, discount: number, campaignDiscount: number, stock: number, barcode: string, manualDiscount?: boolean}>} */
     const cart = new Map();
     let searchTimer = 0;
     let paying = false;
@@ -689,6 +696,7 @@ function initPos() {
                     data-brand="${escapeHtml(item.brand ?? '')}"
                     data-variant="${escapeHtml(item.variant)}"
                     data-price="${escapeHtml(item.price)}"
+                    data-campaign-discount="${escapeHtml(item.campaign_discount ?? 0)}"
                     data-stock="${escapeHtml(item.stock)}"
                     class="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-accent"
                 >
@@ -701,7 +709,9 @@ function initPos() {
                         <span class="block truncate text-[12px] text-muted-foreground">${escapeHtml([item.brand, item.variant, item.sku, item.barcode].filter(Boolean).join(' · '))}</span>
                     </span>
                     <span class="shrink-0 text-right">
-                        <span class="block text-[13px] text-foreground">${money(item.price)}</span>
+                        ${Number(item.campaign_discount ?? 0) > 0
+                            ? `<span class="block text-[11px] text-muted-foreground line-through">${money(item.price)}</span><span class="block text-[13px] text-foreground">${money(item.sale_price ?? (item.price - item.campaign_discount))}</span>`
+                            : `<span class="block text-[13px] text-foreground">${money(item.price)}</span>`}
                         <span class="block text-[11px] text-muted-foreground">${escapeHtml(stockLabel)} ${escapeHtml(item.stock)}</span>
                     </span>
                 </button>
@@ -747,6 +757,7 @@ function initPos() {
         brand: button.dataset.brand ?? '',
         variant: button.dataset.variant,
         price: Number(button.dataset.price),
+        campaignDiscount: Number(button.dataset.campaignDiscount ?? 0),
         barcode: button.dataset.barcode,
         stock: Number(button.dataset.stock ?? 0),
     });
@@ -772,7 +783,11 @@ function initPos() {
                     ${line.qty}
                     <button type="button" data-pos-qty="${escapeHtml(line.sku)}" data-delta="1" class="px-1 text-muted-foreground">+</button>
                 </td>
-                <td class="px-3 py-2 text-foreground" data-label="${escapeHtml(table?.dataset.labelUnit ?? '')}">${money(line.price)}</td>
+                <td class="px-3 py-2 text-foreground" data-label="${escapeHtml(table?.dataset.labelUnit ?? '')}">
+                    ${Number(line.campaignDiscount ?? 0) > 0
+                        ? `<span class="block text-muted-foreground line-through">${money(line.price)}</span>${money(line.price - (line.campaignDiscount ?? 0))}`
+                        : money(line.price)}
+                </td>
                 <td class="px-3 py-2 text-muted-foreground" data-label="${escapeHtml(table?.dataset.labelDiscount ?? '')}">
                     <input
                         type="number"
@@ -816,8 +831,12 @@ function initPos() {
         if (current) {
             current.qty = nextQty;
             current.stock = data.stock;
+            if (! current.manualDiscount) {
+                current.discount = (current.campaignDiscount ?? 0) * nextQty;
+            }
         } else {
-            cart.set(data.sku, { ...data, qty: 1, discount: 0 });
+            const campaign = Number(data.campaignDiscount ?? 0);
+            cart.set(data.sku, { ...data, qty: 1, campaignDiscount: campaign, discount: campaign });
         }
 
         renderCart();
@@ -1000,6 +1019,8 @@ function initPos() {
             line.qty = nextQty;
             if (line.qty <= 0) {
                 cart.delete(line.sku);
+            } else if (! line.manualDiscount) {
+                line.discount = (line.campaignDiscount ?? 0) * line.qty;
             }
             renderCart();
             return;
@@ -1078,6 +1099,7 @@ function initPos() {
         }
 
         line.discount = value;
+        line.manualDiscount = true;
         renderCart();
     });
 
@@ -1117,6 +1139,64 @@ function initPos() {
 
     search?.focus();
     loadItems();
+}
+
+function initPickers() {
+    document.querySelectorAll('[data-picker]').forEach((root) => {
+        const source = root.querySelector('[data-picker-source]');
+        const chips = root.querySelector('[data-picker-chips]');
+        const template = root.querySelector('[data-picker-template]');
+
+        if (! source || ! chips || ! template) {
+            return;
+        }
+
+        const syncDisabled = () => {
+            const taken = new Set([...chips.querySelectorAll('input')].map((input) => input.value));
+
+            [...source.options].forEach((option) => {
+                if (! option.value) {
+                    return;
+                }
+
+                option.disabled = taken.has(option.value);
+            });
+        };
+
+        source.addEventListener('change', () => {
+            const option = source.selectedOptions[0];
+
+            if (! option?.value) {
+                return;
+            }
+
+            const chip = template.content.firstElementChild.cloneNode(true);
+            chip.querySelector('input').value = option.value;
+            chip.querySelector('[data-picker-label]').textContent = option.dataset.label || option.textContent.trim();
+            chips.append(chip);
+            source.value = '';
+            syncDisabled();
+        });
+
+        root.closest('form')?.addEventListener('submit', () => {
+            if (source.value) {
+                source.dispatchEvent(new Event('change'));
+            }
+        });
+
+        chips.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-picker-remove]');
+
+            if (! button) {
+                return;
+            }
+
+            button.closest('[data-picker-chip]')?.remove();
+            syncDisabled();
+        });
+
+        syncDisabled();
+    });
 }
 
 function initReturnReasonNotes() {

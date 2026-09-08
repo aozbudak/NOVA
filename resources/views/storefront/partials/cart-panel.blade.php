@@ -1,6 +1,7 @@
 @php
     $items = $items ?? app(\App\Support\Cart::class)->items();
-    $subtotal = $subtotal ?? app(\App\Support\Cart::class)->subtotal();
+    $totals = $totals ?? app(\App\Support\Cart::class)->totals();
+    $subtotal = $subtotal ?? $totals['total'];
 @endphp
 
 @if ($items->isEmpty())
@@ -31,6 +32,14 @@
                         <div>
                             <p class="text-sm">{{ $item['product']['name'] }}</p>
                             <p class="mt-1 text-xs text-muted-foreground">{{ __('storefront.cart.size', ['size' => $item['size']]) }}</p>
+                            @if ($item['line_discount'] > 0)
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    <span class="line-through">{{ Number::currency($item['unit_original'] * $item['quantity'], in: 'EUR') }}</span>
+                                    @if ($item['discount_percent'])
+                                        · {{ __('storefront.product.off', ['percent' => $item['discount_percent']]) }}
+                                    @endif
+                                </p>
+                            @endif
                         </div>
                         <p class="text-sm">{{ Number::currency($item['line_total'], in: 'EUR') }}</p>
                     </div>
@@ -51,9 +60,25 @@
         @endforeach
     </ul>
     <div class="border-t border-border px-5 py-4">
-        <div class="flex items-center justify-between text-sm">
-            <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.cart.subtotal') }}</span>
-            <span data-cart-subtotal>{{ Number::currency($subtotal, in: 'EUR') }}</span>
+        <div class="flex flex-col gap-1.5 text-sm">
+            <div class="flex items-center justify-between">
+                <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.cart.subtotal') }}</span>
+                <span>{{ Number::currency($totals['subtotal'], in: 'EUR') }}</span>
+            </div>
+            @if ($totals['discount'] > 0)
+                <div class="flex items-center justify-between">
+                    <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.cart.discount') }}</span>
+                    <span>−{{ Number::currency($totals['discount'], in: 'EUR') }}</span>
+                </div>
+            @endif
+            <div class="flex items-center justify-between">
+                <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.cart.tax') }}</span>
+                <span>{{ Number::currency($totals['tax'], in: 'EUR') }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.cart.total') }}</span>
+                <span data-cart-subtotal>{{ Number::currency($totals['total'], in: 'EUR') }}</span>
+            </div>
         </div>
         <x-button href="{{ route('checkout.show') }}" class="mt-4 w-full">{{ __('storefront.cart.checkout') }}</x-button>
     </div>

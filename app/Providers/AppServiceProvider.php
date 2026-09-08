@@ -7,6 +7,7 @@ use App\Support\AdminStaff;
 use App\Support\AdminStore;
 use App\Support\Cart;
 use App\Support\Catalog;
+use App\Support\DiscountService;
 use App\Support\Wishlist;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -22,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AdminNavigation::class, fn (): AdminNavigation => new AdminNavigation(
             $this->app->make(AdminStaff::class),
         ));
+        $this->app->singleton(DiscountService::class);
     }
 
     /**

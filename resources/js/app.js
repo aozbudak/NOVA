@@ -608,6 +608,79 @@ document.addEventListener('submit', async (event) => {
     openLayer('cart');
 });
 
+const formatMoney = (value) => new Intl.NumberFormat(document.documentElement.lang || 'en', {
+    style: 'currency',
+    currency: 'EUR',
+}).format(Number(value));
+
+const updateProductPrice = () => {
+    const root = document.querySelector('[data-product-price]');
+
+    if (! root) {
+        return;
+    }
+
+    let prices = [];
+
+    try {
+        prices = JSON.parse(root.dataset.variantPrices || '[]');
+    } catch {
+        prices = [];
+    }
+
+    const size = document.querySelector('[data-add-to-cart] input[name="size"]:checked')?.value ?? '';
+    const color = document.querySelector('[data-add-to-cart] input[name="color"]:checked')?.value ?? '';
+    const match = prices.find((row) => {
+        if (String(row.size).toUpperCase() !== String(size).toUpperCase()) {
+            return false;
+        }
+
+        if (! color) {
+            return true;
+        }
+
+        return String(row.color).toUpperCase() === String(color).toUpperCase();
+    }) ?? prices.find((row) => String(row.size).toUpperCase() === String(size).toUpperCase());
+
+    const price = match?.price ?? root.dataset.basePrice;
+    const oldPrice = match ? match.oldPrice : (root.dataset.baseOld || null);
+    const percent = match?.percent ?? (root.dataset.basePercent || null);
+    const oldEl = root.querySelector('[data-price-old]');
+    const currentEl = root.querySelector('[data-price-current]');
+    const badge = document.querySelector('[data-price-badge]');
+
+    if (currentEl) {
+        currentEl.textContent = formatMoney(price);
+    }
+
+    if (oldEl) {
+        if (oldPrice) {
+            oldEl.textContent = formatMoney(oldPrice);
+            oldEl.classList.remove('hidden');
+        } else {
+            oldEl.textContent = '';
+            oldEl.classList.add('hidden');
+        }
+    }
+
+    if (badge) {
+        if (percent) {
+            badge.textContent = t('productOff', ':percent% off').replace(':percent', String(percent));
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+};
+
+document.addEventListener('change', (event) => {
+    if (event.target.matches('[data-add-to-cart] input[name="size"], [data-add-to-cart] input[name="color"]')) {
+        updateProductPrice();
+    }
+});
+
+updateProductPrice();
+
 document.addEventListener('input', (event) => {
     if (event.target.matches('[data-search-input]')) {
         renderSearchResults(event.target.value);

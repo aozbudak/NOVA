@@ -16,6 +16,7 @@ class CartController extends Controller
         return response()->json([
             'count' => $cart->count(),
             'subtotal' => $cart->subtotal(),
+            'totals' => $cart->totals(),
             'items' => $cart->items()->values(),
         ]);
     }

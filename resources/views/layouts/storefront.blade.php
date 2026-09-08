@@ -77,6 +77,7 @@
                     addToWishlist: @json(__('storefront.wishlist.add')),
                     removeFromWishlist: @json(__('storefront.wishlist.remove')),
                     productImage: @json(__('storefront.product.image')),
+                    productOff: @json(__('storefront.product.off')),
                     returnSubmitted: @json(__('storefront.account.return_submitted')),
                 },
             };

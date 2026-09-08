@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\CashController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\IncomeExpenseController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\LogoutController;
@@ -32,6 +33,7 @@ use App\Http\Controllers\Storefront\BrandController as StorefrontBrandController
 use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\CheckoutController;
 use App\Http\Controllers\Storefront\CollectionController;
+use App\Http\Controllers\Storefront\DiscountController as StorefrontDiscountController;
 use App\Http\Controllers\Storefront\HomeController;
 use App\Http\Controllers\Storefront\LocaleController;
 use App\Http\Controllers\Storefront\OrderController as StorefrontOrderController;
@@ -55,6 +57,7 @@ Route::get('/shop/{department}/{category?}', [CollectionController::class, 'show
 
 Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product.show');
 Route::get('/brands/{brand}', [StorefrontBrandController::class, 'show'])->name('brands.show');
+Route::get('/discounts/{discount}', [StorefrontDiscountController::class, 'show'])->name('discounts.show');
 
 Route::get('/search', SearchController::class)->name('search');
 
@@ -121,6 +124,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::put('/brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
             Route::post('/brands/{brand}/toggle', [BrandController::class, 'toggle'])->name('brands.toggle');
             Route::delete('/brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
+            Route::get('/discounts', [DiscountController::class, 'index'])->name('discounts.index');
+            Route::post('/discounts', [DiscountController::class, 'store'])->name('discounts.store');
+            Route::put('/discounts/{discount}', [DiscountController::class, 'update'])->name('discounts.update');
+            Route::post('/discounts/{discount}/toggle', [DiscountController::class, 'toggle'])->name('discounts.toggle');
+            Route::delete('/discounts/{discount}', [DiscountController::class, 'destroy'])->name('discounts.destroy');
             Route::get('/variants', VariantController::class)->name('variants.index');
             Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
             Route::post('/inventory/adjust', [InventoryController::class, 'adjust'])->name('inventory.adjust');

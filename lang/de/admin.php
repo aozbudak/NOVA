@@ -57,6 +57,7 @@ return [
         'products' => 'Produkte',
         'categories' => 'Kategorien',
         'brands' => 'Marken',
+        'discounts' => 'Rabatte',
         'variants' => 'Varianten',
         'inventory' => 'Bestand',
         'stock_movements' => 'Bestandsbewegungen',

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\DiscountController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
@@ -29,6 +30,7 @@ Route::middleware('web')->name('api.')->group(function (): void {
     Route::get('/catalog/{product}', [CatalogController::class, 'show'])->name('catalog.show');
     Route::get('/brands', [BrandController::class, 'index'])->name('brands.index');
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+    Route::get('/discounts', [DiscountController::class, 'index'])->name('discounts.index');
     Route::get('/search', SearchController::class)->name('search');
 
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -64,6 +66,9 @@ Route::middleware(['web', EnsureAdminAuthenticated::class, EnsureAdminPageAccess
     Route::post('/brands', [BrandController::class, 'store'])->name('brands.store');
     Route::put('/brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
     Route::delete('/brands/{brand}', [BrandController::class, 'destroy'])->name('brands.destroy');
+    Route::post('/discounts', [DiscountController::class, 'store'])->name('discounts.store');
+    Route::put('/discounts/{discount}', [DiscountController::class, 'update'])->name('discounts.update');
+    Route::delete('/discounts/{discount}', [DiscountController::class, 'destroy'])->name('discounts.destroy');
     Route::get('/pos/items', [PosController::class, 'items'])->name('pos.items');
 
     Route::get('/sales', [SaleController::class, 'index'])->name('sales.index');

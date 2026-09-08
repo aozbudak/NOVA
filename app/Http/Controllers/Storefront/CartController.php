@@ -18,6 +18,7 @@ class CartController extends Controller
         return view('storefront.partials.cart-panel', [
             'items' => $cart->items(),
             'subtotal' => $cart->subtotal(),
+            'totals' => $cart->totals(),
         ]);
     }
 

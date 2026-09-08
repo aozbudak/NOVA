@@ -20,6 +20,7 @@ class CheckoutController extends Controller
         return view('storefront.checkout', [
             'items' => $cart->items(),
             'subtotal' => $cart->subtotal(),
+            'totals' => $cart->totals(),
             'reducedChrome' => true,
         ]);
     }
@@ -44,13 +45,13 @@ class CheckoutController extends Controller
 
         $orderId = 'NOVA-'.now()->format('ymdHis').'-'.str_pad((string) random_int(10, 99), 2, '0', STR_PAD_LEFT);
 
-        $records->placeCheckout($cart, $validated, $orderId);
+        $order = $records->placeCheckout($cart, $validated, $orderId);
 
         session([
             'storefront.last_order' => [
-                'id' => $orderId,
+                'id' => $order?->order_number ?? $orderId,
                 'email' => $validated['email'],
-                'total' => $cart->subtotal(),
+                'total' => $order?->total_amount ?? $cart->totals()['total'],
             ],
         ]);
 

@@ -9,6 +9,7 @@ use App\Models\Brand;
 use App\Models\CashTransaction;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Discount;
 use App\Models\Exchange;
 use App\Models\Order;
 use App\Models\Product;
@@ -705,6 +706,91 @@ final class AdminStore
     public function deleteBrand(string $id): bool
     {
         return (new DatabaseRecords)->deleteBrand($id);
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function discountRecords(): Collection
+    {
+        if (! Schema::hasTable('discounts')) {
+            return collect();
+        }
+
+        return Discount::query()
+            ->with(['products:id,name', 'variants:id,sku,size,color', 'categories:id,name', 'brands:id,name', 'creator:id,name'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (Discount $discount): array => $this->mapDiscount($discount));
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function createDiscount(array $data): array
+    {
+        $saved = (new DatabaseRecords)->saveDiscount($data);
+
+        return $saved !== null ? $this->mapDiscount($saved) : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
+     */
+    public function updateDiscount(string $id, array $data): ?array
+    {
+        $saved = (new DatabaseRecords)->saveDiscount($data, $id);
+
+        return $saved !== null ? $this->mapDiscount($saved) : null;
+    }
+
+    public function toggleDiscount(string $id): bool
+    {
+        return (new DatabaseRecords)->toggleDiscount($id) !== null;
+    }
+
+    public function deleteDiscount(string $id): bool
+    {
+        return (new DatabaseRecords)->deleteDiscount($id);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function mapDiscount(Discount $discount): array
+    {
+        $targets = collect()
+            ->merge($discount->products->pluck('name'))
+            ->merge($discount->variants->map(fn ($variant): string => trim(($variant->sku ?? '').' '.$variant->size.' '.$variant->color)))
+            ->merge($discount->categories->pluck('name'))
+            ->merge($discount->brands->pluck('name'))
+            ->filter()
+            ->values()
+            ->all();
+
+        return [
+            'id' => $discount->id,
+            'name' => $discount->name,
+            'type' => $discount->type->value,
+            'type_label' => $discount->type->label(),
+            'value' => (float) $discount->value,
+            'starts_at' => $discount->starts_at?->format('Y-m-d\TH:i'),
+            'ends_at' => $discount->ends_at?->format('Y-m-d\TH:i'),
+            'starts_label' => $discount->starts_at?->format('d.m.Y H:i'),
+            'ends_label' => $discount->ends_at?->format('d.m.Y H:i'),
+            'status' => $discount->is_active ? 'active' : 'inactive',
+            'targets' => $targets,
+            'targets_label' => $targets === [] ? '—' : implode(', ', $targets),
+            'product_ids' => $discount->products->pluck('id')->all(),
+            'variant_ids' => $discount->variants->pluck('id')->all(),
+            'category_ids' => $discount->categories->pluck('id')->all(),
+            'brand_ids' => $discount->brands->pluck('id')->all(),
+            'creator' => $discount->creator?->name,
+            'created_at' => $discount->created_at?->format('d.m.Y H:i'),
+        ];
     }
 
     /**
@@ -3397,7 +3483,7 @@ final class AdminStore
         $query = ProductVariant::query()
             ->where('is_active', true)
             ->whereHas('product', fn ($product) => $product->where('is_active', true))
-            ->with(['product.brandRecord', 'product.images', 'stock']);
+            ->with(['product.brandRecord', 'product.category', 'product.images', 'stock']);
 
         if ($needle !== '') {
             $lower = Str::lower($needle);
@@ -3453,6 +3539,8 @@ final class AdminStore
             'brand' => $variant['brand'] ?? '',
             'variant' => trim(($variant['color'] ?? '').' / '.($variant['size'] ?? ''), ' /'),
             'price' => $variant['price'],
+            'campaign_discount' => 0,
+            'sale_price' => $variant['price'],
             'stock' => $variant['stock'],
             'image' => $variant['image'] ?? '',
         ];
@@ -3465,6 +3553,11 @@ final class AdminStore
     {
         $product = $variant->product;
         $image = $product?->images->first()?->image_url ?? '';
+        $quote = $product instanceof Product
+            ? app(DiscountService::class)->quote($product, $variant)
+            : null;
+        $original = (float) ($quote?->unitOriginal ?? $variant->price ?? $product?->base_price ?? 0);
+        $campaign = (float) ($quote?->unitAmount ?? 0);
 
         return [
             'sku' => $variant->sku,
@@ -3472,7 +3565,9 @@ final class AdminStore
             'name' => $product?->name ?? $variant->sku,
             'brand' => $product?->brandRecord?->name ?? (string) $product?->brand,
             'variant' => trim(($variant->color ?? '').' / '.($variant->size ?? ''), ' /'),
-            'price' => (float) ($variant->price ?? $product?->base_price ?? 0),
+            'price' => $original,
+            'campaign_discount' => $campaign,
+            'sale_price' => (float) ($quote?->unitFinal ?? $original),
             'stock' => (int) ($variant->stock?->quantity ?? 0),
             'image' => $image,
         ];

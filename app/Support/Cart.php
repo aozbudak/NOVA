@@ -11,7 +11,19 @@ class Cart
     public function __construct(private Catalog $catalog) {}
 
     /**
-     * @return Collection<int, array{key: string, product: array<string, mixed>, size: string, color: string, quantity: int, line_total: float}>
+     * @return Collection<int, array{
+     *     key: string,
+     *     product: array<string, mixed>,
+     *     size: string,
+     *     color: string,
+     *     quantity: int,
+     *     unit_original: float,
+     *     unit_price: float,
+     *     line_discount: float,
+     *     line_total: float,
+     *     discount_percent: int|null,
+     *     discount_name: string|null
+     * }>
      */
     public function items(): Collection
     {
@@ -23,13 +35,23 @@ class Cart
                     return null;
                 }
 
+                $quantity = (int) $line['quantity'];
+                $size = (string) $line['size'];
+                $color = (string) ($line['color'] ?? '');
+                $pricing = $this->linePricing($product, $size, $color);
+
                 return [
                     'key' => $line['key'],
                     'product' => $product,
-                    'size' => $line['size'],
-                    'color' => $line['color'] ?? '',
-                    'quantity' => (int) $line['quantity'],
-                    'line_total' => $product['price'] * (int) $line['quantity'],
+                    'size' => $size,
+                    'color' => $color,
+                    'quantity' => $quantity,
+                    'unit_original' => $pricing['original'],
+                    'unit_price' => $pricing['price'],
+                    'line_discount' => round(($pricing['original'] - $pricing['price']) * $quantity, 2),
+                    'line_total' => round($pricing['price'] * $quantity, 2),
+                    'discount_percent' => $pricing['percent'],
+                    'discount_name' => $pricing['name'],
                 ];
             })
             ->filter()
@@ -44,6 +66,29 @@ class Cart
     public function subtotal(): float
     {
         return (float) $this->items()->sum('line_total');
+    }
+
+    /**
+     * @return array{subtotal: float, discount: float, tax: float, total: float}
+     */
+    public function totals(): array
+    {
+        $items = $this->items();
+        $discount = (float) $items->sum('line_discount');
+        $total = (float) $items->sum('line_total');
+        $subtotal = round($total + $discount, 2);
+        $tax = (float) $items->sum(function (array $line): float {
+            $rate = $line['product']['vat_rate'] ?? 20;
+
+            return (float) Price::breakdown($line['line_total'], $rate)['vat'];
+        });
+
+        return [
+            'subtotal' => $subtotal,
+            'discount' => $discount,
+            'tax' => $tax,
+            'total' => $total,
+        ];
     }
 
     public function add(int $productId, string $size, int $quantity, ?string $color = null): void
@@ -127,5 +172,46 @@ class Cart
     public function clear(): void
     {
         session()->forget('cart');
+    }
+
+    /**
+     * @param  array<string, mixed>  $product
+     * @return array{original: float, price: float, percent: int|null, name: string|null}
+     */
+    private function linePricing(array $product, string $size, string $color): array
+    {
+        $match = collect($product['variantPrices'] ?? [])->first(function (array $row) use ($size, $color): bool {
+            if (Str::upper((string) ($row['size'] ?? '')) !== Str::upper($size)) {
+                return false;
+            }
+
+            if ($color === '') {
+                return true;
+            }
+
+            return Str::upper((string) ($row['color'] ?? '')) === Str::upper($color);
+        });
+
+        if (is_array($match)) {
+            $price = (float) $match['price'];
+            $original = (float) ($match['oldPrice'] ?? $price);
+
+            return [
+                'original' => $original,
+                'price' => $price,
+                'percent' => $match['percent'] ?? $product['discountPercent'] ?? null,
+                'name' => $match['discountName'] ?? $product['discountName'] ?? null,
+            ];
+        }
+
+        $price = (float) $product['price'];
+        $original = (float) ($product['oldPrice'] ?? $price);
+
+        return [
+            'original' => $original,
+            'price' => $price,
+            'percent' => $product['discountPercent'] ?? null,
+            'name' => $product['discountName'] ?? null,
+        ];
     }
 }

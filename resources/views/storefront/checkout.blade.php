@@ -3,6 +3,14 @@
 @section('title', __('storefront.checkout.title'))
 
 @section('content')
+    @php
+        $totals ??= [
+            'subtotal' => $subtotal,
+            'discount' => 0,
+            'tax' => 0,
+            'total' => $subtotal,
+        ];
+    @endphp
     <div class="mx-auto grid max-w-[1100px] gap-12 px-4 py-12 lg:grid-cols-[minmax(0,1fr)_20rem] lg:px-8">
         <form method="post" action="{{ route('checkout.store') }}" data-checkout class="flex flex-col gap-12">
             @csrf
@@ -62,14 +70,37 @@
                         <div class="flex-1">
                             <p>{{ $item['product']['name'] }}</p>
                             <p class="text-xs text-muted-foreground">{{ $item['size'] }} · {{ $item['quantity'] }}</p>
+                            @if ($item['line_discount'] > 0)
+                                <p class="text-xs text-muted-foreground line-through">{{ Number::currency($item['unit_original'] * $item['quantity'], in: 'EUR') }}</p>
+                            @endif
                         </div>
                         <p>{{ Number::currency($item['line_total'], in: 'EUR') }}</p>
                     </li>
                 @endforeach
             </ul>
-            <div class="mt-6 flex justify-between border-t border-border pt-4 text-sm">
-                <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.checkout.subtotal') }}</span>
-                <span>{{ Number::currency($subtotal, in: 'EUR') }}</span>
+            <div class="mt-6 flex flex-col gap-2 border-t border-border pt-4 text-sm">
+                <div class="flex justify-between">
+                    <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.checkout.subtotal') }}</span>
+                    <span>{{ Number::currency($totals['subtotal'], in: 'EUR') }}</span>
+                </div>
+                @if ($totals['discount'] > 0)
+                    <div class="flex justify-between">
+                        <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.checkout.discount') }}</span>
+                        <span>−{{ Number::currency($totals['discount'], in: 'EUR') }}</span>
+                    </div>
+                @endif
+                <div class="flex justify-between">
+                    <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.checkout.shipping') }}</span>
+                    <span>{{ __('storefront.checkout.complimentary') }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.checkout.tax') }}</span>
+                    <span>{{ Number::currency($totals['tax'], in: 'EUR') }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="tracking-label uppercase text-muted-foreground">{{ __('storefront.checkout.total') }}</span>
+                    <span>{{ Number::currency($totals['total'], in: 'EUR') }}</span>
+                </div>
             </div>
         </aside>
     </div>

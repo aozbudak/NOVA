@@ -4,7 +4,9 @@ namespace App\Support;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Discount;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -16,6 +18,8 @@ class Catalog
      * @var Collection<int, array<string, mixed>>|null
      */
     private ?Collection $items = null;
+
+    public function __construct(private DiscountService $discounts = new DiscountService) {}
 
     /**
      * @return Collection<int, array<string, mixed>>
@@ -79,23 +83,45 @@ class Catalog
     private function mapFromDatabase(Product $product): array
     {
         $attributes = $product->attributes ?? [];
-        $onSale = $product->sale_price !== null;
         $activeVariants = $product->variants->where('is_active', true);
+        $pricingVariant = $activeVariants->first();
+        $quote = $this->discounts->quote($product, $pricingVariant instanceof ProductVariant ? $pricingVariant : null);
+        $onSale = $quote->hasDiscount();
         $colors = $attributes['colors'] ?? $this->colorsFromVariants($activeVariants);
-        $sizes = $attributes['sizes'] ?? $this->sizesFromVariants($activeVariants);
+        $sizes = $attributes['sizes'] ?? $this->sizesFromVariants($activeVariants, $product);
         $images = $product->images->pluck('image_url')->values()->all();
         $brand = $product->brandRecord;
+        $variantPrices = $activeVariants
+            ->map(function ($variant) use ($product): array {
+                $quote = $this->discounts->quote($product, $variant);
+
+                return [
+                    'size' => (string) $variant->size,
+                    'color' => (string) $variant->color,
+                    'price' => (float) $quote->unitFinal,
+                    'oldPrice' => $quote->hasDiscount() ? (float) $quote->unitOriginal : null,
+                    'percent' => $quote->percent,
+                    'discountName' => $quote->name,
+                ];
+            })
+            ->values()
+            ->all();
 
         return [
             'id' => (int) ($product->catalog_code ?: sprintf('%u', crc32((string) $product->id))),
             'name' => $product->name,
             'slug' => $product->slug,
-            'price' => (float) ($onSale ? $product->sale_price : $product->base_price),
-            'oldPrice' => $onSale ? (float) $product->base_price : null,
+            'price' => (float) $quote->unitFinal,
+            'oldPrice' => $onSale ? (float) $quote->unitOriginal : null,
+            'discountPercent' => $quote->percent,
+            'discountName' => $quote->name,
+            'discountId' => $quote->discountId,
+            'vat_rate' => (float) ($product->vat_rate ?? 20),
             'currency' => $product->currency,
             'images' => $images,
             'colors' => $colors,
             'sizes' => $sizes,
+            'variantPrices' => $variantPrices,
             'category' => $attributes['department'] ?? $product->category?->parent?->slug ?? $product->category?->slug,
             'type' => $attributes['type'] ?? $this->leafType($product),
             'brand' => $brand?->slug ?? Str::slug((string) $product->brand),
@@ -255,7 +281,8 @@ class Catalog
      *     collection?: string|null,
      *     availability?: string|null,
      *     price?: string|null,
-     *     sort?: string|null
+     *     sort?: string|null,
+     *     discount?: string|null
      * }  $filters
      * @return Collection<int, array<string, mixed>>
      */
@@ -268,7 +295,15 @@ class Catalog
         $products = match ($department) {
             'women', 'men', 'kids', 'sport' => $products->where('category', $department),
             'new-in' => $products->where('isNew', true),
-            'sale' => $products->filter(fn (array $product): bool => $product['oldPrice'] !== null),
+            'sale' => $products->filter(function (array $product) use ($filters): bool {
+                if ($product['oldPrice'] === null) {
+                    return false;
+                }
+
+                $discountId = $filters['discount'] ?? null;
+
+                return $discountId === null || ($product['discountId'] ?? null) === $discountId;
+            }),
             'collections' => $products,
             default => $products->filter(function (array $product) use ($department): bool {
                 $leaf = $this->leafSlug($department);
@@ -367,6 +402,8 @@ class Catalog
                 $header[] = $brands;
             }
 
+            $header[] = $this->discountNavItem();
+
             return $header;
         }
 
@@ -432,14 +469,7 @@ class Catalog
                     ['label' => $this->t('nav.sport'), 'href' => route('shop.show', 'sport')],
                 ]],
             ], $this->t('featured.house_collections'), 'photo-1483985988355-763728e1935b'),
-            $this->navItem($this->t('nav.sale'), 'sale', [
-                ['title' => $this->t('nav.reduced'), 'links' => [
-                    ['label' => $this->t('nav.women'), 'href' => route('shop.show', ['department' => 'sale'])],
-                    ['label' => $this->t('nav.men'), 'href' => route('shop.show', 'men')],
-                    ['label' => $this->t('nav.kids'), 'href' => route('shop.show', 'kids')],
-                    ['label' => $this->t('nav.sport'), 'href' => route('shop.show', 'sport')],
-                ]],
-            ], $this->t('featured.selected_pieces'), 'photo-1487222477894-8943e31ef7b2'),
+            $this->discountNavItem(),
         ];
 
         return $this->mergeDatabaseNavigation($items);
@@ -585,6 +615,82 @@ class Catalog
         ]);
     }
 
+    public function findDiscount(string $id): ?Discount
+    {
+        if (! Schema::hasTable('discounts')) {
+            return null;
+        }
+
+        return Discount::query()->active()->find($id);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function browseDiscount(Discount $discount, array $filters = []): Collection
+    {
+        return $this->browse([
+            ...$filters,
+            'department' => 'sale',
+            'discount' => $discount->id,
+        ]);
+    }
+
+    /**
+     * @return array{label: string, department: string, href: string, columns: list<array{title: string, links: list<array{label: string, href: string}>}>, featured: array{title: string, image: string, href: string}}
+     */
+    private function discountNavItem(): array
+    {
+        $discounts = $this->headerDiscounts();
+        $saleHref = route('shop.show', 'sale');
+        $links = $discounts
+            ->map(fn (Discount $discount): array => [
+                'label' => $discount->name,
+                'href' => route('discounts.show', $discount),
+            ])
+            ->values()
+            ->all();
+
+        if ($links === []) {
+            $links[] = [
+                'label' => $this->t('nav.sale'),
+                'href' => $saleHref,
+            ];
+        }
+
+        return [
+            'label' => $this->t('nav.discounts'),
+            'department' => 'sale',
+            'href' => $saleHref,
+            'columns' => [[
+                'title' => $this->t('nav.reduced'),
+                'links' => $links,
+            ]],
+            'featured' => [
+                'title' => $this->t('nav.discounts'),
+                'image' => $this->image('photo-1487222477894-8943e31ef7b2', 900),
+                'href' => $saleHref,
+            ],
+        ];
+    }
+
+    /**
+     * @return Collection<int, Discount>
+     */
+    private function headerDiscounts(): Collection
+    {
+        if (! Schema::hasTable('discounts')) {
+            return collect();
+        }
+
+        return Discount::query()
+            ->active()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get(['id', 'name', 'type', 'value']);
+    }
+
     /**
      * @param  Collection<int, mixed>  $variants
      * @return list<array{name: string, hex: string}>
@@ -605,17 +711,27 @@ class Catalog
 
     /**
      * @param  Collection<int, mixed>  $variants
-     * @return list<array{code: string, in_stock: bool}>
+     * @return list<array{code: string, in_stock: bool, price?: float, oldPrice?: float|null}>
      */
-    private function sizesFromVariants(Collection $variants): array
+    private function sizesFromVariants(Collection $variants, ?Product $product = null): array
     {
         return $variants
             ->filter(fn ($variant): bool => filled($variant->size))
             ->unique('size')
-            ->map(fn ($variant): array => [
-                'code' => (string) $variant->size,
-                'in_stock' => (int) ($variant->stock?->quantity ?? 0) > 0,
-            ])
+            ->map(function ($variant) use ($product): array {
+                $row = [
+                    'code' => (string) $variant->size,
+                    'in_stock' => (int) ($variant->stock?->quantity ?? 0) > 0,
+                ];
+
+                if ($product instanceof Product) {
+                    $quote = $this->discounts->quote($product, $variant);
+                    $row['price'] = (float) $quote->unitFinal;
+                    $row['oldPrice'] = $quote->hasDiscount() ? (float) $quote->unitOriginal : null;
+                }
+
+                return $row;
+            })
             ->values()
             ->all();
     }
@@ -1199,10 +1315,16 @@ class Catalog
             'slug' => Str::slug($name),
             'price' => $price,
             'oldPrice' => $oldPrice,
+            'discountPercent' => $oldPrice !== null && $oldPrice > 0
+                ? (int) round((($oldPrice - $price) / $oldPrice) * 100)
+                : null,
+            'discountName' => null,
+            'vat_rate' => 20,
             'currency' => 'EUR',
             'images' => array_map(fn (string $photo): string => $this->image($photo, 1400), $photos),
             'colors' => $colors,
             'sizes' => $sizes ?? $this->sizes($outOfStockSizes),
+            'variantPrices' => [],
             'category' => $category,
             'type' => $type,
             'collection' => $collection,
