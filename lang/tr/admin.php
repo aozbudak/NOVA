@@ -288,6 +288,7 @@ return [
         'header_select' => 'Kategori seçin',
         'covers' => 'Kapak fotoğrafları',
         'covers_help' => 'Anasayfadaki Yeni standart, Kadın, Erkek ve Koleksiyonlar kapaklarını buradan değiştirin.',
+        'cover_edit' => 'Kapak fotoğraflarını düzenle',
         'cover_hero' => 'Yeni standart',
         'cover_women' => 'Kadın',
         'cover_men' => 'Erkek',

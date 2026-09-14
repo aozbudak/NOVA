@@ -142,6 +142,7 @@ return [
         'header_select' => 'Sélectionner une catégorie',
         'covers' => 'Photos de couverture',
         'covers_help' => 'Modifiez les couvertures de la page d’accueil : The new standard, Femme, Homme et Collections.',
+        'cover_edit' => 'Modifier les photos de couverture',
         'cover_hero' => 'The new standard',
         'cover_women' => 'Femme',
         'cover_men' => 'Homme',

@@ -142,6 +142,7 @@ return [
         'header_select' => 'Kategorie auswählen',
         'covers' => 'Coverfotos',
         'covers_help' => 'Ändern Sie die Startseiten-Cover für The new standard, Damen, Herren und Kollektionen.',
+        'cover_edit' => 'Coverfotos bearbeiten',
         'cover_hero' => 'The new standard',
         'cover_women' => 'Damen',
         'cover_men' => 'Herren',

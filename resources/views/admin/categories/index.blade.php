@@ -56,29 +56,40 @@
         </div>
     </x-admin.card>
 
+    @php
+        $coverEditorOpen = $errors->hasAny(['covers', 'covers.hero', 'covers.women', 'covers.men', 'covers.collections']);
+    @endphp
     <x-admin.card class="mb-6 overflow-hidden">
-        <div class="border-b border-border px-5 py-4">
-            <h2 class="text-sm font-medium text-foreground">{{ __('admin.categories.covers') }}</h2>
-            <p class="mt-1 text-[12px] text-muted-foreground">{{ __('admin.categories.covers_help') }}</p>
-        </div>
-        <form method="POST" action="{{ route('admin.categories.covers.update') }}" enctype="multipart/form-data" class="flex flex-col gap-5 p-5">
-            @csrf
-            @method('PUT')
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                @foreach ($covers as $cover)
-                    <x-admin.field :label="$cover['label']" :name="'covers.'.$cover['slot']" :help="__('admin.categories.cover_hint')">
-                        @if (filled($cover['image']))
-                            <img src="{{ $cover['image'] }}" alt="" width="160" height="200" class="mb-3 h-[200px] w-full object-cover">
-                        @endif
-                        <x-admin.input type="file" :name="'covers['.$cover['slot'].']'" accept="image/jpeg,image/png,image/webp" />
-                    </x-admin.field>
-                @endforeach
-            </div>
-            @error('covers')
-                <p class="text-[12px] text-destructive">{{ $message }}</p>
-            @enderror
-            <x-admin.button type="submit" data-busy-label="{{ __('admin.common.saving') }}">{{ __('admin.categories.cover_save') }}</x-admin.button>
-        </form>
+        <details data-cover-editor @if ($coverEditorOpen) open data-cover-editor-open @endif class="group/cover-editor">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
+                <div class="min-w-0">
+                    <h2 class="text-sm font-medium text-foreground">{{ __('admin.categories.covers') }}</h2>
+                    <p class="mt-1 text-[12px] text-muted-foreground">{{ __('admin.categories.covers_help') }}</p>
+                </div>
+                <span class="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-muted-foreground">
+                    {{ __('admin.categories.cover_edit') }}
+                    <x-icon name="chevron-down" size="size-3.5" class="transition-transform duration-200 group-open/cover-editor:rotate-180" />
+                </span>
+            </summary>
+            <form method="POST" action="{{ route('admin.categories.covers.update') }}" enctype="multipart/form-data" class="flex flex-col gap-5 border-t border-border p-5">
+                @csrf
+                @method('PUT')
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    @foreach ($covers as $cover)
+                        <x-admin.field :label="$cover['label']" :name="'covers.'.$cover['slot']" :help="__('admin.categories.cover_hint')">
+                            @if (filled($cover['image']))
+                                <img src="{{ $cover['image'] }}" alt="" width="160" height="200" class="mb-3 h-[200px] w-full object-cover">
+                            @endif
+                            <x-admin.input type="file" :name="'covers['.$cover['slot'].']'" accept="image/jpeg,image/png,image/webp" />
+                        </x-admin.field>
+                    @endforeach
+                </div>
+                @error('covers')
+                    <p class="text-[12px] text-destructive">{{ $message }}</p>
+                @enderror
+                <x-admin.button type="submit" data-busy-label="{{ __('admin.common.saving') }}">{{ __('admin.categories.cover_save') }}</x-admin.button>
+            </form>
+        </details>
     </x-admin.card>
 
     <x-admin.table :paginator="$categories">

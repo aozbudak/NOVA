@@ -288,6 +288,7 @@ return [
         'header_select' => 'Select a category',
         'covers' => 'Storefront covers',
         'covers_help' => 'Change the homepage covers for The new standard, Women, Men, and Collections.',
+        'cover_edit' => 'Edit cover photos',
         'cover_hero' => 'The new standard',
         'cover_women' => 'Women',
         'cover_men' => 'Men',
