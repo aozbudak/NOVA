@@ -4,7 +4,7 @@
 @section('description', __('storefront.home.description'))
 
 @section('content')
-    <x-hero-section />
+    <x-hero-section :image="$heroImage" />
     <x-collection-section :campaigns="$campaigns" />
 
     <section class="mx-auto mt-20 max-w-[1600px] px-4 md:mt-28 md:px-8">

@@ -22,6 +22,10 @@ class AdminCategoryTest extends TestCase
             ->assertSee('Header')
             ->assertSee('Add to header')
             ->assertSee('No categories in the header yet.')
+            ->assertSee('Storefront covers')
+            ->assertSee('The new standard')
+            ->assertSee('Collections')
+            ->assertSee('Save covers')
             ->assertDontSee('This module is ready for operational data.');
     }
 

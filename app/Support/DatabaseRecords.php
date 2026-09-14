@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\StaffRole;
 use App\Enums\StockMovementType;
+use App\Enums\StorefrontCoverSlot;
 use App\Models\AuditLog;
 use App\Models\Brand;
 use App\Models\CashRegister;
@@ -24,6 +25,7 @@ use App\Models\Role;
 use App\Models\SaleReturn;
 use App\Models\Stock;
 use App\Models\StockMovement;
+use App\Models\StorefrontCover;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -113,6 +115,43 @@ final class DatabaseRecords
         $category->update(['show_in_header' => $inHeader]);
 
         return $category->fresh() ?? $category;
+    }
+
+    public function saveStorefrontCover(StorefrontCoverSlot $slot, UploadedFile $file): ?StorefrontCover
+    {
+        if (! Schema::hasTable('storefront_covers')) {
+            return null;
+        }
+
+        $path = $file->store('covers', 'public');
+
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        $cover = StorefrontCover::query()->firstOrNew(['slot' => $slot]);
+        $previous = $cover->image_url;
+        $cover->image_url = Storage::disk('public')->url($path);
+        $cover->save();
+
+        $this->deleteStoredCover($previous);
+
+        return $cover->fresh() ?? $cover;
+    }
+
+    private function deleteStoredCover(?string $url): void
+    {
+        if (! filled($url)) {
+            return;
+        }
+
+        $path = Str::after($url, '/storage/');
+
+        if ($path === $url || ! str_starts_with($path, 'covers/')) {
+            return;
+        }
+
+        Storage::disk('public')->delete($path);
     }
 
     /**

@@ -115,6 +115,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
             Route::put('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
             Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
             Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+            Route::put('/categories/covers', [CategoryController::class, 'updateCovers'])->name('categories.covers.update');
             Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
             Route::post('/categories/header', [CategoryController::class, 'attachHeader'])->name('categories.header.store');
             Route::delete('/categories/{category}/header', [CategoryController::class, 'detachHeader'])->name('categories.header.destroy');

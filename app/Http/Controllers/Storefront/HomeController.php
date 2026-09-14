@@ -13,6 +13,7 @@ class HomeController extends Controller
         return view('storefront.home', [
             'products' => $catalog->featured(),
             'campaigns' => $catalog->campaigns(),
+            'heroImage' => $catalog->heroImage(),
         ]);
     }
 }

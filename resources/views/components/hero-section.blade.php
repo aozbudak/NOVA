@@ -1,8 +1,8 @@
+@props(['image'])
+
 <section class="relative min-h-svh overflow-hidden bg-muted">
     <img
-        src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=2400&q=80"
-        srcset="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80 800w, https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1600&q=80 1600w, https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=2400&q=80 2400w"
-        sizes="100vw"
+        src="{{ $image }}"
         alt="{{ __('storefront.hero.alt') }}"
         width="2400"
         height="1600"

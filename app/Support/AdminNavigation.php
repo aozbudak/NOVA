@@ -18,6 +18,7 @@ final class AdminNavigation
         'admin.categories.index' => 'categories',
         'admin.categories.store' => 'categories',
         'admin.categories.update' => 'categories',
+        'admin.categories.covers.update' => 'categories',
         'admin.categories.destroy' => 'categories',
         'admin.categories.header.store' => 'categories',
         'admin.categories.header.destroy' => 'categories',

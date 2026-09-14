@@ -2,11 +2,13 @@
 
 namespace App\Support;
 
+use App\Enums\StorefrontCoverSlot;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Discount;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StorefrontCover;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -18,6 +20,11 @@ class Catalog
      * @var Collection<int, array<string, mixed>>|null
      */
     private ?Collection $items = null;
+
+    /**
+     * @var array<string, string>|null
+     */
+    private ?array $coverUrls = null;
 
     public function __construct(private DiscountService $discounts = new DiscountService) {}
 
@@ -220,24 +227,50 @@ class Catalog
                 'slug' => 'women',
                 'title' => $this->t('nav.women'),
                 'eyebrow' => $this->t('collection.aw26'),
-                'image' => $this->image('photo-1469334031218-e382a71b716b', 1600),
+                'image' => $this->coverUrl(StorefrontCoverSlot::Women),
                 'href' => route('shop.show', ['department' => 'women']),
             ],
             [
                 'slug' => 'men',
                 'title' => $this->t('nav.men'),
                 'eyebrow' => $this->t('collection.aw26'),
-                'image' => $this->image('photo-1490578474895-699cd4e2cf59', 1600),
+                'image' => $this->coverUrl(StorefrontCoverSlot::Men),
                 'href' => route('shop.show', ['department' => 'men']),
             ],
             [
                 'slug' => 'new-collection',
                 'title' => $this->t('campaign.new_collection'),
                 'eyebrow' => $this->t('featured.season_edit'),
-                'image' => $this->image('photo-1490481651871-ab68de25d43d', 2000),
+                'image' => $this->coverUrl(StorefrontCoverSlot::Collections),
                 'href' => route('shop.show', ['department' => 'new-in']),
             ],
         ];
+    }
+
+    public function heroImage(): string
+    {
+        return $this->coverUrl(StorefrontCoverSlot::Hero);
+    }
+
+    /**
+     * @return list<array{slot: string, label: string, image: string}>
+     */
+    public function coverSlots(): array
+    {
+        return collect(StorefrontCoverSlot::cases())
+            ->map(fn (StorefrontCoverSlot $slot): array => [
+                'slot' => $slot->value,
+                'label' => $slot->label(),
+                'image' => $this->coverUrl($slot),
+            ])
+            ->all();
+    }
+
+    public function coverUrl(StorefrontCoverSlot $slot): string
+    {
+        $this->coverUrls ??= $this->storedCoverUrls();
+
+        return $this->coverUrls[$slot->value] ?? $this->defaultCoverUrl($slot);
     }
 
     /**
@@ -1402,5 +1435,33 @@ class Catalog
     private function image(string $photo, int $width): string
     {
         return 'https://images.unsplash.com/'.$photo.'?auto=format&fit=crop&w='.$width.'&q=80';
+    }
+
+    private function defaultCoverUrl(StorefrontCoverSlot $slot): string
+    {
+        return match ($slot) {
+            StorefrontCoverSlot::Hero => $this->image('photo-1483985988355-763728e1935b', 2400),
+            StorefrontCoverSlot::Women => asset('images/covers/women-winter.png'),
+            StorefrontCoverSlot::Men => $this->image('photo-1490578474895-699cd4e2cf59', 1600),
+            StorefrontCoverSlot::Collections => $this->image('photo-1490481651871-ab68de25d43d', 2000),
+        };
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function storedCoverUrls(): array
+    {
+        if (! Schema::hasTable('storefront_covers')) {
+            return [];
+        }
+
+        return StorefrontCover::query()
+            ->orderBy('slot')
+            ->get(['slot', 'image_url'])
+            ->mapWithKeys(fn (StorefrontCover $cover): array => [
+                $cover->slot->value => $cover->image_url,
+            ])
+            ->all();
     }
 }
