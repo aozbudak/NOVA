@@ -300,12 +300,13 @@ function initHeader() {
 
     applyChrome = () => {
         const megaOpen = chrome.classList.contains('mega-open');
-        const glass = megaOpen || ! overHero || window.scrollY > 24;
+        const filled = megaOpen || ! overHero || window.scrollY > 24;
 
-        chrome.classList.toggle('text-overlay', ! glass);
-        chrome.classList.toggle('text-foreground', glass);
-        chrome.classList.toggle('glass', glass);
-        chrome.classList.toggle('border-transparent', ! glass);
+        chrome.classList.toggle('text-overlay', ! filled);
+        chrome.classList.toggle('text-foreground', filled);
+        chrome.classList.toggle('bg-transparent', ! filled);
+        chrome.classList.toggle('chrome-solid', filled);
+        chrome.classList.toggle('border-transparent', ! filled);
     };
 
     applyChrome();

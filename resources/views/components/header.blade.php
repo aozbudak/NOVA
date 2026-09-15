@@ -12,7 +12,7 @@
 <div
     data-chrome
     data-over-hero="{{ $overHero ? 'true' : 'false' }}"
-    class="fixed inset-x-0 top-0 z-40 transition-[background-color,border-color,color,backdrop-filter] duration-200 {{ $overHero ? 'border-b border-transparent text-overlay' : 'glass border-b text-foreground' }}"
+    class="fixed inset-x-0 top-0 z-40 transition-[background-color,border-color,color,backdrop-filter] duration-200 {{ $overHero ? 'border-b border-transparent bg-transparent text-overlay' : 'chrome-solid border-b text-foreground' }}"
 >
     <x-announcement-bar />
 

@@ -1,0 +1,13 @@
+# Git commit messages (SCM Generate Commit Message)
+
+When generating a Git commit message for this repository, ALWAYS write the subject and body in Turkish. Never write English commit messages.
+
+- Keep conventional commit prefixes in English: feat:, fix:, chore:, refactor:, docs:, test:, style:, perf:
+- The text after the prefix MUST be Turkish
+- Use a single concise subject line. Add a short Turkish body only if the change is non-obvious
+- Do not restate the diff line by line in English
+
+Examples:
+feat: header stillerine chrome-solid sınıfı eklendi
+fix: sipariş listesinde boş durum hatası giderildi
+chore: bağımlılıklar güncellendi

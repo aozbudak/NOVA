@@ -179,6 +179,13 @@
         letter-spacing: 0.14em;
     }
 
+    .chrome-solid {
+        background-color: var(--background);
+        border-color: var(--border);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
     .glass {
         background-color: var(--glass);
         border-color: var(--glass-border);
