@@ -376,15 +376,6 @@ php artisan serve
 Müşteri: [http://localhost:8000](http://localhost:8000)  
 Admin: [http://localhost:8000/admin/login](http://localhost:8000/admin/login)
 
-### Demo hesaplar (seeder)
-
-| Rol | Kullanıcı | Şifre |
-| --- | --- | --- |
-| Müşteri | `ada@nova.example` | `password123` |
-| Mağaza müdürü | `deniz` | `secret123` |
-| Kasiyer | `ayse` / `mert` | `secret123` |
-| Depo | `ece` | `secret123` |
-
 ---
 
 ## Test
